@@ -113,5 +113,11 @@ int socket_set_contains(fdset_t *fds, socket_t fd);
  * @param sockfd Descriptor del socket a cerrar.
  */
 void socket_close(socket_t sockfd);
+int crearSocket();
+int obtenerSocketMaximoInicial(int, int);
+void inicializarSOCKADDR_IN(struct sockaddr_in*, char*,char*);
+void reutilizarSocket(int);
+void asignarDirecciones(int, const struct sockaddr*);
 
 #endif /* SOCKET_H_ */
+
