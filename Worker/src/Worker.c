@@ -8,10 +8,109 @@
  ============================================================================
  */
 
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
-int main(void) {
-	puts("!!!Hello World!!!"); /* prints !!!Hello World!!! */
+#include <commons/config.h>
+#include <commons/log.h>
+
+#define MAX_IP_LEN 16   // aaa.bbb.ccc.ddd -> son 15 caracteres, 16 contando un '\0'
+#define MAX_PORT_LEN 6  // 65535 -> 5 digitos, 6 contando un '\0'
+#define MAX_NOMBRE_NODO 5
+#define MAX_RUTA 25
+
+typedef struct{
+	char * IP_FILESYSTEM,
+		   PUERTO_FILESYSTEM,
+	       NOMBRE_NODO,
+		   PUERTO_WORKER,
+		   PUERTO_DATANODE,
+		   RUTA_DATABIN;
+
+}tWorker;
+t_log * logTrace;
+void crearLogger() {
+   char *pathLogger = string_new();
+
+   char cwd[1024];
+
+   string_append(&pathLogger, getcwd(cwd, sizeof(cwd)));
+
+   string_append(&pathLogger, "/Worker_LOG.log");
+
+   char *logWorker = strdup("Worker_LOG.log");
+
+   logTrace = log_create(pathLogger, logWorker, false, LOG_LEVEL_INFO);
+
+   free(pathLogger);
+   free(logWorker);
+}
+
+tWorker *getConfigWorker(char* ruta) {
+	printf("Ruta del archivo de configuracion: %s\n", ruta);
+	tWorker *worker = malloc(sizeof(tWorker));
+
+	t_config *workerConfig = config_create(ruta);
+
+	worker->IP_FILESYSTEM     = malloc(MAX_IP_LEN);
+	worker->PUERTO_FILESYSTEM = malloc(MAX_PORT_LEN);
+	worker->NOMBRE_NODO       = malloc(MAX_NOMBRE_NODO);
+	worker->PUERTO_WORKER     = malloc(MAX_PORT_LEN);
+	worker->PUERTO_DATANODE   = malloc(MAX_PORT_LEN);
+	worker->RUTA_DATABIN      = malloc(MAX_RUTA);
+
+	strcpy(worker->IP_FILESYSTEM,
+			config_get_string_value(workerConfig, "IP_FILESYSTEM"));
+	strcpy(worker->PUERTO_FILESYSTEM,
+			config_get_string_value(workerConfig, "PUERTO_FILSESYSTEM"));
+	strcpy(worker->NOMBRE_NODO,
+			config_get_string_value(workerConfig, "NOMBRE_NODO"));
+	strcpy(worker->PUERTO_WORKER,
+			config_get_string_value(workerConfig, "PUERTO_WORKER"));
+	strcpy(worker->PUERTO_DATANODE,
+			config_get_string_value(workerConfig, "PUERTO_DATANODE"));
+	strcpy(worker->RUTA_DATABIN,
+			config_get_string_value(workerConfig, "RUTA_DATABIN"));
+
+	config_destroy(workerConfig);
+	return worker;
+}
+
+void mostrarConfiguracion(tWorker *worker) {
+	printf("IP_FILESYSTEM: &s", worker->IP_FILESYSTEM);
+	printf("NOMBRE_NODO: &s", worker->NOMBRE_NODO);
+	printf("PUERTO_DATANODE: &s", worker->PUERTO_DATANODE);
+	printf("PUERTO_FILESYSTEM: &s", worker->PUERTO_FILESYSTEM);
+	printf("PUERTO_WORKER: &s", worker->PUERTO_WORKER);
+	printf("RUTA_DATABIN: &s", worker->RUTA_DATABIN);
+}
+
+void liberarConfiguracionWorker(tWorker*worker) {
+
+	free(worker->IP_FILESYSTEM);
+	worker->IP_FILESYSTEM = NULL;
+	free(worker->NOMBRE_NODO);
+	worker->NOMBRE_NODO = NULL;
+	free(worker->PUERTO_DATANODE);
+	worker->PUERTO_DATANODE = NULL;
+	free(worker->PUERTO_FILESYSTEM);
+	worker->PUERTO_FILESYSTEM = NULL;
+	free(worker->PUERTO_WORKER);
+	worker->PUERTO_WORKER = NULL;
+	free(worker->RUTA_DATABIN);
+	worker->RUTA_DATABIN = NULL;
+}
+
+
+
+
+int main(int argc, char* argv[]) {
+	tWorker * worker;
+	worker = getConfigWorker(argv[1]);
+	mostrarConfiguracion(worker);
+	crearLogger();
+
+
 	return EXIT_SUCCESS;
 }

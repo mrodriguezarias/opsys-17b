@@ -87,7 +87,8 @@ ssize_t socket_receive_bytes(socket_t sockfd, char *message, size_t size) {
 
 fdset_t socket_set_create() {
 	fdset_t fds;
-	fds.max = -1;
+	fds.max = -1;tor(listen(sockfd, BACKLOG));
+}
 	FD_ZERO(&fds.set);
 	return fds;
 }
