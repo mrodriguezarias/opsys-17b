@@ -38,17 +38,14 @@ int obtenerSocketMaximoInicial(int, int);
 void reutilizarSocket(int);
 void asignarDirecciones(int, const struct sockaddr*);
 
-int main(int argc, char *argv[]) {
+int main() {
 	char* path = "/home/utnso/archivoConfiguracion/archivoConfigFileSystem.cfg";
 	t_config* archivoConfig = config_create(path);
 	tinformacion informacion_socket;
 
-	logFileSystem = log_create("LogKernel.log", "Proceso_Kernel", false,LOG_LEVEL_TRACE);
+	logFileSystem = log_create("LogKernel.log", "FileSystem", false,LOG_LEVEL_TRACE);
 	//VALIDACIONES
-		if (argc != 2) {
-			log_error(logFileSystem, "La cantidad de parametros es incorrecta");
-			return 1;
-		}
+
 		if (archivoConfig == NULL) {
 			log_error(logFileSystem,
 					"Archivo configuracion: error al intentar leer ruta");
@@ -71,9 +68,9 @@ int main(int argc, char *argv[]) {
 		//fin VALIDACIONES
 		//configuracion del archivo configuracion
 		informacion_socket.IP_FILESYSTEM = config_get_string_value(archivoConfig, "IP_FILESYSTEM");
-		informacion_socket.PUERTO_DATANODE = config_get_int_value(archivoConfig, "PUERTO_DATANODE");
-		informacion_socket.PUERTO_WORKER = config_get_int_value(archivoConfig, "PUERTO_WORKER");
-		informacion_socket.PUERTO_YAMA = config_get_int_value(archivoConfig, "PUERTO_YAMA");
+		informacion_socket.PUERTO_DATANODE = config_get_string_value(archivoConfig, "PUERTO_DATANODE");
+		informacion_socket.PUERTO_WORKER = config_get_string_value(archivoConfig, "PUERTO_WORKER");
+		informacion_socket.PUERTO_YAMA = config_get_string_value(archivoConfig, "PUERTO_YAMA");
 
 		escucharPuertosDataNodeYYama(informacion_socket);
 }
