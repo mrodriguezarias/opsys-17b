@@ -31,12 +31,13 @@ typedef struct {
 
 //funciones
 void escucharPuertosDataNodeYYama(tinformacion);
-void handshake(int, struct sockaddr_in, fd_set,fd_set, int);
-void inicializarSOCKADDR_IN(struct sockaddr_in*, char*,char*);
+void handshakeConDataNode(int, struct sockaddr_in, fd_set,fd_set, int);
+void handshakeConYama(int, struct sockaddr_in, fd_set,fd_set, int);
+/*void inicializarSOCKADDR_IN(struct sockaddr_in*, char*,char*);
 int crearSocket();
 int obtenerSocketMaximoInicial(int, int);
 void reutilizarSocket(int);
-void asignarDirecciones(int, const struct sockaddr*);
+void asignarDirecciones(int, const struct sockaddr*); */
 
 int main() {
 	char* path = "/home/utnso/archivoConfiguracion/archivoConfigFileSystem.cfg";
@@ -73,6 +74,7 @@ int main() {
 		informacion_socket.PUERTO_YAMA = config_get_string_value(archivoConfig, "PUERTO_YAMA");
 
 		escucharPuertosDataNodeYYama(informacion_socket);
+		return 0;
 }
 
 
@@ -145,7 +147,7 @@ void escucharPuertosDataNodeYYama(tinformacion informacion_socket) {
 						(maximo_Sockets < nuevoSocket) ?
 								nuevoSocket : maximo_Sockets;
 				printf("Ya acepte un datanode \n ");
-				handshake(nuevoSocket, remoteaddr, master, read_fds,
+				handshakeConDataNode(nuevoSocket, remoteaddr, master, read_fds,
 						maximo_Sockets);
 				//ejecuto lo que tengo que hacerr para el datanodee....
 			}
@@ -164,7 +166,7 @@ void escucharPuertosDataNodeYYama(tinformacion informacion_socket) {
 				maximo_Sockets =
 						(maximo_Sockets < nuevoSocket) ?
 								nuevoSocket : maximo_Sockets;
-				handshake(nuevoSocket, remoteaddr, master, read_fds,
+				handshakeConYama(nuevoSocket, remoteaddr, master, read_fds,
 						maximo_Sockets);
 				//ejecuto rutina con yama
 
@@ -189,15 +191,15 @@ void escucharPuertosDataNodeYYama(tinformacion informacion_socket) {
 					} else {
 						///switch con mensajes
 					}
-					}
+				}
 			}
 
-}
-}
+		}
+	}
 }
 
 
-void handshake(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set master,
+void handshakeConDataNode(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set master,
 		fd_set read_fds, int maximo_Sockets) {
 	char buffer_select[MAXIMO_TAMANIO_DATOS];
 	int cantidadBytes;
@@ -205,7 +207,7 @@ void handshake(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set master,
 	cantidadBytes = recv(nuevoSocket, buffer_select, sizeof(buffer_select), 0);
 	buffer_select[cantidadBytes] = '\0';
 	printf("Credencial recibida: %s\n", buffer_select);
-	if (!strcmp(buffer_select, "Yatpos\0")) { //Yatpos es la credencial que autoriza al proceso a seguir conectado
+	if (!strcmp(buffer_select, "Yatpos-DataNode\0")) { //Yatpos es la credencial que autoriza al proceso a seguir conectado
 		printf("FileSystem: nueva conexion desde %s en socket %d\n",
 				inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
 		if (send(nuevoSocket, "Bienvenido al FileSystem!", 26, 0) == -1) {
@@ -223,55 +225,27 @@ void handshake(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set master,
 }
 
 
-int crearSocket() // funcion para crear socket
-{
-	int socketfd;
-	if ((socketfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) //inicializamos el socket
-			{
-		perror("Socket Fail");
-		exit(1);
-	}
-	return socketfd; //devolvemos el socket creado
-}
+void handshakeConYama(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set master,
+		fd_set read_fds, int maximo_Sockets) {
+	char buffer_select[MAXIMO_TAMANIO_DATOS];
+	int cantidadBytes;
 
-
-
-int obtenerSocketMaximoInicial(int socketYama, int socketDataNode) {
-	int socketMaximoInicial = 0;
-
-	if (socketYama > socketDataNode) {
-		socketMaximoInicial = socketYama;
+	cantidadBytes = recv(nuevoSocket, buffer_select, sizeof(buffer_select), 0);
+	buffer_select[cantidadBytes] = '\0';
+	printf("Credencial recibida: %s\n", buffer_select);
+	if (!strcmp(buffer_select, "Yatpos-Yama\0")) { //Yatpos es la credencial que autoriza al proceso a seguir conectado
+		printf("FileSystem: nueva conexion desde %s en socket %d\n",
+				inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
+		if (send(nuevoSocket, "Bienvenido al FileSystem!", 26, 0) == -1) {
+			perror("Error en el send");
+		}
 	} else {
-		socketMaximoInicial = socketDataNode;
+		printf(
+				"El proceso que requirio acceso, no posee los permisos adecuados\n");
+		if (send(nuevoSocket, "Usted no esta autorizado!", MAXIMO_TAMANIO_DATOS,
+				0) == -1) {
+			perror("Error en el send");
+		}
+		close(nuevoSocket);
 	}
-	return socketMaximoInicial;
-}
-
-void inicializarSOCKADDR_IN(struct sockaddr_in* direccion, char* direccionIP,
-		char* puerto) // La funcion transforma sola los datos de host a network
-{
-	direccion->sin_family = AF_INET;
-	direccion->sin_addr.s_addr = inet_addr(direccionIP);
-	direccion->sin_port = htons(atoi(puerto));
-	memset(&(direccion->sin_zero), '/0', 8);
-	return;
-}
-
-void reutilizarSocket(int socketFD) {
-	int yes = 1;
-	if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) //el socket se puede reutilizar
-			{
-		perror("setsockopt");
-		exit(2);
-	}
-	return;
-}
-
-void asignarDirecciones(int socketFD, const struct sockaddr* sockDIR) //Asociamos el puerto y direccion al socket
-{
-	if (bind(socketFD, sockDIR, sizeof(struct sockaddr)) == -1) {
-		perror("Bind fail");
-		exit(3);
-	}
-	return;
 }

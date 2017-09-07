@@ -192,7 +192,6 @@ int crearSocket() // funcion para crear socket
 }
 
 
-
 int obtenerSocketMaximoInicial(int socketYama, int socketDataNode) {
 	int socketMaximoInicial = 0;
 
@@ -204,31 +203,31 @@ int obtenerSocketMaximoInicial(int socketYama, int socketDataNode) {
 	return socketMaximoInicial;
 }
 
-//void inicializarSOCKADDR_IN(struct sockaddr_in* direccion, char* direccionIP,
-//		char* puerto) // La funcion transforma sola los datos de host a network
-//{
-//	direccion->sin_family = AF_INET;
-//	direccion->sin_addr.s_addr = inet_addr(direccionIP);
-//	direccion->sin_port = htons(atoi(puerto));
-//	memset(&(direccion->sin_zero), '/0', 8);
-//	return;
-//}
-//
-//void reutilizarSocket(int socketFD) {
-//	int yes = 1;
-//	if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) //el socket se puede reutilizar
-//			{
-//		perror("setsockopt");
-//		exit(2);
-//	}
-//	return;
-//}
-//
-//void asignarDirecciones(int socketFD, const struct sockaddr* sockDIR) //Asociamos el puerto y direccion al socket
-//{
-//	if (bind(socketFD, sockDIR, sizeof(struct sockaddr)) == -1) {
-//		perror("Bind fail");
-//		exit(3);
-//	}
-//	return;
-//}
+void inicializarSOCKADDR_IN(struct sockaddr_in* direccion, char* direccionIP,
+		char* puerto) // La funcion transforma sola los datos de host a network
+{
+	direccion->sin_family = AF_INET;
+	direccion->sin_addr.s_addr = inet_addr(direccionIP);
+	direccion->sin_port = htons(atoi(puerto));
+	memset(&(direccion->sin_zero), '/0', 8);
+	return;
+}
+
+void reutilizarSocket(int socketFD) {
+	int yes = 1;
+	if (setsockopt(socketFD, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) //el socket se puede reutilizar
+			{
+		perror("setsockopt");
+		exit(2);
+	}
+	return;
+}
+
+void asignarDirecciones(int socketFD, const struct sockaddr* sockDIR) //Asociamos el puerto y direccion al socket
+{
+	if (bind(socketFD, sockDIR, sizeof(struct sockaddr)) == -1) {
+		perror("Bind fail");
+		exit(3);
+	}
+	return;
+}
