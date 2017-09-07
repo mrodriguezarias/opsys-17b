@@ -114,6 +114,15 @@ int socket_set_contains(fdset_t *fds, socket_t fd);
  */
 void socket_close(socket_t sockfd);
 
+///////////////////////////////////////
+
+#include <netinet/in.h>
+
+int crearSocket();
+int obtenerSocketMaximoInicial(int socketYama, int socketDataNode);
+void inicializarSOCKADDR_IN(struct sockaddr_in* direccion, char* direccionIP, char* puerto);
+void reutilizarSocket(int socketFD);
+void asignarDirecciones(int socketFD, const struct sockaddr* sockDIR);
 
 #endif /* SOCKET_H_ */
 

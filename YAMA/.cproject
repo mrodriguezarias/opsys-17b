@@ -36,12 +36,17 @@
 								<option id="gnu.c.compiler.option.include.paths.19706031" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Shared}&quot;"/>
 								</option>
+								<option id="gnu.c.compiler.option.dialect.flags.232447049" superClass="gnu.c.compiler.option.dialect.flags" value="-std=gnu11" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.187757638" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.1058627502" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug">
+<<<<<<< HEAD
 								<option id="gnu.c.link.option.libs.1061936502" name="Libraries (-l)" superClass="gnu.c.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="commons"/>
 								</option>
+=======
+								<option id="gnu.c.link.option.libs.1061936502" name="Libraries (-l)" superClass="gnu.c.link.option.libs"/>
+>>>>>>> stash
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.883305848" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
