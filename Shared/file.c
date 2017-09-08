@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <mstring.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <errno.h>
@@ -42,11 +43,11 @@ const char *file_rscdir() {
 void file_create_sysdirs() {
 	file_mkdir(file_basedir());
 
-	const char *confdir = mstring_format("%s/config", file_basedir());
+	char *confdir = mstring_format("%s/config", file_basedir());
 	file_mkdir(confdir);
 	free(confdir);
 
-	const char *logdir = mstring_format("%s/logs", file_basedir());
+	char *logdir = mstring_format("%s/logs", file_basedir());
 	file_mkdir(logdir);
 	free(logdir);
 }
