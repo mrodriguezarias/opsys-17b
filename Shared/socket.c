@@ -180,6 +180,9 @@ static ssize_t recvall(socket_t sockfd, void *buf, size_t len) {
 }
 
 //////////////////////////////////////////////////
+
+#include <arpa/inet.h>
+
 int crearSocket() // funcion para crear socket
 {
 	int socketfd;
@@ -209,7 +212,7 @@ void inicializarSOCKADDR_IN(struct sockaddr_in* direccion, char* direccionIP,
 	direccion->sin_family = AF_INET;
 	direccion->sin_addr.s_addr = inet_addr(direccionIP);
 	direccion->sin_port = htons(atoi(puerto));
-	memset(&(direccion->sin_zero), '/0', 8);
+	memset(&(direccion->sin_zero), '\0', 8);
 	return;
 }
 

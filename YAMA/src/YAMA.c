@@ -32,6 +32,8 @@ int socket_FileSystem;
 
 //funciones
 //void escucharPuertosDataNodeYYama(tinformacion);
+void escucharPuertosMaster(tinformacion);
+void handshakeConMaster(int, struct sockaddr_in, fd_set, fd_set, int);
 void handshakeConFS();
 
 int main() {
