@@ -50,7 +50,7 @@ static const char *config_name() {
 }
 
 static char *config_file(bool user) {
-	const char *dir = user ? file_basedir() : file_rscdir();
+	const char *dir = user ? file_userdir() : file_rscdir();
 	return mstring_format("%s/config/%s.cnf", dir, config_name());
 }
 

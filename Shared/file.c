@@ -24,7 +24,19 @@ const char *file_homedir() {
 	return homedir;
 }
 
-const char *file_basedir() {
+const char *file_sysdir() {
+	static char dir[PATH_MAX] = {0};
+	if(!*dir) {
+		char *execdir = file_dir(file_proc());
+		char *path = mstring_format("%s/../..", execdir);
+		free(execdir);
+		realpath(path, dir);
+		free(path);
+	}
+	return dir;
+}
+
+const char *file_userdir() {
 	static char dir[PATH_MAX] = {0};
 	if(!*dir) {
 		snprintf(dir, PATH_MAX, "%s/yatpos", file_homedir());
@@ -35,24 +47,32 @@ const char *file_basedir() {
 const char *file_rscdir() {
 	static char dir[PATH_MAX] = {0};
 	if(!*dir) {
-		snprintf(dir, PATH_MAX, "%s/git/tp-2017-2c-YATPOS/Shared/rsc", file_homedir());
+		snprintf(dir, PATH_MAX, "%s/Shared/rsc", file_sysdir());
 	}
 	return dir;
 }
 
 void file_create_sysdirs() {
-	file_mkdir(file_basedir());
+	file_mkdir(file_userdir());
 
-	char *confdir = mstring_format("%s/config", file_basedir());
+	char *confdir = mstring_format("%s/config", file_userdir());
 	file_mkdir(confdir);
 	free(confdir);
 
-	char *logdir = mstring_format("%s/logs", file_basedir());
+	char *logdir = mstring_format("%s/logs", file_userdir());
 	file_mkdir(logdir);
 	free(logdir);
 }
 
 // ========== Funciones de archivos ==========
+
+const char *file_proc() {
+	static char proc[PATH_MAX] = {0};
+	if(!*proc) {
+		readlink("/proc/self/exe", proc, PATH_MAX);
+	}
+	return proc;
+}
 
 bool file_exists(const char *path) {
 	return access(path, F_OK) != -1;
@@ -88,12 +108,16 @@ size_t file_size(const char *path) {
 	return s.st_size;
 }
 
+char *file_dir(const char *path) {
+	char *dir = strdup(path);
+	char *slash = strrchr(dir, '/');
+	if(slash) *slash = '\0';
+	return dir;
+}
+
 const char *file_name(const char *path) {
 	char *slash = strrchr(path, '/');
-	if(slash == NULL) {
-		return path;
-	}
-	return slash + 1;
+	return slash ? slash + 1 : path;
 }
 
 void file_copy(const char *source, const char *target) {

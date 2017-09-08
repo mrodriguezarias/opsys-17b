@@ -12,10 +12,16 @@
 const char *file_homedir(void);
 
 /**
- * Devuelve el directorio base del sistema (/home/utnso/yatpos).
- * @return Directorio base.
+ * Devuelve el directorio del sistema (tp-2017-2c-YATPOS).
+ * @return Directorio del sistema.
  */
-const char *file_basedir(void);
+const char *file_sysdir(void);
+
+/**
+ * Devuelve el directorio de usuario del sistema (/home/utnso/yatpos).
+ * @return Directorio de usuario.
+ */
+const char *file_userdir(void);
 
 /**
  * Devuelve la ruta al directorio de recursos (Shared/rsc).
@@ -28,6 +34,12 @@ const char *file_rscdir(void);
  * Solo debería llamarse por process_init().
  */
 void file_create_sysdirs(void);
+
+/**
+ * Devuelve la ruta absoluta del ejecutable.
+ * @return Ruta del ejecutable.
+ */
+const char *file_proc(void);
 
 /**
  * Verifica si un archivo existe en el sistema.
@@ -56,6 +68,14 @@ void file_mkdir(const char *path);
  * @return Tamaño del archivo en bytes.
  */
 size_t file_size(const char *path);
+
+/**
+ * Devuelve la ruta al directorio donde se encuentra un archivo.
+ * La cadena devuelta debe ser liberada con free().
+ * @param Ruta al archivo.
+ * @return Directorio del archivo.
+ */
+char *file_dir(const char *path);
 
 /**
  * Devuelve el nombre de un archivo.

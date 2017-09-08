@@ -50,7 +50,7 @@ static t_log *logger(bool print) {
 	static t_log *logger = NULL, *printer;
 	if(logger == NULL) {
 		char *pname = (char*) process_name(process_current());
-		char *logfile = mstring_format("%s/logs/%s.log", file_basedir(), pname);
+		char *logfile = mstring_format("%s/logs/%s.log", file_userdir(), pname);
 		logger = log_create(logfile, pname, false, LOG_LEVEL_TRACE);
 		printer = log_create(logfile, pname, true, LOG_LEVEL_TRACE);
 		free(logfile);
