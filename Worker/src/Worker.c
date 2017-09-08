@@ -11,6 +11,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include "socket.h"
+#include "serial.h"
 
 #include <commons/config.h>
 #include <commons/log.h>
@@ -22,13 +25,14 @@
 
 typedef struct{
 	char * IP_FILESYSTEM,
-		   PUERTO_FILESYSTEM,
-	       NOMBRE_NODO,
-		   PUERTO_WORKER,
-		   PUERTO_DATANODE,
-		   RUTA_DATABIN;
+		 * PUERTO_FILESYSTEM,
+	     * NOMBRE_NODO,
+		 * PUERTO_WORKER,
+		 * PUERTO_DATANODE,
+		 * RUTA_DATABIN;
 
 }tWorker;
+tWorker * worker;
 t_log * logTrace;
 void crearLogger() {
    char *pathLogger = string_new();
@@ -51,6 +55,8 @@ tWorker *getConfigWorker(char* ruta) {
 	printf("Ruta del archivo de configuracion: %s\n", ruta);
 	tWorker *worker = malloc(sizeof(tWorker));
 
+	//t_config *workerConfig = config_create("/home/utnso/tp-2017-2c-YATPOS/Worker/src/config_worker");
+
 	t_config *workerConfig = config_create(ruta);
 
 	worker->IP_FILESYSTEM     = malloc(MAX_IP_LEN);
@@ -63,7 +69,7 @@ tWorker *getConfigWorker(char* ruta) {
 	strcpy(worker->IP_FILESYSTEM,
 			config_get_string_value(workerConfig, "IP_FILESYSTEM"));
 	strcpy(worker->PUERTO_FILESYSTEM,
-			config_get_string_value(workerConfig, "PUERTO_FILSESYSTEM"));
+			config_get_string_value(workerConfig, "PUERTO_FILESYSTEM"));
 	strcpy(worker->NOMBRE_NODO,
 			config_get_string_value(workerConfig, "NOMBRE_NODO"));
 	strcpy(worker->PUERTO_WORKER,
@@ -78,12 +84,12 @@ tWorker *getConfigWorker(char* ruta) {
 }
 
 void mostrarConfiguracion(tWorker *worker) {
-	printf("IP_FILESYSTEM: &s", worker->IP_FILESYSTEM);
-	printf("NOMBRE_NODO: &s", worker->NOMBRE_NODO);
-	printf("PUERTO_DATANODE: &s", worker->PUERTO_DATANODE);
-	printf("PUERTO_FILESYSTEM: &s", worker->PUERTO_FILESYSTEM);
-	printf("PUERTO_WORKER: &s", worker->PUERTO_WORKER);
-	printf("RUTA_DATABIN: &s", worker->RUTA_DATABIN);
+	printf("IP_FILESYSTEM: %s\n", worker->IP_FILESYSTEM);
+	printf("NOMBRE_NODO: %s\n", worker->NOMBRE_NODO);
+	printf("PUERTO_DATANODE: %s\n", worker->PUERTO_DATANODE);
+	printf("PUERTO_FILESYSTEM: %s\n", worker->PUERTO_FILESYSTEM);
+	printf("PUERTO_WORKER: %s\n", worker->PUERTO_WORKER);
+	printf("RUTA_DATABIN: %s\n", worker->RUTA_DATABIN);
 }
 
 void liberarConfiguracionWorker(tWorker*worker) {
@@ -106,11 +112,16 @@ void liberarConfiguracionWorker(tWorker*worker) {
 
 
 int main(int argc, char* argv[]) {
-	tWorker * worker;
+
+	int socket_worker;
+	struct sockaddr_in direccion_worker;
+
 	worker = getConfigWorker(argv[1]);
 	mostrarConfiguracion(worker);
 	crearLogger();
 
+	inicializarSOCKADDR_IN(&direccion_worker, worker->IP_FILESYSTEM,worker->PUERTO_WORKER);
+											//La ip, en realidad cambia, pero como es local pongo la de fs
 
 	return EXIT_SUCCESS;
 }
