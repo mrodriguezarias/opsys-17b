@@ -12,6 +12,8 @@
 #include "serial.h"
 #include <string.h>
 
+#include <protocol.h>
+
 #define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
 int SocketBuscado_GLOBAL = 0;
 t_log* logYama;

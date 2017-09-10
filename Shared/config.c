@@ -43,7 +43,7 @@ const char *config_get(const char *property) {
 static const char *config_name() {
 	static const char *node = "Node";
 	t_process process = process_current();
-	if(process == WORKER || process == DATANODE) {
+	if(process == PROC_WORKER || process == PROC_DATANODE) {
 		return node;
 	}
 	return process_name(process);

@@ -1,7 +1,7 @@
 #include <file.h>
 #include "process.h"
 
-static t_process current = UNDEFINED;
+static t_process current = PROC_UNDEFINED;
 
 // ========== Funciones públicas ==========
 
@@ -15,6 +15,6 @@ t_process process_current() {
 }
 
 const char *process_name(t_process process) {
-	static char *names[] = {"YAMA", "FileSystem", "Master", "Worker", "DataNode"};
+	static char *names[] = {"(Undefined)", "YAMA", "FileSystem", "Master", "Worker", "DataNode"};
 	return names[process];
 }
