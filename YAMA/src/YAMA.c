@@ -43,7 +43,7 @@ void handshakeConFS();
 
 int main() {
 	struct sockaddr_in addr_FileSystem;
-	process_init(YAMA);
+	process_init(PROC_YAMA);
 	config_load();
 	logYama = log_create("logYama.log", "Yama", false,LOG_LEVEL_TRACE);
 	//me conecto con filesystem
