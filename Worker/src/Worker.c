@@ -1,13 +1,3 @@
-/*
- ============================================================================
- Name        : Worker.c
- Author      : 
- Version     :
- Copyright   : Your copyright notice
- Description : Hello World in C, Ansi-style
- ============================================================================
- */
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,11 +7,16 @@
 
 #include <commons/config.h>
 #include <commons/log.h>
+#include <commons/string.h>
+#include <config.h>
+#include <arpa/inet.h>
 
 #define MAX_IP_LEN 16   // aaa.bbb.ccc.ddd -> son 15 caracteres, 16 contando un '\0'
 #define MAX_PORT_LEN 6  // 65535 -> 5 digitos, 6 contando un '\0'
 #define MAX_NOMBRE_NODO 5
 #define MAX_RUTA 25
+#define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
+#define MAXCONEXIONESLISTEN 10
 
 typedef struct{
 	char * IP_FILESYSTEM,
@@ -34,6 +29,20 @@ typedef struct{
 }tWorker;
 tWorker * worker;
 t_log * logTrace;
+typedef struct {
+ int id;
+ int tamanio;
+} t_cabecera;
+int socketEscuchandoMaster;
+int socketCliente;
+
+
+//funciones
+void handshakeConMaster(int nuevoSocket, struct sockaddr_in remoteaddr);
+void escucharPuertosMaster();
+void creoHijos();
+void configurarListener(int, int);
+
 void crearLogger() {
    char *pathLogger = string_new();
 
@@ -108,20 +117,79 @@ void liberarConfiguracionWorker(tWorker*worker) {
 	worker->RUTA_DATABIN = NULL;
 }
 
-
-
-
 int main(int argc, char* argv[]) {
-
-	int socket_worker;
-	struct sockaddr_in direccion_worker;
 
 	worker = getConfigWorker(argv[1]);
 	mostrarConfiguracion(worker);
 	crearLogger();
-
-	inicializarSOCKADDR_IN(&direccion_worker, worker->IP_FILESYSTEM,worker->PUERTO_WORKER);
-											//La ip, en realidad cambia, pero como es local pongo la de fs
-
+	escucharPuertosMaster();
 	return EXIT_SUCCESS;
+}
+
+void escucharPuertosMaster() {
+	 socklen_t clienteLen;
+	 //Variables Sockets
+	  struct sockaddr_in dirWorker;
+	  struct sockaddr_in dirCliente;
+	//////PREPARO EL SOCKET PARA ESCUCHAR CONEXIONES
+	 inicializarSOCKADDR_IN(&dirWorker, "127.0.0.1", worker->PUERTO_WORKER); //IP="0" PARA QUE TOME MAQUINA LOCAL
+	 socketEscuchandoMaster = crearSocket();
+	 reutilizarSocket(socketEscuchandoMaster);
+	 asignarDirecciones(socketEscuchandoMaster, (struct sockaddr *) &dirWorker);
+	 configurarListener(socketEscuchandoMaster, MAXCONEXIONESLISTEN);
+	 clienteLen = sizeof(dirCliente);
+	 printf("Estoy escuchando conexiones \n");
+
+	 //Acepto conexiones entrantes, validando que sean solo de tipo Master.
+	 if ((socketCliente = accept(socketEscuchandoMaster,(struct sockaddr *) &dirCliente,(socklen_t *) &clienteLen)) < 0) {
+	  perror("Error en la aceptacion \n");
+	  close(socketEscuchandoMaster);
+	  exit(0);
+	 }
+	 //QUEDA BLOQUEADO POR EL ACCEPT HASTA QUE ALGUIEN SE CONECTA
+	 handshakeConMaster(socketCliente, dirCliente);
+	 creoHijos();
+	 while(1);
+}
+
+
+void configurarListener(int socket, int cantConexiones) {
+	if (listen(socket, cantConexiones) == -1) {
+		perror("listen");
+		exit(1);
+	}
+}
+
+void handshakeConMaster(int nuevoSocket, struct sockaddr_in remoteaddr){
+		char buffer_select[MAXIMO_TAMANIO_DATOS];
+		int cantidadBytes;
+		strcpy(buffer_select,"");
+		cantidadBytes = recv(nuevoSocket, buffer_select, sizeof(buffer_select), 0);
+		buffer_select[cantidadBytes] = '\0';
+		printf("recibi %d \n",cantidadBytes);
+		printf("Credencial recibida: %s\n", buffer_select);
+		if (!strcmp(buffer_select, "Yatpos-Master\0")) { //Yatpos es la credencial que autoriza al proceso a seguir conectado
+			printf("Yama: nueva conexion desde %s en socket %d\n", inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
+			if (send(nuevoSocket, "Bienvenido a Worker!", 20, 0) == -1) {
+				perror("Error en el send");
+			}
+		} else {
+			printf("El proceso que requirio acceso, no posee los permisos adecuados\n");
+			if (send(nuevoSocket, "Usted no esta autorizado!", MAXIMO_TAMANIO_DATOS, 0) == -1) {
+				perror("Error en el send");
+			}
+			close(nuevoSocket);
+		}
+ }
+
+void creoHijos(){
+	if ( fork() == 0 ) {
+	/* Lógica del proceso HIJO */
+	printf("Hola soy el hijo \n");
+	exit(0);
+	}
+	else {
+	/* Lógica del proceso PADRE*/
+		printf("Hola soy el proceso padre \n");
+	}
 }

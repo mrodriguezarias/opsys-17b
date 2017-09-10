@@ -21,7 +21,6 @@ void config_load() {
 	if(!file_exists(config_path)) {
 		set_defaults();
 	}
-
 	t_config *config = config_create(config_path);
 	free(config_path);
 

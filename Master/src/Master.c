@@ -7,6 +7,8 @@
 #include<commons/config.h>
 #include<commons/collections/list.h>
 #include<commons/collections/queue.h>
+#include <commons/string.h>
+#include <arpa/inet.h>
 
 
 #include<pthread.h>
@@ -32,8 +34,9 @@ typedef struct {
 } tMaster;
 
 tMaster*master;
-
+int socket_yama;
 t_log * logTrace;
+void handshake(int );
 
 void crearLogger() {
    char *pathLogger = string_new();
@@ -91,48 +94,56 @@ void liberarConfiguracionmaster(tMaster*master) {
 
 }
 
-
-
-
-
 int main(int argc,char*argv[]) {
-//	char buffer[MAXSIZE];
-//	struct data m;
-//
-//	puts("Hello, I am a serveworkerr.");
-//
-//	puts("Listening for connections...");
-//	socket_t socket = socket_listen(PORT);
-//	puts("Connected.");
-//
-//	puts("Receiving message...");
-//	size_t n = socket_receive_bytes(socket, buffer, sizeof(struct data));
-//	serial_unpack(buffer, "Ihds", &m.d, &m.h, &m.f, m.s);
-//
-//	printf("Received %d bytes:\n", n);
-//	printf("m.d = %u\n", m.d);
-//	printf("m.h = %hd\n", m.h);
-//	printf("m.f = %lf\n", m.f);
-//	printf("m.s = %s\n", m.s);
 
-	int socket_master;
-	struct sockaddr_in direccion_master;
+
+	struct sockaddr_in addr_yama;
 
 	master = getConfigMaster(argv[1]);
 	mostrarConfiguracion(master);
 	crearLogger();
 
-	socket_master = crearSocket();
-	inicializarSOCKADDR_IN(&direccion_master, master->YAMA_IP,master->YAMA_PUERTO);
+	socket_yama = crearSocket();
+	inicializarSOCKADDR_IN(&addr_yama, master->YAMA_IP,master->YAMA_PUERTO);
 
-	if (connect(socket_master, (struct sockaddr*) &direccion_master,sizeof(struct sockaddr)) == -1) {
+	if (connect(socket_yama, (struct sockaddr*) &addr_yama,sizeof(struct sockaddr)) == -1) {
 		log_error(logTrace, "Error al conectarse con YAMA");
 	}
+	handshake(socket_yama);
+	//indico el archivo sobre el que deseo operar
+	//quedo a la espera de indicaciones de yama
+	//simulo que recibo una ip y un puerto de yama para conectarme con un worker.IP=127.0.0.1 PUERTO= 5050
+	//pruebo conexion
+	struct sockaddr_in addr_worker;
+	//me conecto con un worker
+	int	socket_worker = crearSocket();
+	inicializarSOCKADDR_IN(&addr_worker,"127.0.0.1","5050");
 
-
-	while(1){
-
+	if(connect(socket_worker,(struct sockaddr*) &addr_worker,sizeof(struct sockaddr)) == -1){
+			perror("Error en la conexion con Worker");
 	}
 
+	handshake(socket_worker);
+	while(1);
 	return EXIT_SUCCESS;
 }
+
+void handshake(int socket){
+	 char handshake[26];
+	 int cantBytes;
+	 if((cantBytes = send(socket,"Yatpos-Master",sizeof("Yatpos-Master"),0)) <= 0) //envio credencial
+	 {
+	  perror("No pudo enviar!");
+	  exit(1);
+	 }
+	 printf("envie %d \n",cantBytes);
+	 if ((recv(socket,handshake,26,0)) <= 0)
+	 {
+	  perror("Mi cliente se esconectó");
+	  exit(1);
+	 }
+	 handshake[26] = '\0';
+	 printf("%s\n",handshake);
+}
+
+

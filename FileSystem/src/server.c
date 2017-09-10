@@ -31,7 +31,7 @@ void escucharPuertosDataNodeYYama() {
 
 	//crea socket para el datanode
 	inicializarSOCKADDR_IN(&direccion_DataNode, "127.0.0.1", (char*) config_get("PUERTO_DATANODE"));
-	socketEscuchandoDataNode = crearSocket(); //abstraccion, se debe armar la funcion
+	socketEscuchandoDataNode = crearSocket();
 
 	//Yama
 	struct sockaddr_in direccion_Yama;

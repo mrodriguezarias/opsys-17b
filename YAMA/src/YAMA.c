@@ -1,20 +1,24 @@
+#include <commons/log.h>
+#include <sys/types.h>
+#include <netdb.h>
+#include <string.h>
+#include <process.h>
+#include <config.h>
+#include <file.h>
+#include <stdio.h>
+#include <stddef.h>
+#include <sys/select.h>
+#include <netinet/in.h>
+#include <socket.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/socket.h>
-#include <commons/config.h>
-#include <commons/log.h>
-#include <sys/types.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netdb.h>
-#include "socket.h"
-#include "serial.h"
-#include <string.h>
 
 #define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
 int SocketBuscado_GLOBAL = 0;
 t_log* logYama;
+
 
 typedef struct{
  char* FS_IP;
@@ -31,67 +35,31 @@ typedef struct {
 int socket_FileSystem;
 
 //funciones
-//void escucharPuertosDataNodeYYama(tinformacion);
-void escucharPuertosMaster(tinformacion);
-void handshakeConMaster(int, struct sockaddr_in, fd_set, fd_set, int);
+void escucharPuertosMaster();
+void handshakeConMaster(int, struct sockaddr_in);
 void handshakeConFS();
 
 int main() {
-	char* path = "/home/utnso/archivoConfiguracion/archivoConfigYama.cfg";
-	t_config* archivoConfig = config_create(path);
-	tinformacion informacion_socket;
 	struct sockaddr_in addr_FileSystem;
-
+	process_init(YAMA);
+	config_load();
 	logYama = log_create("logYama.log", "Yama", false,LOG_LEVEL_TRACE);
-	//VALIDACIONES
-
-	if (archivoConfig == NULL) {
-		log_error(logYama,"Archivo configuracion: error al intentar leer ruta");
-		return 1;
-	}
-	if (!config_has_property(archivoConfig, "FS_IP")) {
-		log_error(logYama,"Archivo configuracion: error al leer IP_FILESYSTEM");
-		return 1;
-	}
-	if (!config_has_property(archivoConfig, "FS_PUERTO")) {
-		log_error(logYama, "Archivo configuracion: error al leer FS_PUERTO");
-		return 1;
-	}
-	if (!config_has_property(archivoConfig, "RETARDO_PLANIFICACION")) {
-		log_error(logYama, "Archivo configuracion: error al leer RETARDO_PLANIFICACION");
-		return 1;
-	}
-	if (!config_has_property(archivoConfig, "ALGORITMO_BALANCEO")) {
-		log_error(logYama, "Archivo configuracion: error al leer ALGORITMO_BALANCEO");
-		return 1;
-	}
-	if (!config_has_property(archivoConfig, "MASTER_PUERTO")) {
-		log_error(logYama, "Archivo configuracion: error al leer MASTER_PUERTO");
-		return 1;
-	}
-	//fin VALIDACIONES
-	//configuracion del archivo configuracion
-	informacion_socket.FS_IP = config_get_string_value(archivoConfig, "FS_IP");
-	informacion_socket.FS_PUERTO = config_get_string_value(archivoConfig, "FS_PUERTO");
-	informacion_socket.RETARDO_PLANIFICACION = config_get_string_value(archivoConfig, "RETARDO_PLANIFICACION");
-	informacion_socket.ALGORITMO_BALANCEO = config_get_string_value(archivoConfig, "ALGORITMO_BALANCEO");
-	informacion_socket.MASTER_PUERTO = config_get_string_value(archivoConfig, "MASTER_PUERTO");
-
 	//me conecto con filesystem
 	socket_FileSystem = crearSocket();
-	inicializarSOCKADDR_IN(&addr_FileSystem,informacion_socket.FS_IP,informacion_socket.FS_PUERTO);
+	inicializarSOCKADDR_IN(&addr_FileSystem,(char*) config_get("FS_IP"),(char*) config_get("FS_PUERTO"));
 
 	if(connect(socket_FileSystem,(struct sockaddr*) &addr_FileSystem,sizeof(struct sockaddr)) == -1){
-		perror("Error en la conexion con el FileSystem");
+			perror("Error en la conexion con el FileSystem");
 	}
 
 	handshakeConFS();
-	escucharPuertosMaster(informacion_socket);
+	////// me quedo a la escucha
+	escucharPuertosMaster();
 	return 0;
 }
 
 
-void escucharPuertosMaster(tinformacion informacion_socket) {
+void escucharPuertosMaster() {
 	fd_set master;
 	fd_set read_fds;
 	int maximo_Sockets;
@@ -100,8 +68,8 @@ void escucharPuertosMaster(tinformacion informacion_socket) {
 	struct sockaddr_in direccion_Master;
 
 	//crea socket para el master
-	inicializarSOCKADDR_IN(&direccion_Master,informacion_socket.FS_IP,informacion_socket.MASTER_PUERTO);
-	socketEscuchandoMaster = crearSocket(); //abstraccion, se debe armar la funcion
+	inicializarSOCKADDR_IN(&direccion_Master,(char*) config_get("FS_IP"),(char*) config_get("MASTER_PUERTO"));
+	socketEscuchandoMaster = crearSocket();
 
 	//socket servidor
 	reutilizarSocket(socketEscuchandoMaster); // obviar el mensaje "address already in use"
@@ -140,7 +108,7 @@ void escucharPuertosMaster(tinformacion informacion_socket) {
 				FD_SET(nuevoSocket, &read_fds);
 				maximo_Sockets = (maximo_Sockets < nuevoSocket) ? nuevoSocket : maximo_Sockets;
 				printf("Ya acepte un master \n ");
-				handshakeConMaster(nuevoSocket, remoteaddr, master, read_fds, maximo_Sockets);
+				handshakeConMaster(nuevoSocket, remoteaddr);
 				//ejecuto lo que tengo que hacerr para el master....
 			}
 		}
@@ -169,7 +137,7 @@ void escucharPuertosMaster(tinformacion informacion_socket) {
 	}
 }
 
-void handshakeConMaster(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set master, fd_set read_fds, int maximo_Sockets) {
+void handshakeConMaster(int nuevoSocket, struct sockaddr_in remoteaddr) {
 	char buffer_select[MAXIMO_TAMANIO_DATOS];
 	int cantidadBytes;
 
