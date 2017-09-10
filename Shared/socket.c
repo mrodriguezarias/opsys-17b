@@ -13,15 +13,15 @@
 
 static void check_descriptor(int descriptor);
 static struct addrinfo *create_addrinfo(const char *ip, const char *port);
-static socket_t create_socket(struct addrinfo *addr);
-static size_t sendall(socket_t sockfd, const void *buf, size_t len);
-static ssize_t recvall(socket_t sockfd, void *buf, size_t len);
+static t_socket create_socket(struct addrinfo *addr);
+static size_t sendall(t_socket sockfd, const void *buf, size_t len);
+static size_t recvall(t_socket sockfd, void *buf, size_t len);
 
 // ========== Public functions ==========
 
-socket_t socket_init(const char *ip, const char *port) {
+t_socket socket_init(const char *ip, const char *port) {
 	struct addrinfo *cur, *addr = create_addrinfo(ip, port);
-	socket_t sockfd = -1;
+	t_socket sockfd = -1;
 	int ret = -1;
 
 	for(cur = addr; cur != NULL; cur = cur->ai_next) {
@@ -49,39 +49,39 @@ socket_t socket_init(const char *ip, const char *port) {
 	return sockfd;
 }
 
-socket_t socket_listen(const char *port) {
-	socket_t sv_sock = socket_init(NULL, port);
-	socket_t cli_sock = socket_accept(sv_sock);
+t_socket socket_listen(const char *port) {
+	t_socket sv_sock = socket_init(NULL, port);
+	t_socket cli_sock = socket_accept(sv_sock);
 
 	socket_close(sv_sock);
 	return cli_sock;
 }
 
-socket_t socket_accept(socket_t sv_sock) {
+t_socket socket_accept(t_socket sv_sock) {
 	struct sockaddr rem_addr;
 	socklen_t addr_size = sizeof rem_addr;
 
-	socket_t cli_sock = accept(sv_sock, &rem_addr, &addr_size);
+	t_socket cli_sock = accept(sv_sock, &rem_addr, &addr_size);
 	return cli_sock;
 }
 
-socket_t socket_connect(const char *ip, const char *port) {
+t_socket socket_connect(const char *ip, const char *port) {
 	return socket_init(ip, port);
 }
 
-size_t socket_send_string(socket_t sockfd, const char *message) {
+size_t socket_send_string(t_socket sockfd, const char *message) {
 	return sendall(sockfd, message, strlen(message) + 1);
 }
 
-size_t socket_send_bytes(socket_t sockfd, const char *message, size_t size) {
+size_t socket_send_bytes(t_socket sockfd, const char *message, size_t size) {
 	return sendall(sockfd, message, size);
 }
 
-ssize_t socket_receive_string(socket_t sockfd, char *message) {
+size_t socket_receive_string(t_socket sockfd, char *message) {
 	return recvall(sockfd, message, MAXSIZE);
 }
 
-ssize_t socket_receive_bytes(socket_t sockfd, char *message, size_t size) {
+size_t socket_receive_bytes(t_socket sockfd, char *message, size_t size) {
 	return recvall(sockfd, message, size);
 }
 
@@ -92,14 +92,14 @@ fdset_t socket_set_create() {
 	return fds;
 }
 
-void socket_set_add(fdset_t *fds, socket_t fd) {
+void socket_set_add(fdset_t *fds, t_socket fd) {
 	FD_SET(fd, &fds->set);
 	if(fd > fds->max) {
 		fds->max = fd;
 	}
 }
 
-void socket_set_remove(fdset_t *fds, socket_t fd) {
+void socket_set_remove(fdset_t *fds, t_socket fd) {
 	if(!FD_ISSET(fd, &fds->set)) return;
 	FD_CLR(fd, &fds->set);
 	if(fd == fds->max) {
@@ -107,11 +107,11 @@ void socket_set_remove(fdset_t *fds, socket_t fd) {
 	}
 }
 
-int socket_set_contains(fdset_t *fds, socket_t fd) {
+int socket_set_contains(fdset_t *fds, t_socket fd) {
 	return FD_ISSET(fd, &fds->set);
 }
 
-void socket_close(socket_t sockfd) {
+void socket_close(t_socket sockfd) {
 	shutdown(sockfd, SHUT_RDWR);
 	close(sockfd);
 }
@@ -141,8 +141,8 @@ static struct addrinfo *create_addrinfo(const char *ip, const char *port) {
 	return addr;
 }
 
-static socket_t create_socket(struct addrinfo *addr) {
-	socket_t sockfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+static t_socket create_socket(struct addrinfo *addr) {
+	t_socket sockfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
 
 	if(sockfd != -1) {
 		int reuse = 1;
@@ -152,7 +152,7 @@ static socket_t create_socket(struct addrinfo *addr) {
 	return sockfd;
 }
 
-static size_t sendall(socket_t sockfd, const void *buf, size_t len) {
+static size_t sendall(t_socket sockfd, const void *buf, size_t len) {
 	size_t bytes_sent = 0;
 
 	while(bytes_sent < len) {
@@ -164,7 +164,7 @@ static size_t sendall(socket_t sockfd, const void *buf, size_t len) {
 	return bytes_sent;
 }
 
-static ssize_t recvall(socket_t sockfd, void *buf, size_t len) {
+static size_t recvall(t_socket sockfd, void *buf, size_t len) {
 	size_t bytes_received = 0;
 
 	while(bytes_received < len) {

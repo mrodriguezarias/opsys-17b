@@ -3,7 +3,14 @@
 
 #define PROCESS_COUNT 5
 
-typedef enum { UNDEFINED = -1, YAMA, FILESYS, MASTER, WORKER, DATANODE } t_process;
+typedef enum {
+	PROC_UNDEFINED,
+	PROC_YAMA,
+	PROC_FILESYSTEM,
+	PROC_MASTER,
+	PROC_WORKER,
+	PROC_DATANODE
+} t_process;
 
 /**
  * Inicializa un proceso.
