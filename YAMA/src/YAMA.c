@@ -50,7 +50,7 @@ int main() {
 void connect_to_filesystem() {
 	t_socket socket = socket_connect(config_get("FS_IP"), config_get("FS_PUERTO"));
 	protocol_handshake(socket);
-	logif("Conectado a proceso FileSystem por socket %i", socket);
+	log_inform("Conectado a proceso FileSystem por socket %i", socket);
 	yama.fs_socket = socket;
 }
 
@@ -69,7 +69,7 @@ void listen_to_master() {
 				t_packet packet = protocol_receive(cli_sock);
 				if(packet.operation == OP_HANDSHAKE && packet.sender == PROC_MASTER) {
 					socket_set_add(cli_sock, &sockets);
-					logif("Conectado proceso Master por socket %i", cli_sock);
+					log_inform("Conectado proceso Master por socket %i", cli_sock);
 				} else {
 					socket_close(cli_sock);
 				}
@@ -85,7 +85,7 @@ void listen_to_master() {
 				if(string) {
 					printf("Recibido: %s\n", string);
 				} else {
-					logif("Desconectado proceso Master de socket %i", sock);
+					log_inform("Desconectado proceso Master de socket %i", sock);
 					socket_close(sock);
 					socket_set_remove(sock, &sockets);
 				}

@@ -1,5 +1,4 @@
 #include <file.h>
-#include <mstring.h>
 #include <process.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -8,6 +7,7 @@
 #include <commons/config.h>
 #include <commons/collections/dictionary.h>
 #include <config.h>
+#include <mstring.h>
 
 static const char *config_name(void);
 static char *config_file(bool user);
@@ -27,7 +27,7 @@ void config_load() {
 	free(config_path);
 
 	if(config == NULL) {
-		logep("Error al intentar cargar archivo de configuración");
+		log_report("Error al intentar cargar archivo de configuración");
 		exit(EXIT_FAILURE);
 	}
 
@@ -52,7 +52,7 @@ static const char *config_name() {
 
 static char *config_file(bool user) {
 	const char *dir = user ? system_userdir() : system_rscdir();
-	return mstring_format("%s/config/%s.cnf", dir, config_name());
+	return mstring_create("%s/config/%s.cnf", dir, config_name());
 }
 
 static void set_defaults() {
@@ -72,7 +72,7 @@ static void check_properties(t_config *config) {
 	bool should_exit = false;
 	void iterator(char *key, void *_) {
 		if(!config_has_property(config, key)) {
-			logep("Falta definir la propiedad %s en el archivo de configuración", key);
+			log_report("Falta definir la propiedad %s en el archivo de configuración", key);
 			should_exit = true;
 		}
 	}

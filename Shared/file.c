@@ -6,51 +6,80 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <string.h>
-#include <mstring.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <errno.h>
+#include <mstring.h>
+#include <system.h>
+#include <log.h>
+
+char *user_path(const char *path);
+void show_error_and_exit(t_file *file, const char *type);
+
+// ========== Funciones públicas ==========
 
 bool file_exists(const char *path) {
-	return access(path, F_OK) != -1;
+	char *upath = user_path(path);
+	bool exists = access(upath, F_OK) != -1;
+	free(upath);
+	return exists;
 }
 
 bool file_isdir(const char *path) {
-	if(!file_exists(path)) return false;
+	char *upath = user_path(path);
+	bool exists = access(upath, F_OK) != -1;
 	struct stat s;
-	stat(path, &s);
-	return s.st_mode & S_IFDIR;
+	stat(upath, &s);
+	bool isdir = s.st_mode & S_IFDIR;
+	free(upath);
+	return exists && isdir;
 }
 
 void file_mkdir(const char *path) {
-	if(file_exists(path)) return;
+	char *upath = user_path(path);
+	if(access(upath, F_OK) != -1) {
+		free(upath);
+		return;
+	}
 	mode_t perms = S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH;
-
-	char mpath[PATH_MAX];
-	strncpy(mpath, path, PATH_MAX);
-
-	for(char *p = mpath + 1; *p; p++) {
+	for(char *p = upath + 1; *p; p++) {
 		if(*p == '/') {
 			*p = '\0';
-			mkdir(mpath, perms);
+			mkdir(upath, perms);
 			*p = '/';
 		}
 	}
-
-	mkdir(mpath, perms);
+	mkdir(upath, perms);
+	free(upath);
 }
 
 size_t file_size(const char *path) {
+	char *upath = user_path(path);
 	struct stat s;
-	stat(path, &s);
+	stat(upath, &s);
+	free(upath);
 	return s.st_size;
 }
 
+char *file_sizep(const char *path) {
+	static const char *pref[] = {"", "K", "M", "G", "T"};
+	const size_t size = file_size(path);
+	const unsigned short mult = 1024;
+	const char *x = size < mult ? "" : "i";
+	float s = size;
+	int i = 0;
+	while(s >= mult) {
+		i++;
+		s /= mult;
+	}
+	return mstring_create("%.1f %s%sB", s, pref[i], x);
+}
+
 char *file_dir(const char *path) {
-	char *dir = strdup(path);
-	char *slash = strrchr(dir, '/');
+	char *upath = user_path(path);
+	char *slash = strrchr(upath, '/');
 	if(slash) *slash = '\0';
-	return dir;
+	return upath;
 }
 
 const char *file_name(const char *path) {
@@ -59,17 +88,19 @@ const char *file_name(const char *path) {
 }
 
 void file_copy(const char *source, const char *target) {
+	char *usource = user_path(source);
 	int fd_from = open(source, O_RDONLY);
-	if(fd_from == -1) return;
-
-	char path[PATH_MAX] = {0};
-	if(file_isdir(target)) {
-		snprintf(path, PATH_MAX, "%s/%s", target, file_name(source));
-	} else {
-		strcpy(path, target);
+	if(fd_from == -1) {
+		free(usource);
+		return;
 	}
 
-	int fd_to = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0664);
+	char *utarget = user_path(target);
+	if(file_isdir(utarget)) {
+		mstring_format(&utarget, "%s/%s", utarget, file_name(source));
+	}
+
+	int fd_to = open(utarget, O_WRONLY | O_CREAT | O_TRUNC, 0664);
 	if(fd_to == -1) goto exit;
 
 	char buffer[4096];
@@ -86,7 +117,85 @@ void file_copy(const char *source, const char *target) {
 	}
 
 	exit:
+	free(usource);
+	free(utarget);
 	close(fd_from);
 	if(fd_to != -1) close(fd_to);
+}
+
+t_file *file_open(const char *path) {
+	char *upath = user_path(path);
+	t_file *file = fopen(upath, "r+");
+	if(file == NULL) {
+		log_report("Error al abrir archivo %s: %s", upath, strerror(errno));
+		free(upath);
+		exit(EXIT_FAILURE);
+	}
+	free(upath);
+	return file;
+}
+
+char *file_path(t_file *file) {
+	char link[PATH_MAX];
+	snprintf(link, PATH_MAX, "/proc/self/fd/%i", fileno(file));
+
+	char path[PATH_MAX];
+	readlink(link, path, PATH_MAX);
+	return strdup(path);
+}
+
+char *file_readline(t_file *file) {
+	if(file == NULL) return NULL;
+	char *line = NULL;
+	size_t len = 0;
+	ssize_t read = getline(&line, &len, file);
+	if(read == -1) {
+		if(errno != 0) show_error_and_exit(file, "leer");
+		return NULL;
+	}
+	if(line[read - 1] == '\n') {
+		line[read - 1] = '\0';
+	}
+	return line;
+}
+
+char *file_readlines(t_file *file) {
+	if(file == NULL) return NULL;
+	size_t len = 64;
+	char *line = malloc(64);
+	char *lines = strdup("");
+	while(getline(&line, &len, file) != -1) {
+		char *tmp = mstring_create("%s%s", lines, line);
+		free(lines);
+		lines = tmp;
+	}
+	free(line);
+	if(errno != 0) show_error_and_exit(file, "leer");
+	return lines;
+}
+
+void file_close(t_file *file) {
+	if(file != NULL) {
+		fclose(file);
+	}
+}
+
+// ========== Funciones privadas ==========
+
+char *user_path(const char *path) {
+	char fullpath[PATH_MAX] = {0};
+	if(*path == '/') {
+		strcpy(fullpath, path);
+	} else {
+		snprintf(fullpath, PATH_MAX, "%s/%s", system_userdir(), path);
+	}
+	return strdup(fullpath);
+}
+
+void show_error_and_exit(t_file *file, const char *type) {
+	char *path = file_path(file);
+	log_report("Error al %s archivo %s: %s", type, path, strerror(errno));
+	free(path);
+	exit(EXIT_FAILURE);
 }
 

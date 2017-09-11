@@ -19,7 +19,7 @@ const char *system_basedir() {
 	static char dir[PATH_MAX] = {0};
 	if(!*dir) {
 		char *execdir = file_dir(system_proc());
-		char *path = mstring_format("%s/../..", execdir);
+		char *path = mstring_create("%s/../..", execdir);
 		free(execdir);
 		realpath(path, dir);
 		free(path);
@@ -46,13 +46,17 @@ const char *system_rscdir() {
 void system_init() {
 	file_mkdir(system_userdir());
 
-	char *confdir = mstring_format("%s/config", system_userdir());
+	char *confdir = mstring_create("%s/config", system_userdir());
 	file_mkdir(confdir);
 	free(confdir);
 
-	char *logdir = mstring_format("%s/logs", system_userdir());
+	char *logdir = mstring_create("%s/logs", system_userdir());
 	file_mkdir(logdir);
 	free(logdir);
+
+	char *tmpdir = mstring_create("%s/tmp", system_userdir());
+	file_mkdir(tmpdir);
+	free(tmpdir);
 }
 
 const char *system_proc() {

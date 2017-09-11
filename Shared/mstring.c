@@ -1,9 +1,13 @@
-#include "mstring.h"
 #include <string.h>
 #include <ctype.h>
+#include <mstring.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+static char *create_format_template(const char *format, va_list args);
+
+// ========== Funciones públicas ==========
 
 char *mstring_trim(char *string) {
 	if(string == NULL || string[0] == '\0') {
@@ -30,13 +34,23 @@ char *mstring_trim(char *string) {
     return string;
 }
 
-char *mstring_format(const char *format, ...) {
-	char buffer[1024];
-	va_list ap;
-	va_start(ap, format);
-	vsnprintf(buffer, sizeof buffer, format, ap);
-	va_end(ap);
-	return strdup(buffer);
+char *mstring_create(const char *format, ...) {
+	char *str = NULL;
+	va_list args;
+	va_start(args, format);
+	str = create_format_template(format, args);
+	va_end(args);
+	return str;
+}
+
+void mstring_format(char **string, const char *format, ...) {
+	char *str = NULL;
+	va_list args;
+	va_start(args, format);
+	str = create_format_template(format, args);
+	va_end(args);
+	free(*string);
+	*string = str;
 }
 
 bool mstring_empty(const char *string) {
@@ -54,4 +68,12 @@ bool mstring_equal(const char *str1, const char *str2) {
 
 bool mstring_equali(const char *str1, const char *str2) {
 	return strcasecmp(str1, str2) == 0;
+}
+
+// ========== Funciones privadas ==========
+
+static char *create_format_template(const char *format, va_list args) {
+	char buffer[1024];
+	vsnprintf(buffer, sizeof buffer, format, args);
+	return strdup(buffer);
 }

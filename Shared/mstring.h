@@ -19,7 +19,14 @@ char *mstring_trim(char *string);
  * @param format Formato de la cadena.
  * @return Cadena con formato.
  */
-char *mstring_format(const char *format, ...);
+char *mstring_create(const char *format, ...);
+
+/**
+ * Modifica una usando el formato especificado.
+ * @param Puntero a la cadena a modificar.
+ * @param format Formato de la cadena.
+ */
+void mstring_format(char **string, const char *format, ...);
 
 /**
  * Verifica si una cadena está vacía.
