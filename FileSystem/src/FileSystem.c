@@ -1,12 +1,11 @@
-#include <config.h>
 #include <process.h>
+#include <stdlib.h>
 #include "console.h"
 #include "server.h"
 
 int main() {
 	process_init(PROC_FILESYSTEM);
-	config_load();
-	escucharPuertosDataNodeYYama();
+	server();
 	console();
-	return 0;
+	return EXIT_SUCCESS;
 }

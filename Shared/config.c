@@ -1,11 +1,13 @@
-#include "config.h"
 #include <file.h>
 #include <mstring.h>
 #include <process.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <system.h>
 #include <log.h>
+#include <commons/config.h>
 #include <commons/collections/dictionary.h>
+#include <config.h>
 
 static const char *config_name(void);
 static char *config_file(bool user);
@@ -49,7 +51,7 @@ static const char *config_name() {
 }
 
 static char *config_file(bool user) {
-	const char *dir = user ? file_userdir() : file_rscdir();
+	const char *dir = user ? system_userdir() : system_rscdir();
 	return mstring_format("%s/config/%s.cnf", dir, config_name());
 }
 

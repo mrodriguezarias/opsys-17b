@@ -1,5 +1,6 @@
-#include <file.h>
-#include "process.h"
+#include <config.h>
+#include <process.h>
+#include <system.h>
 
 static t_process current = PROC_UNDEFINED;
 
@@ -7,7 +8,8 @@ static t_process current = PROC_UNDEFINED;
 
 void process_init(t_process process) {
 	current = process;
-	file_create_sysdirs();
+	system_init();
+	config_load();
 }
 
 t_process process_current() {

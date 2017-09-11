@@ -47,3 +47,11 @@ bool mstring_empty(const char *string) {
 	free(copy);
 	return empty;
 }
+
+bool mstring_equal(const char *str1, const char *str2) {
+	return strcmp(str1, str2) == 0;
+}
+
+bool mstring_equali(const char *str1, const char *str2) {
+	return strcasecmp(str1, str2) == 0;
+}

@@ -39,6 +39,8 @@ t_socket socket_init(const char *ip, const char *port) {
 	}
 
 	freeaddrinfo(addr);
+
+	if((sockfd == -1 || ret == -1) && errno == ENOTCONN) return -1;
 	check_descriptor(sockfd);
 	check_descriptor(ret);
 
@@ -69,37 +71,39 @@ t_socket socket_connect(const char *ip, const char *port) {
 	return socket_init(ip, port);
 }
 
-size_t socket_send_string(t_socket sockfd, const char *message) {
-	return sendall(sockfd, message, strlen(message) + 1);
-}
-
 size_t socket_send_bytes(t_socket sockfd, const char *message, size_t size) {
 	return sendall(sockfd, message, size);
-}
-
-size_t socket_receive_string(t_socket sockfd, char *message) {
-	return recvall(sockfd, message, MAXSIZE);
 }
 
 size_t socket_receive_bytes(t_socket sockfd, char *message, size_t size) {
 	return recvall(sockfd, message, size);
 }
 
-fdset_t socket_set_create() {
-	fdset_t fds;
+void socket_send_string(t_socket sockfd, const char *message) {
+	sendall(sockfd, message, strlen(message) + 1);
+}
+
+char *socket_receive_string(t_socket sockfd) {
+	char message[MAXSIZE];
+	size_t size = recvall(sockfd, message, MAXSIZE);
+	return size > 0 ? strdup(message) : NULL;
+}
+
+t_fdset socket_set_create() {
+	t_fdset fds;
 	fds.max = -1;
 	FD_ZERO(&fds.set);
 	return fds;
 }
 
-void socket_set_add(fdset_t *fds, t_socket fd) {
+void socket_set_add(t_socket fd, t_fdset *fds) {
 	FD_SET(fd, &fds->set);
 	if(fd > fds->max) {
 		fds->max = fd;
 	}
 }
 
-void socket_set_remove(fdset_t *fds, t_socket fd) {
+void socket_set_remove(t_socket fd, t_fdset *fds) {
 	if(!FD_ISSET(fd, &fds->set)) return;
 	FD_CLR(fd, &fds->set);
 	if(fd == fds->max) {
@@ -107,8 +111,15 @@ void socket_set_remove(fdset_t *fds, t_socket fd) {
 	}
 }
 
-int socket_set_contains(fdset_t *fds, t_socket fd) {
+int socket_set_contains(t_socket fd, t_fdset *fds) {
 	return FD_ISSET(fd, &fds->set);
+}
+
+t_fdset socket_select(t_fdset fds) {
+	t_fdset sfds = fds;
+	int r = select(sfds.max + 1, &sfds.set, NULL, NULL, NULL);
+	check_descriptor(r);
+	return sfds;
 }
 
 void socket_close(t_socket sockfd) {
@@ -169,7 +180,7 @@ static size_t recvall(t_socket sockfd, void *buf, size_t len) {
 
 	while(bytes_received < len) {
 		ssize_t n = recv(sockfd, buf + bytes_received, len - bytes_received, 0);
-		check_descriptor(n);
+		if(n == -1) return 0;
 		bytes_received += n;
 		if(n == 0 || (len == MAXSIZE && ((char*)buf)[bytes_received - 1] == '\0')) {
 			break;

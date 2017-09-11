@@ -10,7 +10,7 @@ typedef int t_socket;
 typedef struct {
     fd_set set;
     t_socket max;
-} fdset_t;
+} t_fdset;
 
 /**
  * Si se indica la IP, crea un socket y lo conecta al servidor de la IP y
@@ -48,14 +48,6 @@ t_socket socket_accept(t_socket sv_sock);
 t_socket socket_connect(const char *ip, const char *port);
 
 /**
- * Envía una cadena de texto por una conexión abierta en un determinado socket.
- * @param sockfd Descriptor del socket.
- * @param message Mensaje a enviar.
- * @return Número de bytes enviados.
- */
-size_t socket_send_string(t_socket sockfd, const char *message);
-
-/**
  * Envía datos binarios por una conexión abierta en un determinado socket.
  * @param sockfd Descriptor del socket.
  * @param message Mensaje a enviar.
@@ -63,14 +55,6 @@ size_t socket_send_string(t_socket sockfd, const char *message);
  * @return Número de bytes enviados.
  */
 size_t socket_send_bytes(t_socket sockfd, const char *message, size_t size);
-
-/**
- * Recibe una cadena de texto por una conexión abierta en un determinado socket.
- * @param sockfd Descriptor del socket.
- * @param message Mensaje a recibir.
- * @return Número de bytes recibidos (-1 si hubo error).
- */
-size_t socket_receive_string(t_socket sockfd, char *message);
 
 /**
  * Recibe datos binarios por una conexión abierta en un determinado socket.
@@ -82,31 +66,53 @@ size_t socket_receive_string(t_socket sockfd, char *message);
 size_t socket_receive_bytes(t_socket sockfd, char *message, size_t size);
 
 /**
+ * Envía una cadena de texto por una conexión abierta en un determinado socket.
+ * @param sockfd Descriptor del socket.
+ * @param message Mensaje a enviar.
+ */
+void socket_send_string(t_socket sockfd, const char *message);
+
+/**
+ * Recibe una cadena de texto por una conexión abierta en un determinado socket.
+ * La cadena recibida debe ser liberada con free() después de usarla.
+ * @param sockfd Descriptor del socket.
+ * @return Mensaje recibido.
+ */
+char *socket_receive_string(t_socket sockfd);
+
+/**
  * Crea un conjunto de sockets para ser usado por socket_select().
  * @return Conjunto de sockets.
  */
-fdset_t socket_set_create(void);
+t_fdset socket_set_create(void);
 
 /**
  * Agrega un socket a un conjunto de sockets.
- * @param fds conjunto de sockets.
- * @param fd socket a agregar.
+ * @param fd Socket a agregar.
+ * @param fds Conjunto de sockets.
  */
-void socket_set_add(fdset_t *fds, t_socket fd);
+void socket_set_add(t_socket fd, t_fdset *fds);
 
 /**
  * Elimina un socket de un conjunto de sockets.
- * @param fds conjunto de sockets.
- * @param fd socket a eliminar.
+ * @param fd Socket a eliminar.
+ * @param fds Conjunto de sockets.
  */
-void socket_set_remove(fdset_t *fds, t_socket fd);
+void socket_set_remove(t_socket fd, t_fdset *fds);
 
 /**
  * Verifica si un socket está presente en un conjunto de sockets.
- * @param fds conjunto de sockets.
- * @param fd socket a verificar.
+ * @param fd Socket a verificar.
+ * @param fds Conjunto de sockets.
  */
-int socket_set_contains(fdset_t *fds, t_socket fd);
+int socket_set_contains(t_socket fd, t_fdset *fds);
+
+/**
+ * Realiza un select() sobre un determinado set de sockets.
+ * @param sockets Set de sockets.
+ * @return Sockets seleccionados.
+ */
+t_fdset socket_select(t_fdset fds);
 
 /**
  * Cierra un socket abierto con socket_listen() o socket_connect().

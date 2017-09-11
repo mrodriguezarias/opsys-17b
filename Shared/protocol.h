@@ -39,4 +39,10 @@ void protocol_send(t_packet packet, t_socket socket);
  */
 t_packet protocol_receive(t_socket socket);
 
+/**
+ * Envía un apretón de manos.
+ * @param socket Descriptor del socket.
+ */
+void protocol_handshake(t_socket socket);
+
 #endif /* PROTOCOL_H_ */

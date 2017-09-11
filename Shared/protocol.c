@@ -43,3 +43,7 @@ t_packet protocol_receive(t_socket socket) {
 
 	return packet;
 }
+
+void protocol_handshake(t_socket socket) {
+	protocol_send(protocol_packet(OP_HANDSHAKE, 0, NULL), socket);
+}

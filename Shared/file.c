@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <pwd.h>
 #include <stdio.h>
 #include <limits.h>
 #include <sys/stat.h>
@@ -12,73 +11,12 @@
 #include <libgen.h>
 #include <errno.h>
 
-#include <stdio.h>
-
-// ========== Directorios del sistema ==========
-
-const char *file_homedir() {
-	char *homedir;
-	if((homedir = getenv("HOME")) == NULL) {
-		homedir = getpwuid(getuid())->pw_dir;
-	}
-	return homedir;
-}
-
-const char *file_sysdir() {
-	static char dir[PATH_MAX] = {0};
-	if(!*dir) {
-		char *execdir = file_dir(file_proc());
-		char *path = mstring_format("%s/../..", execdir);
-		free(execdir);
-		realpath(path, dir);
-		free(path);
-	}
-	return dir;
-}
-
-const char *file_userdir() {
-	static char dir[PATH_MAX] = {0};
-	if(!*dir) {
-		snprintf(dir, PATH_MAX, "%s/yatpos", file_homedir());
-	}
-	return dir;
-}
-
-const char *file_rscdir() {
-	static char dir[PATH_MAX] = {0};
-	if(!*dir) {
-		snprintf(dir, PATH_MAX, "%s/Shared/rsc", file_sysdir());
-	}
-	return dir;
-}
-
-void file_create_sysdirs() {
-	file_mkdir(file_userdir());
-
-	char *confdir = mstring_format("%s/config", file_userdir());
-	file_mkdir(confdir);
-	free(confdir);
-
-	char *logdir = mstring_format("%s/logs", file_userdir());
-	file_mkdir(logdir);
-	free(logdir);
-}
-
-// ========== Funciones de archivos ==========
-
-const char *file_proc() {
-	static char proc[PATH_MAX] = {0};
-	if(!*proc) {
-		readlink("/proc/self/exe", proc, PATH_MAX);
-	}
-	return proc;
-}
-
 bool file_exists(const char *path) {
 	return access(path, F_OK) != -1;
 }
 
 bool file_isdir(const char *path) {
+	if(!file_exists(path)) return false;
 	struct stat s;
 	stat(path, &s);
 	return s.st_mode & S_IFDIR;
@@ -128,7 +66,7 @@ void file_copy(const char *source, const char *target) {
 	if(file_isdir(target)) {
 		snprintf(path, PATH_MAX, "%s/%s", target, file_name(source));
 	} else {
-		strncpy(path, target, PATH_MAX);
+		strcpy(path, target);
 	}
 
 	int fd_to = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0664);

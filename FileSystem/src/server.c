@@ -1,5 +1,4 @@
 #include "server.h"
-#include <config.h>
 #include <stddef.h>
 #include <sys/select.h>
 #include <netinet/in.h>
@@ -9,6 +8,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <config.h>
+#include <protocol.h>
 
 #define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
 
@@ -21,7 +22,7 @@ typedef struct {
 void handshakeConDataNode(int, struct sockaddr_in, fd_set,fd_set, int);
 void handshakeConYama(int, struct sockaddr_in, fd_set,fd_set, int);
 
-void escucharPuertosDataNodeYYama() {
+void server() {
 	fd_set master;
 	fd_set read_fds;
 	int maximo_Sockets;
@@ -166,13 +167,9 @@ void handshakeConDataNode(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set
 
 void handshakeConYama(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set master,
 		fd_set read_fds, int maximo_Sockets) {
-	char buffer_select[MAXIMO_TAMANIO_DATOS];
-	int cantidadBytes;
 
-	cantidadBytes = recv(nuevoSocket, buffer_select, sizeof(buffer_select), 0);
-	buffer_select[cantidadBytes] = '\0';
-	printf("Credencial recibida: %s\n", buffer_select);
-	if (!strcmp(buffer_select, "Yatpos-Yama\0")) { //Yatpos es la credencial que autoriza al proceso a seguir conectado
+	t_packet packet = protocol_receive(nuevoSocket);
+	if(packet.operation == OP_HANDSHAKE && packet.sender == PROC_YAMA) {
 		printf("FileSystem: nueva conexion desde %s en socket %d\n",
 				inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
 		if (send(nuevoSocket, "Bienvenido al FileSystem!", 26, 0) == -1) {

@@ -1,10 +1,11 @@
-#include <file.h>
+#include <mstring.h>
+#include <readline/history.h>
+#include <readline/readline.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <readline/readline.h>
-#include <readline/history.h>
-#include <stdbool.h>
-#include "mstring.h"
+#include <string.h>
+#include <system.h>
 
 // ========== Estructuras ==========
 
@@ -87,7 +88,7 @@ void console() {
 // ========== Funciones privadas ==========
 
 static void init_console() {
-	history_file = mstring_format("%s/.history", file_userdir());
+	history_file = mstring_format("%s/.history", system_userdir());
 	read_history(history_file);
 	rl_attempted_completion_function = rl_completion;
 }

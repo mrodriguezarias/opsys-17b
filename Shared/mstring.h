@@ -28,4 +28,21 @@ char *mstring_format(const char *format, ...);
  */
 bool mstring_empty(const char *string);
 
+/**
+ * Verifica si dos cadenas son iguales.
+ * @param str1 Cadena 1.
+ * @param str2 Cadena 2.
+ * @return Valor lógico indicando si las cadenas son iguales.
+ */
+bool mstring_equal(const char *str1, const char *str2);
+
+/**
+ * Verifica si dos cadenas son iguales.
+ * No tiene en cuenta mayúsculas y minúsculas. (i=ignore case)
+ * @param str1 Cadena 1.
+ * @param str2 Cadena 2.
+ * @return Valor lógico indicando si las cadenas son iguales.
+ */
+bool mstring_equali(const char *str1, const char *str2);
+
 #endif /* MSTRING_H_ */
