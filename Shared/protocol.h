@@ -1,8 +1,9 @@
 #ifndef PROTOCOL_H_
 #define PROTOCOL_H_
 
-#include "socket.h"
-#include "process.h"
+#include <process.h>
+#include <serial.h>
+#include <socket.h>
 
 typedef enum {
 	OP_UNDEFINED,
@@ -12,17 +13,16 @@ typedef enum {
 typedef struct {
 	t_process sender;		// Proceso remitente
 	t_operation operation;	// Operación a realizar
-	size_t size;			// Tamaño del paquete
-	char *content;			// Contenido serializado
+	t_serial content;		// Contenido serializado
 } t_packet;
 
 /**
  * Crea un paquete para enviar una operación.
- * @param header Encabezado del paquete.
- * @param payload (Opcional) Cuerpo del paquete.
+ * @param operation Operación a realizar.
+ * @param content Contenido serializado.
  * @return Paquete.
  */
-t_packet protocol_packet(t_operation operation, size_t size, char *content);
+t_packet protocol_packet(t_operation operation, t_serial content);
 
 /**
  * Envía un packete a un determinado socket.

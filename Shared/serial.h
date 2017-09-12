@@ -1,6 +1,13 @@
 #ifndef SERIAL_H_
 #define SERIAL_H_
 
+#include <stddef.h>
+
+typedef struct serial {
+	char *data;
+	size_t size;
+} t_serial;
+
 /*
  * Referencias para el formato de serialización:
  * ---
@@ -18,15 +25,14 @@
 
 /*
  * Serializa datos según el formato especificado.
- * @param buf Búfer de datos serializados.
- * @return Tamaño de los datos serializados.
+ * @return Datos serializados (serial.data debe ser liberado con free()).
  */
-size_t serial_pack(char *buf, const char *format, ...);
+t_serial serial_pack(const char *format, ...);
 
 /*
  * Deserializa datos según el formato especificado.
- * @param buf Búfer de datos serializados.
+ * @param serial Datos serializados.
  */
-void serial_unpack(const char *buf, const char *format, ...);
+void serial_unpack(t_serial serial, const char *format, ...);
 
 #endif /* SERIAL_H_ */

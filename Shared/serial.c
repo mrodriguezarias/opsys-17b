@@ -8,6 +8,10 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdlib.h>
+#include "serial.h"
+
+#define SERIAL_MAX 1024
 
 // macros for packing floats and doubles:
 #define pack754_16(f) (pack754((f), 16, 5))
@@ -201,8 +205,10 @@ static unsigned long long int unpacku64(unsigned char *buf)
 **  (16-bit unsigned length is automatically prepended to strings)
 */
 
-unsigned int serial_pack(char *buf, const char *format, ...)
+t_serial serial_pack(const char *format, ...)
 {
+	char buffer[SERIAL_MAX];
+	char *buf = buffer;
 	va_list ap;
 
 	signed char c;              // 8-bit
@@ -314,7 +320,10 @@ unsigned int serial_pack(char *buf, const char *format, ...)
 
 	va_end(ap);
 
-	return size;
+	char *data = malloc(size);
+	memcpy(data, buffer, size);
+
+	return (t_serial) {data, size};
 }
 
 /*
@@ -323,8 +332,9 @@ unsigned int serial_pack(char *buf, const char *format, ...)
 **  (string is extracted based on its stored length, but 's' can be
 **  prepended with a max length)
 */
-void serial_unpack(const char *buf, const char *format, ...)
+void serial_unpack(t_serial serial, const char *format, ...)
 {
+	const char *buf = serial.data;
 	va_list ap;
 
 	signed char *c;              // 8-bit

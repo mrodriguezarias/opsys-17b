@@ -6,23 +6,21 @@
 
 static const size_t HEADER_SIZE = sizeof(t_process) + sizeof(t_operation) + sizeof(size_t);
 
-t_packet protocol_packet(t_operation operation, size_t size, char *content) {
+t_packet protocol_packet(t_operation operation, t_serial content) {
 	t_packet packet;
 	packet.sender = process_current();
 	packet.operation = operation;
-	packet.size = size;
 	packet.content = content;
 	return packet;
 }
 
 void protocol_send(t_packet packet, t_socket socket) {
-	char *header = malloc(HEADER_SIZE);
-	serial_pack(header, "iii", packet.sender, packet.operation, packet.size);
-	socket_send_bytes(socket, header, HEADER_SIZE);
-	free(header);
+	t_serial header = serial_pack("iii", packet.sender, packet.operation, packet.content.size);
+	socket_send_bytes(socket, header.data, header.size);
+	free(header.data);
 
-	if(packet.size > 0 && packet.content != NULL) {
-		socket_send_bytes(socket, packet.content, packet.size);
+	if(packet.content.size > 0) {
+		socket_send_bytes(socket, packet.content.data, packet.content.size);
 	}
 }
 
@@ -30,20 +28,20 @@ t_packet protocol_receive(t_socket socket) {
 	t_packet packet;
 	memset(&packet, 0, sizeof packet);
 
-	char *header = malloc(HEADER_SIZE);
-	if(socket_receive_bytes(socket, header, HEADER_SIZE)) {
-		serial_unpack(header, "iii", &packet.sender, &packet.operation, &packet.size);
+	t_serial header = {malloc(HEADER_SIZE), HEADER_SIZE};
+	if(socket_receive_bytes(socket, header.data, header.size)) {
+		serial_unpack(header, "iii", &packet.sender, &packet.operation, &packet.content.size);
 	}
-	free(header);
+	free(header.data);
 
-	if(packet.operation != OP_UNDEFINED && packet.size > 0) {
-		packet.content = malloc(packet.size);
-		socket_receive_bytes(socket, packet.content, packet.size);
+	if(packet.operation != OP_UNDEFINED && packet.content.size > 0) {
+		packet.content.data = malloc(packet.content.size);
+		socket_receive_bytes(socket, packet.content.data, packet.content.size);
 	}
 
 	return packet;
 }
 
 void protocol_handshake(t_socket socket) {
-	protocol_send(protocol_packet(OP_HANDSHAKE, 0, NULL), socket);
+	protocol_send(protocol_packet(OP_HANDSHAKE, (t_serial){NULL, 0}), socket);
 }

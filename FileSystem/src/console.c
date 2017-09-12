@@ -88,7 +88,7 @@ void console() {
 // ========== Funciones privadas ==========
 
 static void init_console() {
-	history_file = mstring_format("%s/.history", system_userdir());
+	history_file = mstring_create("%s/.history", system_userdir());
 	read_history(history_file);
 	rl_attempted_completion_function = rl_completion;
 }
