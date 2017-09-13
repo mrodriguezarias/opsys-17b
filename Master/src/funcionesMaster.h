@@ -3,8 +3,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "socket.h"
-#include "serial.h"
+
+#include <protocol.h>
+#include <log.h>
+#include <socket.h>
+#include <serial.h>
 
 #include<commons/log.h>
 #include<commons/config.h>
@@ -59,23 +62,24 @@ pthread_t * hilo_worker;
 
 typedef struct{
 	char * nodo;                 //Nodo 1
-	char * ip_y_puerto_worker;   //192.168.1.10:5000  aaa.ddd.c.dd:ppppp contando \0
+	char * ip;   //192.168.1.10:5000  aaa.ddd.c.dd:ppppp contando \0
+	char * puerto;//Divido en dos al puerto y la ip, para tener mas facilidad en su uso
 	char * archivo_etapa;        /* /tmp/Master1-temp38 */
 }tDatosEtapa,tAlmacenadoFinal;
 
 typedef struct{
-	tDatosEtapa * etapa_transformacion;
+	tDatosEtapa  etapa_transformacion;
 	int bloque;				  //38
 	int bytes_ocupados;		  //10180
 }tEtapaTransformacion;
 
 typedef struct{
-	tDatosEtapa * etapa_reduccion_local;
+	tDatosEtapa  etapa_reduccion_local;
     t_list * archivos_temporales_de_transformacion;
 }tEtapaReduccionLocal;
 
 typedef struct{
-	tDatosEtapa * etapa_reduccion_global;
+	tDatosEtapa  etapa_reduccion_global;
     char * archivo_temporal_de_rl; // rl = reduccion_local
     bool * encargado;
 }tEtapaReduccionGlobal;
@@ -89,7 +93,8 @@ void liberarConfiguracionMaster(tMaster*masterAux);
 void iniciar_master(tMaster * masterAux);
 
 
-void connect_to_yama(tMaster * masterAux);
+//void connect_to_yama(tMaster * masterAux);
+void connect_to_yama();
 void connect_to_worker(const char * ip,const char*port);
 void terminate(void);
 

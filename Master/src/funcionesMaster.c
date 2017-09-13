@@ -1,22 +1,22 @@
 #include "funcionesMaster.h"
 #include "manejadores.h"
-t_log * logTrace;
-void crearLogger() {
-   char *pathLogger = string_new();
-
-   char cwd[1024];
-
-   string_append(&pathLogger, getcwd(cwd, sizeof(cwd)));
-
-   string_append(&pathLogger, "/Master_LOG.log");
-
-   char *logmaster = strdup("Master_LOG.log");
-
-   logTrace = log_create(pathLogger, logmaster, false, LOG_LEVEL_INFO);
-
-   free(pathLogger);
-   free(logmaster);
-}
+//t_log * logTrace;
+//void crearLogger() {
+//   char *pathLogger = string_new();
+//
+//   char cwd[1024];
+//
+//   string_append(&pathLogger, getcwd(cwd, sizeof(cwd)));
+//
+//   string_append(&pathLogger, "/Master_LOG.log");
+//
+//   char *logmaster = strdup("Master_LOG.log");
+//
+//   logTrace = log_create(pathLogger, logmaster, false, LOG_LEVEL_INFO);
+//
+//   free(pathLogger);
+//   free(logmaster);
+//}
 tMaster *getConfigMaster() {
 	printf("Ruta del archivo de configuracion: %s\n", RUTA_CONFIG);
 	tMaster *masterAux = malloc(sizeof(tMaster));
@@ -64,7 +64,7 @@ void liberarConfiguracionMaster(tMaster*masterAux) {
 }
 
 void iniciar_master(tMaster * masterAux){
-		crearLogger();
+	//	crearLogger();
 		masterAux = getConfigMaster();
 		mostrarConfiguracion(masterAux);
 		connect_to_yama(masterAux);
@@ -73,18 +73,18 @@ void iniciar_master(tMaster * masterAux){
 
 
 
-void connect_to_yama(tMaster * masterAux) {
-	const char *ip = config_get(masterAux->YAMA_IP);
-	const char *port = config_get(masterAux->YAMA_PUERTO);
+void connect_to_yama() {
+	const char *ip = config_get("YAMA_IP");
+	const char *port = config_get("YAMA_PUERTO");
 
 	t_socket socket = socket_connect(ip, port);
 	if(socket == -1) {
-		logep("YAMA no está corriendo en %s:%s", ip, port);
+		//logep("YAMA no está corriendo en %s:%s", ip, port);
 		exit(EXIT_FAILURE);
 	}
 
 	protocol_handshake(socket);
-	logif("Conectado a YAMA en %s:%s por el socket %i", ip, port, socket);
+	//logif("Conectado a YAMA en %s:%s por el socket %i", ip, port, socket);
 	master.yama_socket = socket;
 }
 
@@ -93,12 +93,12 @@ void connect_to_worker(const char* IP,const char * puerto) { //La ip y el puerto
 	const char *port = config_get(puerto);
 	t_socket socket = socket_connect(ip, port);
 	if(socket == -1) {
-		logep("Worker no está corriendo en %s:%s", ip, port);
+		//logep("Worker no está corriendo en %s:%s", ip, port);
 		exit(EXIT_FAILURE);
 	}
 
 	protocol_handshake(socket);
-	logif("Conectado a Worker en %s:%s por el socket %i", ip, port, socket);
+	//logif("Conectado a Worker en %s:%s por el socket %i", ip, port, socket);
 	master.worker_socket = socket;
 }
 

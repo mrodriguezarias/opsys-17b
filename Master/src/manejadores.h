@@ -2,6 +2,7 @@
 #define MANEJADORES_H
 
 #include "funcionesMaster.h"
+#include <protocol.h>
 #include <commons/log.h>
 
 typedef enum{
@@ -14,7 +15,7 @@ typedef enum{
 
 
 
-void manejador_yama(t_packet *);
+void manejador_yama(t_packet );
 void manejador_worker();
 
 

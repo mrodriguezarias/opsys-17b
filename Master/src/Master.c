@@ -42,12 +42,16 @@ int main(int argc,char*argv[]) {
 	printf("Enviando archivo a YAMA...");
 	socket_send_string(master.yama_socket, lines);
 	printf(" ok\n");
-	t_packet * paquete;//paquete recivido desde llama
-	size_t stat;
+
+	t_packet * paquete;	//paquete recivido desde llama
+	t_packet packet;
+
 	do{
-		manejador_yama(paquete);
+		packet = protocol_receive(master.yama_socket);
+		manejador_yama(packet);
+
 	}
-	while((stat = socket_receive_bytes(master.yama_socket,paquete->content,paquete->size))<0);
+	while(true);
 
 
 
