@@ -47,6 +47,10 @@ void manejador_yama(t_packet paquete) {
 //		printf("nodo: %s\n",etapa_transformacion->nodo);
 //		printf("puerto: %s\n",etapa_transformacion->puerto);
 		connect_to_worker(etapa_transformacion.ip, etapa_transformacion.puerto);
+		printf("Socket worker: %d \n",master.worker_socket);
+		char * buffer = socket_receive_string(master.worker_socket);
+		t_packet worker = protocol_receive(socket_worker);
+		printf("Respuesta handshake de Worker %s \n",buffer);
 		if (pthread_create(&hilo_transformacion, NULL,
 				(void*) manejador_transformacion, &etapa_transformacion) < 0) {
 			log_report("Error al crear hilo en INICIAR_TRANSFORMACION");

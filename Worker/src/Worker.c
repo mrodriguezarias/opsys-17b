@@ -186,20 +186,20 @@ void handshakeConMaster(int nuevoSocket, struct sockaddr_in remoteaddr){
 		char buffer_select[MAXIMO_TAMANIO_DATOS];
 		int cantidadBytes;
 		strcpy(buffer_select,"");
-		cantidadBytes = recv(nuevoSocket, buffer_select, sizeof(buffer_select), 0);
-		buffer_select[cantidadBytes] = '\0';
-		printf("recibi %d \n",cantidadBytes);
-		printf("Credencial recibida: %s\n", buffer_select);
-		if (!strcmp(buffer_select, "Yatpos-Master\0")) { //Yatpos es la credencial que autoriza al proceso a seguir conectado
+		//cantidadBytes = recv(nuevoSocket, buffer_select, sizeof(buffer_select), 0);
+		t_socket cli_sock = nuevoSocket;
+		t_packet packet = protocol_receive(cli_sock);
+
+
+//		printf("recibi %d \n",cantidadBytes);
+//		printf("Credencial recibida: %d\n", *((int*)buffer_select));
+		//!strcmp(buffer_select, "Yatpos-Master\0")
+		if (packet.operation == OP_HANDSHAKE) { //Yatpos es la credencial que autoriza al proceso a seguir conectado
 			printf("Yama: nueva conexion desde %s en socket %d\n", inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
-			if (send(nuevoSocket, "Bienvenido a Worker!", 20, 0) == -1) {
-				perror("Error en el send");
-			}
+			socket_send_string(nuevoSocket,"Bienvenido a Worker!");
 		} else {
 			printf("El proceso que requirio acceso, no posee los permisos adecuados\n");
-			if (send(nuevoSocket, "Usted no esta autorizado!", MAXIMO_TAMANIO_DATOS, 0) == -1) {
-				perror("Error en el send");
-			}
+			socket_send_string(nuevoSocket,"No posee los permisos adecuados");
 			close(nuevoSocket);
 		}
  }
@@ -208,7 +208,7 @@ void creoHijos(){
 	if ( fork() == 0 ) {
 	/* Lógica del proceso HIJO */
 	printf("Hola soy el hijo \n");
-	exit(0);
+	//exit(0);
 	}
 	else {
 	/* Lógica del proceso PADRE*/
