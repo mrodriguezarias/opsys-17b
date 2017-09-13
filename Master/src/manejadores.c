@@ -11,15 +11,15 @@ pthread_t hilo_rg;
 
 void manejador_transformacion(tEtapaTransformacion * transformacion) {
 	puts("Manejador_transformacion");
-	log_inform("Hilo MANEJADOR_TRANSFORMACION");
-	connect_to_worker(transformacion->ip, transformacion->puerto);
+	log_inform("Hilo ETAPA_TRANSFORMACION");
+
 }
 
 void manejador_rl(tEtapaReduccionLocal * etapa_rl) {
-	connect_to_worker(etapa_rl->ip, etapa_rl->puerto);
+	log_inform("Hilo ETAPA_REDUCCION_LOCAL");
 }
 void manejador_rg(tEtapaReduccionGlobal * etapa_rg) {
-	connect_to_worker(etapa_rg->ip, etapa_rg->puerto);
+	log_inform("Hilo ETAPA_REDUCCION_GLOBAL");
 }
 
 void manejador_yama(t_packet paquete) {
@@ -46,7 +46,7 @@ void manejador_yama(t_packet paquete) {
 //		printf("ip: %s\n",etapa_transformacion->ip);
 //		printf("nodo: %s\n",etapa_transformacion->nodo);
 //		printf("puerto: %s\n",etapa_transformacion->puerto);
-
+		connect_to_worker(etapa_transformacion.ip, etapa_transformacion.puerto);
 		if (pthread_create(&hilo_transformacion, NULL,
 				(void*) manejador_transformacion, &etapa_transformacion) < 0) {
 			log_report("Error al crear hilo en INICIAR_TRANSFORMACION");
@@ -62,6 +62,7 @@ void manejador_yama(t_packet paquete) {
 	case (INICIAR_REDUCCION_LOCAL):
 		serial_unpack(paquete.content, "ssss", etapa_rl.archivo_etapa,
 				etapa_rl.ip, etapa_rl.nodo, etapa_rl.puerto);
+	connect_to_worker(etapa_rl.ip, etapa_rl.puerto);
 		if (pthread_create(&hilo_rl, NULL, (void*) manejador_rl, &etapa_rl)
 				< 0) {
 			log_report("Error al crear hilo en INICIAR_REDUCCION_LOCAL");
@@ -76,6 +77,7 @@ void manejador_yama(t_packet paquete) {
 		serial_unpack(paquete.content, "sssssi", etapa_rg.archivo_etapa,
 				etapa_rg.ip, etapa_rg.nodo, etapa_rg.puerto,
 				etapa_rg.archivo_temporal_de_rl, &etapa_rg.encargado);
+	connect_to_worker(etapa_rg.ip, etapa_rg.puerto);
 		if (pthread_create(&hilo_rg, NULL, (void*) manejador_rg, &etapa_rg)
 				< 0) {
 			log_report("Error al crear hilo en INICIAR_REDUCCION_GLOBAL");
