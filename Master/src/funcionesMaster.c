@@ -88,17 +88,16 @@ void connect_to_yama() {
 	master.yama_socket = socket;
 }
 
-void connect_to_worker(const char* IP,const char * puerto) { //La ip y el puerto son obtenidos mediante YAMA
-	const char *ip = config_get(IP);
-	const char *port = config_get(puerto);
+void connect_to_worker(const char* ip,const char * port) { //La ip y el puerto son obtenidos mediante YAMA
+
 	t_socket socket = socket_connect(ip, port);
 	if(socket == -1) {
-		//logep("Worker no está corriendo en %s:%s", ip, port);
+		log_report("Worker no está corriendo en %s:%s", ip, port);
 		exit(EXIT_FAILURE);
 	}
 
 	protocol_handshake(socket);
-	//logif("Conectado a Worker en %s:%s por el socket %i", ip, port, socket);
+	log_inform("Conectado a Worker en %s:%s por el socket %i", ip, port, socket);
 	master.worker_socket = socket;
 }
 

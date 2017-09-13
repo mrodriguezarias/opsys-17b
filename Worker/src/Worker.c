@@ -1,9 +1,21 @@
-#include <stdlib.h>
-#include <stdio.h>
+#include <sys/types.h>
+#include <netdb.h>
 #include <string.h>
+#include <process.h>
+#include <file.h>
+#include <stdio.h>
+#include <stddef.h>
+#include <sys/select.h>
+#include <netinet/in.h>
+#include <socket.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
-#include "socket.h"
-#include "serial.h"
+#include <arpa/inet.h>
+#include <config.h>
+#include <protocol.h>
+#include <log.h>
+#include <serial.h>
 
 #include <commons/config.h>
 #include <commons/log.h>
@@ -18,6 +30,9 @@
 #define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
 #define MAXCONEXIONESLISTEN 10
 
+
+
+
 #define RUTA "config_worker"
 
 typedef struct{
@@ -29,8 +44,8 @@ typedef struct{
 		 * RUTA_DATABIN;
 
 }tWorker;
-tWorker * worker;
-t_log * logTrace;
+
+//t_log * logTrace;
 typedef struct {
  int id;
  int tamanio;
@@ -45,26 +60,26 @@ void escucharPuertosMaster();
 void creoHijos();
 void configurarListener(int, int);
 
-void crearLogger() {
-   char *pathLogger = string_new();
-
-   char cwd[1024];
-
-   string_append(&pathLogger, getcwd(cwd, sizeof(cwd)));
-
-   string_append(&pathLogger, "/Worker_LOG.log");
-
-   char *logWorker = strdup("Worker_LOG.log");
-
-   logTrace = log_create(pathLogger, logWorker, false, LOG_LEVEL_INFO);
-
-   free(pathLogger);
-   free(logWorker);
-}
+//void crearLogger() {
+//   char *pathLogger = string_new();
+//
+//   char cwd[1024];
+//
+//   string_append(&pathLogger, getcwd(cwd, sizeof(cwd)));
+//
+//   string_append(&pathLogger, "/Worker_LOG.log");
+//
+//   char *logWorker = strdup("Worker_LOG.log");
+//
+//   logTrace = log_create(pathLogger, logWorker, false, LOG_LEVEL_INFO);
+//
+//   free(pathLogger);
+//   free(logWorker);
+//}
 
 tWorker *getConfigWorker() {
 	printf("Ruta del archivo de configuracion: %s\n", RUTA);
-	tWorker *worker = malloc(sizeof(tWorker));
+	tWorker *worker = malloc(sizeof(tWorker*));
 
 	//t_config *workerConfig = config_create("/home/utnso/tp-2017-2c-YATPOS/Worker/src/config_worker");
 
@@ -90,7 +105,9 @@ tWorker *getConfigWorker() {
 	strcpy(worker->RUTA_DATABIN,
 			config_get_string_value(workerConfig, "RUTA_DATABIN"));
 
+
 	config_destroy(workerConfig);
+
 	return worker;
 }
 
@@ -121,14 +138,17 @@ void liberarConfiguracionWorker(tWorker*worker) {
 
 int main(int argc, char* argv[]) {
 
+
+	tWorker * worker;
 	worker = getConfigWorker();
 	mostrarConfiguracion(worker);
-	crearLogger();
-	escucharPuertosMaster();
+
+	escucharPuertosMaster(worker);
+
 	return EXIT_SUCCESS;
 }
 
-void escucharPuertosMaster() {
+void escucharPuertosMaster(tWorker *worker) {
 	 socklen_t clienteLen;
 	 //Variables Sockets
 	  struct sockaddr_in dirWorker;
