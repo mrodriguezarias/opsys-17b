@@ -18,6 +18,8 @@
 #define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
 #define MAXCONEXIONESLISTEN 10
 
+#define RUTA "config_worker"
+
 typedef struct{
 	char * IP_FILESYSTEM,
 		 * PUERTO_FILESYSTEM,
@@ -60,13 +62,13 @@ void crearLogger() {
    free(logWorker);
 }
 
-tWorker *getConfigWorker(char* ruta) {
-	printf("Ruta del archivo de configuracion: %s\n", ruta);
+tWorker *getConfigWorker() {
+	printf("Ruta del archivo de configuracion: %s\n", RUTA);
 	tWorker *worker = malloc(sizeof(tWorker));
 
 	//t_config *workerConfig = config_create("/home/utnso/tp-2017-2c-YATPOS/Worker/src/config_worker");
 
-	t_config *workerConfig = config_create(ruta);
+	t_config *workerConfig = config_create(RUTA);
 
 	worker->IP_FILESYSTEM     = malloc(MAX_IP_LEN);
 	worker->PUERTO_FILESYSTEM = malloc(MAX_PORT_LEN);
@@ -119,7 +121,7 @@ void liberarConfiguracionWorker(tWorker*worker) {
 
 int main(int argc, char* argv[]) {
 
-	worker = getConfigWorker(argv[1]);
+	worker = getConfigWorker();
 	mostrarConfiguracion(worker);
 	crearLogger();
 	escucharPuertosMaster();

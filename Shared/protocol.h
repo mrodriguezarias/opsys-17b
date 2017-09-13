@@ -8,6 +8,18 @@
 typedef enum {
 	OP_UNDEFINED,
 	OP_HANDSHAKE,
+
+
+	INICIAR_TRANSFORMACION = 3,        //yama -> master
+  	INICIAR_REDUCCION_LOCAL = 4,	 //yama -> master
+	INICIAR_REDUCCION_GLOBAL = 5, 	//yama -> master
+	INICIAR_ALMACENAMIENTO = 6,		//yama -> master
+
+	TRANSFORMACION_LISTA = 7,  //master->yama
+	REDUCCION_LOCAL_LISTA = 8, //master->yama
+	REDUCCION_GLOBAL_LISTA = 9,//master->yama
+
+
 } t_operation;
 
 typedef struct {

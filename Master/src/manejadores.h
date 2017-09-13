@@ -5,13 +5,13 @@
 #include <protocol.h>
 #include <commons/log.h>
 
-typedef enum{
-	INICIAR_TRANSFORMACION   =1,
-	INICIAR_REDUCCION_LOCAL  =2,
-	INICIAR_REDUCCION_GLOBAL =3,
-	INICIAR_ALMACENAMIENTO   =4,
-
-}tProtocolo;
+//typedef enum{
+//	INICIAR_TRANSFORMACION   =1,
+//	INICIAR_REDUCCION_LOCAL  =2,
+//	INICIAR_REDUCCION_GLOBAL =3,
+//	INICIAR_ALMACENAMIENTO   =4,
+//
+//}tProtocolo;
 
 
 

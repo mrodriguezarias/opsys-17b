@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include <protocol.h>
 #include <log.h>
@@ -50,7 +51,7 @@ struct {
 
 
 
-tMaster*masterConfig;
+
 
 
 int socket_yama,socket_worker;
@@ -60,29 +61,38 @@ pthread_t * hilo_worker;
 
 
 
-typedef struct{
-	char * nodo;                 //Nodo 1
-	char * ip;   //192.168.1.10:5000  aaa.ddd.c.dd:ppppp contando \0
-	char * puerto;//Divido en dos al puerto y la ip, para tener mas facilidad en su uso
-	char * archivo_etapa;        /* /tmp/Master1-temp38 */
-}tDatosEtapa,tAlmacenadoFinal;
+typedef struct {
+	char nodo[64];                 //Nodo 1
+	char ip[64];   //192.168.1.10:5000  aaa.ddd.c.dd:ppppp contando \0
+	char puerto[64]; //Divido en dos al puerto y la ip, para tener mas facilidad en su uso
+	char archivo_etapa[64]; /* /tmp/Master1-temp38 */
+} tDatosEtapa, tAlmacenadoFinal;
 
-typedef struct{
-	tDatosEtapa  etapa_transformacion;
+typedef struct {
+	char nodo[64];                 //Nodo 1
+	char ip[64];   //192.168.1.10:5000  aaa.ddd.c.dd:ppppp contando \0
+	char puerto[64]; //Divido en dos al puerto y la ip, para tener mas facilidad en su uso
+	char archivo_etapa[64];
 	int bloque;				  //38
 	int bytes_ocupados;		  //10180
-}tEtapaTransformacion;
+} tEtapaTransformacion;
 
-typedef struct{
-	tDatosEtapa  etapa_reduccion_local;
-    t_list * archivos_temporales_de_transformacion;
-}tEtapaReduccionLocal;
+typedef struct {
+	char nodo[64];                 //Nodo 1
+	char ip[64];   //192.168.1.10:5000  aaa.ddd.c.dd:ppppp contando \0
+	char puerto[64]; //Divido en dos al puerto y la ip, para tener mas facilidad en su uso
+	char archivo_etapa[64]; /* /tmp/Master1-temp38 */
+	t_list * archivos_temporales_de_transformacion;
+} tEtapaReduccionLocal;
 
-typedef struct{
-	tDatosEtapa  etapa_reduccion_global;
-    char * archivo_temporal_de_rl; // rl = reduccion_local
-    bool * encargado;
-}tEtapaReduccionGlobal;
+typedef struct {
+	char nodo[64];                 //Nodo 1
+	char ip[64];   //192.168.1.10:5000  aaa.ddd.c.dd:ppppp contando \0
+	char puerto[64]; //Divido en dos al puerto y la ip, para tener mas facilidad en su uso
+	char archivo_etapa[64]; /* /tmp/Master1-temp38 */
+	char archivo_temporal_de_rl[64]; // rl = reduccion_local
+	bool * encargado;
+} tEtapaReduccionGlobal;
 
 
 

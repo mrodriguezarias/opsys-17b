@@ -43,7 +43,7 @@ int main(int argc,char*argv[]) {
 	socket_send_string(master.yama_socket, lines);
 	printf(" ok\n");
 
-	t_packet * paquete;	//paquete recivido desde llama
+
 	t_packet packet;
 
 	do{
