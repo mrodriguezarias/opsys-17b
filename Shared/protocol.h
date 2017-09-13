@@ -9,7 +9,6 @@ typedef enum {
 	OP_UNDEFINED,
 	OP_HANDSHAKE,
 
-
 	INICIAR_TRANSFORMACION = 3,        //yama -> master
   	INICIAR_REDUCCION_LOCAL = 4,	 //yama -> master
 	INICIAR_REDUCCION_GLOBAL = 5, 	//yama -> master
@@ -19,6 +18,8 @@ typedef enum {
 	REDUCCION_LOCAL_LISTA = 8, //master->yama
 	REDUCCION_GLOBAL_LISTA = 9,//master->yama
 
+	GETBLOQUE, //Filesystem -> Datanode
+	SETBLOQUE, //Filesystem -> Datanode
 
 } t_operation;
 
