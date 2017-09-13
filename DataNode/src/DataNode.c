@@ -32,7 +32,7 @@ void handshakeConFS();
 
 int main(){
 	struct sockaddr_in addr_FileSystem;
-	char* path = "/home/utnso/archivoConfiguracion/archivoConfigNodo.cfg";
+	char* path = "/home/utnso/datanode_config";
 	t_config* archivoConfig = config_create(path);
 	logDataNode = log_create("logDataNode.log", "DataNode", true,LOG_LEVEL_TRACE);
 	tinformacion informacion_socket;

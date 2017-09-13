@@ -15,9 +15,6 @@ struct {
 	t_socket worker_socket;
 } master;
 
-void connect_to_yama(void);
-void connect_to_worker(void);
-void terminate(void);
 
 int main(int argc,char*argv[]) {
 	process_init(PROC_MASTER);
@@ -46,44 +43,37 @@ int main(int argc,char*argv[]) {
 	socket_send_string(master.yama_socket, lines);
 	printf(" ok\n");
 
+	t_packet * paquete;	//paquete recivido desde llama
+	t_packet packet;
+
+	do{
+		packet = protocol_receive(master.yama_socket);
+		manejador_yama(packet);
+
+	}
+	while(true);
+
+
+
+
+
+
+
 //	printf("Enviando archivo a Worker...");
 //	socket_send_string(master.worker_socket, lines);
 //	printf(" ok\n");
 
+
+
 	free(lines);
+
+
+
+
+
 
 	terminate();
 	return EXIT_SUCCESS;
 }
 
-void connect_to_yama() {
-	const char *ip = config_get("YAMA_IP");
-	const char *port = config_get("YAMA_PUERTO");
 
-	t_socket socket = socket_connect(ip, port);
-	if(socket == -1) {
-		log_report("YAMA no está corriendo en %s:%s", ip, port);
-		exit(EXIT_FAILURE);
-	}
-
-	protocol_handshake(socket);
-	log_inform("Conectado a YAMA en %s:%s por el socket %i", ip, port, socket);
-	master.yama_socket = socket;
-}
-
-void connect_to_worker() {
-	t_socket socket = socket_connect(WORKER_IP, WORKER_PORT);
-	if(socket == -1) {
-		log_report("Worker no está corriendo en %s:%s", WORKER_IP, WORKER_PORT);
-		exit(EXIT_FAILURE);
-	}
-
-	protocol_handshake(socket);
-	log_inform("Conectado a Worker en %s:%s por el socket %i", WORKER_IP, WORKER_PORT, socket);
-	master.worker_socket = socket;
-}
-
-void terminate() {
-	socket_close(master.yama_socket);
-	socket_close(master.worker_socket);
-}
