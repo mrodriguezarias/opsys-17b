@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include "system.h"
 
 const char *system_homedir() {
@@ -41,6 +42,16 @@ const char *system_rscdir() {
 		snprintf(dir, PATH_MAX, "%s/Shared/rsc", system_basedir());
 	}
 	return dir;
+}
+
+char *system_upath(const char *path) {
+	char fullpath[PATH_MAX] = {0};
+	if(*path == '/') {
+		strcpy(fullpath, path);
+	} else {
+		snprintf(fullpath, PATH_MAX, "%s/%s", system_userdir(), path);
+	}
+	return strdup(fullpath);
 }
 
 void system_init() {

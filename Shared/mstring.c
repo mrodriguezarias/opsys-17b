@@ -70,6 +70,10 @@ bool mstring_equali(const char *str1, const char *str2) {
 	return strcasecmp(str1, str2) == 0;
 }
 
+int mstring_toint(const char *string) {
+	return (int) strtol(string, NULL, 0);
+}
+
 // ========== Funciones privadas ==========
 
 static char *create_format_template(const char *format, va_list args) {

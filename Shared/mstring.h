@@ -52,4 +52,11 @@ bool mstring_equal(const char *str1, const char *str2);
  */
 bool mstring_equali(const char *str1, const char *str2);
 
+/**
+ * Convierte una cadena a un valor entero.
+ * @param string Cadena a convertir.
+ * @return Valor entero.
+ */
+int mstring_toint(const char *string);
+
 #endif /* MSTRING_H_ */

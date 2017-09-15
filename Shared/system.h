@@ -27,6 +27,14 @@ const char *system_userdir(void);
 const char *system_rscdir(void);
 
 /**
+ * Hace una ruta relativa al directorio de usuario.
+ * La cadena devuelta debe ser liberada con free().
+ * @param path Ruta de un archivo.
+ * @return Ruta relativa al directorio de usuario.
+ */
+char *system_upath(const char *path);
+
+/**
  * Crea todos los directorios del sistema.
  * Solo debería llamarse por process_init().
  */

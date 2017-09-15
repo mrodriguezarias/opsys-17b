@@ -104,6 +104,15 @@ char *file_readline(t_file *file);
 char *file_readlines(t_file *file);
 
 /**
+ * Crea un archivo con un determinado tamaño, rellenándolo con ceros.
+ * Si ya existía y era de menor tamaño, lo agranda. Si era más grande,
+ * lo achica.
+ * @param path Ruta al archivo.
+ * @param size Tamaño deseado del archivo.
+ */
+void file_truncate(const char *path, size_t size);
+
+/**
  * Cierra un archivo.
  * @param file Archivo a cerrar.
  */

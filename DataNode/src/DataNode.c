@@ -16,6 +16,8 @@
 #include <string.h>
 #include "socket.h"
 #include "serial.h"
+#include <data.h>
+#include <mstring.h>
 
 //Estructuras
 typedef struct{
@@ -52,11 +54,15 @@ t_setBloque setBloque_unpack(t_serial);
 void getBloque_operation(int);
 void setBloque_operation(int, char*);
 
-int main(){
-	logDataNode = log_create("logDataNode.log", "DataNode", true, LOG_LEVEL_TRACE);
+int main() {
 	process_init(PROC_DATANODE);
+	data_open(config_get("RUTA_DATABIN"), mstring_toint(config_get("DATABIN_SIZE")));
+
+	logDataNode = log_create("logDataNode.log", "DataNode", true, LOG_LEVEL_TRACE);
+
 	connect_to_filesystem();
 	//listen_for_operations();
+	data_close();
 	return EXIT_SUCCESS;
 }
 
