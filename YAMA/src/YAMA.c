@@ -44,6 +44,7 @@ void listen_to_master(void);
 
 int main() {
 	process_init(PROC_YAMA);
+	mostrar_configuracion();
 	//	connect_to_filesystem();
 	listen_to_master();
 	return EXIT_SUCCESS;
@@ -60,7 +61,7 @@ void listen_to_master() {
 	t_socket sv_sock = socket_init(NULL, config_get("MASTER_PUERTO"));
 	t_fdset sockets = socket_set_create();
 	socket_set_add(sv_sock, &sockets);
-
+	log_inform("Escuchando puertos de master");
 	while(true) {
 		t_fdset selected = socket_select(sockets);
 
