@@ -16,6 +16,7 @@
 #include <protocol.h>
 #include <log.h>
 #include <serial.h>
+#include <struct.h>
 
 #define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
 int SocketBuscado_GLOBAL = 0;
@@ -87,12 +88,8 @@ void listen_to_master() {
 					printf("Recibido: %s\n", string);
 					log_inform("Recibido: %s \n",string);
 					//planificicar(script);
-
-					t_serial serial = serial_pack("ssssii","/tmp/Master1-temp38","127.0.0.1","Nodo1","5050",35,100);
-					t_packet paquete = protocol_packet(INICIAR_TRANSFORMACION,serial);
-					protocol_send(paquete,sock);
-
-
+					tEtapaTransformacion et = new_etapa_transformacion("Nodo1","127.0.0.1","5050",35,100,"/tmp/Master1-temp38");
+					mandar_etapa_transformacion(et,sock);
 				} else {
 					log_inform("Desconectado proceso Master de socket %i", sock);
 					socket_close(sock);

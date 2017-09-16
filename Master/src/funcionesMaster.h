@@ -68,7 +68,7 @@ pthread_t * hilo_worker;
 
 void crearLogger();
 tMaster * getConfigMaster();
-void mostrarConfiguracion(tMaster *masterAux);
+void mostrar_configuracion();
 void liberarConfiguracionMaster(tMaster*masterAux);
 void iniciar_master(tMaster * masterAux);
 
