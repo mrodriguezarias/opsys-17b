@@ -13,20 +13,22 @@
 #include <system.h>
 #include <log.h>
 
-char *user_path(const char *path);
+#define FILE_PERMS 0664
+
+char *system_upath(const char *path);
 void show_error_and_exit(t_file *file, const char *type);
 
 // ========== Funciones públicas ==========
 
 bool file_exists(const char *path) {
-	char *upath = user_path(path);
+	char *upath = system_upath(path);
 	bool exists = access(upath, F_OK) != -1;
 	free(upath);
 	return exists;
 }
 
 bool file_isdir(const char *path) {
-	char *upath = user_path(path);
+	char *upath = system_upath(path);
 	bool exists = access(upath, F_OK) != -1;
 	struct stat s;
 	stat(upath, &s);
@@ -36,7 +38,7 @@ bool file_isdir(const char *path) {
 }
 
 void file_mkdir(const char *path) {
-	char *upath = user_path(path);
+	char *upath = system_upath(path);
 	if(access(upath, F_OK) != -1) {
 		free(upath);
 		return;
@@ -54,7 +56,7 @@ void file_mkdir(const char *path) {
 }
 
 size_t file_size(const char *path) {
-	char *upath = user_path(path);
+	char *upath = system_upath(path);
 	struct stat s;
 	stat(upath, &s);
 	free(upath);
@@ -76,7 +78,7 @@ char *file_sizep(const char *path) {
 }
 
 char *file_dir(const char *path) {
-	char *upath = user_path(path);
+	char *upath = system_upath(path);
 	char *slash = strrchr(upath, '/');
 	if(slash) *slash = '\0';
 	return upath;
@@ -88,19 +90,19 @@ const char *file_name(const char *path) {
 }
 
 void file_copy(const char *source, const char *target) {
-	char *usource = user_path(source);
+	char *usource = system_upath(source);
 	int fd_from = open(source, O_RDONLY);
 	if(fd_from == -1) {
 		free(usource);
 		return;
 	}
 
-	char *utarget = user_path(target);
+	char *utarget = system_upath(target);
 	if(file_isdir(utarget)) {
 		mstring_format(&utarget, "%s/%s", utarget, file_name(source));
 	}
 
-	int fd_to = open(utarget, O_WRONLY | O_CREAT | O_TRUNC, 0664);
+	int fd_to = open(utarget, O_WRONLY | O_CREAT | O_TRUNC, FILE_PERMS);
 	if(fd_to == -1) goto exit;
 
 	char buffer[4096];
@@ -124,7 +126,7 @@ void file_copy(const char *source, const char *target) {
 }
 
 t_file *file_open(const char *path) {
-	char *upath = user_path(path);
+	char *upath = system_upath(path);
 	t_file *file = fopen(upath, "r+");
 	if(file == NULL) {
 		log_report("Error al abrir archivo %s: %s", upath, strerror(errno));
@@ -174,6 +176,14 @@ char *file_readlines(t_file *file) {
 	return lines;
 }
 
+void file_truncate(const char *path, size_t size) {
+	char *upath = system_upath(path);
+	int fd = open(upath, O_CREAT | O_WRONLY, FILE_PERMS);
+	free(upath);
+	ftruncate(fd, size);
+	close(fd);
+}
+
 void file_close(t_file *file) {
 	if(file != NULL) {
 		fclose(file);
@@ -181,16 +191,6 @@ void file_close(t_file *file) {
 }
 
 // ========== Funciones privadas ==========
-
-char *user_path(const char *path) {
-	char fullpath[PATH_MAX] = {0};
-	if(*path == '/') {
-		strcpy(fullpath, path);
-	} else {
-		snprintf(fullpath, PATH_MAX, "%s/%s", system_userdir(), path);
-	}
-	return strdup(fullpath);
-}
 
 void show_error_and_exit(t_file *file, const char *type) {
 	char *path = file_path(file);
