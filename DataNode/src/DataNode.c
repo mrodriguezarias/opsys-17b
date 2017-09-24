@@ -1,23 +1,12 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <commons/config.h>
-#include <commons/log.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
 #include <config.h>
+#include <data.h>
 #include <log.h>
+#include <mstring.h>
 #include <process.h>
 #include <protocol.h>
+#include <serial.h>
 #include <socket.h>
-#include <string.h>
-#include "socket.h"
-#include "serial.h"
-#include <data.h>
-#include <mstring.h>
+#include <stdlib.h>
 
 //Estructuras
 typedef struct{
@@ -43,10 +32,8 @@ typedef struct {
 } t_cabecera;
 
 t_socket socket_FileSystem;
-t_log* logDataNode;
 
 //Funciones
-void handshakeConFS();
 void listen_for_operations();
 void connect_to_filesystem();
 t_getBloque getBloque_unpack(t_serial);
@@ -57,9 +44,6 @@ void setBloque_operation(int, char*);
 int main() {
 	process_init(PROC_DATANODE);
 	data_open(config_get("RUTA_DATABIN"), mstring_toint(config_get("DATABIN_SIZE")));
-
-	logDataNode = log_create("logDataNode.log", "DataNode", true, LOG_LEVEL_TRACE);
-
 	connect_to_filesystem();
 	//listen_for_operations();
 	data_close();
@@ -68,27 +52,9 @@ int main() {
 
 void connect_to_filesystem(){
 	t_socket socket = socket_connect(config_get("IP_FILESYSTEM"), config_get("PUERTO_DATANODE"));
-	protocol_handshake(socket); //ACA DEBERIA IR HANDSHAKECONFS o esto funciona bien?
-	//log_inform("Conectado a proceso FileSystem por socket %i", socket); //Este log es el log propio del Datanode o es uno general?
+	protocol_handshake(socket);
+	log_inform("Conectado a proceso FileSystem por socket %i", socket);
 	socket_FileSystem = socket;
-}
-
-
-void handshakeConFS(){
-	char handshake[26];
-
-	if((send(socket_FileSystem,"Yatpos-DataNode",sizeof("Yatpos-DataNode"),0)) <= 0) //envio credencial
-	{
-		perror("No pudo enviar!");
-		exit(1);
-	}
-	if ((recv(socket_FileSystem,handshake,26,0)) <= 0) //"Bienvenido al FileSystem!"
-	{
-		perror("El FileSystem se desconectó");
-		exit(1);
-	}
-	handshake[26] = '\0';
-	printf("%s\n",handshake);
 }
 
 void listen_for_operations(){

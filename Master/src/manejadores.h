@@ -21,4 +21,4 @@ void manejador_worker();
 
 
 
-#endif MANEJADORES_H
+#endif /* MANEJADORES_H */

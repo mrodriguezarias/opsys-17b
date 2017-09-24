@@ -42,4 +42,4 @@ typedef struct {
 
 
 
-#endif STRUCT_H
+#endif /* STRUCT_H */

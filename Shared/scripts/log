@@ -1,0 +1,17 @@
+#!/bin/bash
+##################################################################################
+# Modo de uso:                                                                   #
+# Copiar este archivo a /usr/local/bin, darle permisos de ejecución (chmod +x) y #
+# ejecutar el comando `log {proceso}` desde la consola para ver el log de un     #
+# proceso. [proceso puede ser dnode, fs, master, worker o yama]                  #
+##################################################################################
+logdir="/home/utnso/yatpos/logs"
+declare -A procs=([dnode]="DataNode" [fs]="FileSystem" [master]="Master" [worker]="Worker" [yama]="YAMA")
+if [ "$#" -ne 1 ] || ! [[ "${!procs[@]}" =~ "$1" ]]; then
+	echo "Uso: log [dnode|fs|master|worker|yama]"
+	exit
+fi
+proc="${procs[$1]}"
+logfile="${logdir}/${proc}.log"
+[ ! -f "$logfile" ] && touch "${logfile}"
+tail -F "${logfile}"

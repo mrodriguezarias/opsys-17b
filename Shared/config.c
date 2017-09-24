@@ -14,16 +14,18 @@ static char *config_file(bool user);
 static void set_defaults(void);
 static void check_properties(t_config *config);
 
-static t_config *configs[PROCESS_COUNT];
+static t_config *config = NULL;
 
 // ========== Funciones públicas ==========
 
 void config_load() {
+	if(config != NULL) return;
+
 	char *config_path = config_file(true);
 	if(!file_exists(config_path)) {
 		set_defaults();
 	}
-	t_config *config = config_create(config_path);
+	config = config_create(config_path);
 	free(config_path);
 
 	if(config == NULL) {
@@ -32,11 +34,10 @@ void config_load() {
 	}
 
 	check_properties(config);
-	configs[process_current()] = config;
 }
 
 const char *config_get(const char *property) {
-	return config_get_string_value(configs[process_current()], (char*)property);
+	return config_has_property(config, (char*)property) ? config_get_string_value(config, (char*)property) : NULL;
 }
 
 // ========== Funciones privadas ==========

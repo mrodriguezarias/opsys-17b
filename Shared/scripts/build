@@ -2,17 +2,19 @@
 ##################################################################################
 # Modo de uso:                                                                   #
 # Copiar este archivo a /usr/local/bin, darle permisos de ejecución (chmod +x) y #
-# ejecutar el comando `build` desde la consola para compilar todos los procesos. #
+# ejecutar el comando `build` desde la consola para compilar todos los procesos, #
+# o `build {proceso}` para compilar algún proceso en particular.                 #
 ##################################################################################
 base="/home/utnso/git/tp-2017-2c-YATPOS"
 cwd=$(pwd)
-procs=("DataNode" "FileSystem" "Master" "Worker" "YAMA")
-for proc in "${procs[@]}"; do
-	dir="$base/$proc/Debug"
-	if [ -d "$dir" ]; then
-		cd $dir
-		echo -e "\033[1;33m[$proc]\033[0m"
-		make all
-	fi
+declare -A procs=([dnode]="DataNode" [fs]="FileSystem" [master]="Master" [worker]="Worker" [yama]="YAMA")
+[ "$#" -ne 1 ] && proc="" || proc="${procs[$1]}"
+for cur in "${procs[@]}"; do
+	[ ! -z "$proc" ] && [[ "$cur" != "$proc" ]] && continue
+	dir="$base/$cur/Debug"
+	[ ! -d "$dir" ] && continue
+	cd "$dir"
+	echo -e "\033[1;33m[$cur]\033[0m"
+	make all
 done
-cd $cwd
+cd "$cwd"

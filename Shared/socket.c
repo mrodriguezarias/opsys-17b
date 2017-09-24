@@ -130,10 +130,14 @@ void socket_close(t_socket sockfd) {
 // ========== Private functions ==========
 
 static void check_descriptor(int descriptor) {
-	if(descriptor == -1) {
-		fprintf(stderr, "%s\n", strerror(errno));
-		exit(EXIT_FAILURE);
+	if(descriptor != -1) return;
+	char strerr[128] = {0};
+	switch(errno) {
+	case EBADF:
+		strcpy(strerr, "No hay con quien conectarse");
 	}
+	fprintf(stderr, "Error de socket: %s\n", *strerr != '\0' ? strerr : strerror(errno));
+	exit(EXIT_FAILURE);
 }
 
 static struct addrinfo *create_addrinfo(const char *ip, const char *port) {

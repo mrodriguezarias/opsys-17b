@@ -1,6 +1,8 @@
 #ifndef DATA_H_
 #define DATA_H_
 
+#include <stddef.h>
+
 // Tamaño de bloque = 1 MiB
 #define BLOCK_SIZE 1048576
 

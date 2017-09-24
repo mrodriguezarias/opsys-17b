@@ -1,10 +1,13 @@
-#include <config.h>
-#include <log.h>
+#include <file.h>
 #include <process.h>
 #include <protocol.h>
 #include <socket.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <file.h>
+
+#include "funcionesMaster.h"
+#include "manejadores.h"
 
 // Esto es temporal, para probar la conexión con el Worker.
 #define WORKER_IP "127.0.0.1"
