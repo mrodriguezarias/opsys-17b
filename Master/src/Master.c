@@ -21,7 +21,7 @@ struct {
 
 int main(int argc,char*argv[]) {
 	process_init(PROC_MASTER);
-
+	mostrar_configuracion();
 	connect_to_yama();
 //	connect_to_worker();
 

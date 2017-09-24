@@ -13,16 +13,17 @@ void manejador_transformacion(tEtapaTransformacion * transformacion) {
 	puts("\nManejador_transformacion");
 	log_inform("Hilo ETAPA_TRANSFORMACION");
 	connect_to_worker(transformacion->ip, transformacion->puerto);
-	printf("Socket worker: %d \n",master.worker_socket);
+	printf("Socket worker: %d \n", master.worker_socket);
 	char * buffer = socket_receive_string(master.worker_socket);
 	t_packet worker = protocol_receive(socket_worker);
 	free(worker.content.data);
-	printf("Respuesta handshake de Worker %s \n",buffer);
+	printf("Respuesta handshake de Worker %s \n", buffer);
 
-
-	t_serial serial = serial_pack("ssssii",transformacion->archivo_etapa,transformacion->nodo,transformacion->ip,transformacion->puerto,transformacion->bloque,transformacion->bytes_ocupados);
-	worker = protocol_packet(INICIAR_TRANSFORMACION,serial);
-	protocol_send(worker,master.worker_socket);
+	t_serial serial = serial_pack("ssssii", transformacion->archivo_etapa,
+			transformacion->nodo, transformacion->ip, transformacion->puerto,
+			transformacion->bloque, transformacion->bytes_ocupados);
+	worker = protocol_packet(INICIAR_TRANSFORMACION, serial);
+	protocol_send(worker, master.worker_socket);
 }
 
 void manejador_rl(tEtapaReduccionLocal * etapa_rl) {
@@ -42,11 +43,8 @@ void manejador_yama(t_packet paquete) {
 	switch (paquete.operation) {
 	case (INICIAR_TRANSFORMACION):
 		printf("INICIAR_TRANSFORMACION\n");
-		serial_unpack(paquete.content, "ssssii",
-				etapa_transformacion.archivo_etapa, etapa_transformacion.ip,
-				etapa_transformacion.nodo, etapa_transformacion.puerto,
-				&etapa_transformacion.bloque,
-				&etapa_transformacion.bytes_ocupados);
+
+		etapa_transformacion = etapa_transformacion_unpack(paquete.content);
 
 		printf("archivo etapa: %s\n"
 				"ip worker: %s \n"
@@ -54,7 +52,6 @@ void manejador_yama(t_packet paquete) {
 				etapa_transformacion.archivo_etapa,
 				etapa_transformacion.ip,
 				etapa_transformacion.puerto);
-
 
 
 		if (pthread_create(&hilo_transformacion, NULL,(void*) manejador_transformacion, &etapa_transformacion) < 0) {

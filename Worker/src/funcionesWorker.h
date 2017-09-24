@@ -38,6 +38,6 @@ void mostrar_configuracion();
 
 
 void listen_to_master();
-void creoHijos();
+void manejador_fork();
 
 #endif

@@ -43,11 +43,12 @@ tMaster *getConfigMaster() {
 	return masterAux;
 }
 
-void mostrarConfiguracion(tMaster *master) {
-	printf("YAMA_IP: %s\n", master->YAMA_IP);
-	printf("YAMA_PUERTO: %s\n", master->YAMA_PUERTO);
-	printf("WORKER_IP: %s\n", master->WORKER_IP);
-	printf("PUERTO_WORKER: %s\n", master->PUERTO_WORKER);
+void mostrar_configuracion() {
+
+	printf("YAMA_IP: %s\n",config_get("YAMA_IP"));
+	printf("YAMA_PUERTO: %s\n",config_get("YAMA_PUERTO"));
+	printf("PUERTO_WORKER: %s\n",config_get("WORKER_PUERTO"));
+
 }
 
 void liberarConfiguracionMaster(tMaster*masterAux) {
@@ -66,7 +67,7 @@ void liberarConfiguracionMaster(tMaster*masterAux) {
 void iniciar_master(tMaster * masterAux){
 	//	crearLogger();
 		masterAux = getConfigMaster();
-		mostrarConfiguracion(masterAux);
+		mostrar_configuracion();
 		connect_to_yama(masterAux);
 	}
 

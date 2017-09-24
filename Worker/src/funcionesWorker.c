@@ -44,7 +44,7 @@ void listen_to_master() {
 			t_packet packet = protocol_receive(socketFor);
 			switch (packet.operation) {
 			case (INICIAR_TRANSFORMACION):
-					creoHijos();
+					manejador_fork();
 				printf("Socket sock: %d\n", socketFor);
 				break;
 			default:
@@ -57,13 +57,14 @@ void listen_to_master() {
 }
 
 
-void creoHijos() {
-	if (fork() == 0) {
+void manejador_fork() {
+	pid_t pid;
+	if ((pid =fork()) == 0) {
 		/* Lógica del proceso HIJO */
-		printf("Hola soy el hijo \n");
+		printf("Hola soy el hijo de pid %d \n",pid);
 		//exit(0);
 	} else {
 		/* Lógica del proceso PADRE*/
-		printf("Hola soy el proceso padre \n");
+		printf("Hola soy el proceso padre de pid  %d \n",pid);
 	}
 }
