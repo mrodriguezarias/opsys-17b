@@ -11,6 +11,7 @@
 #include <serial.h>
 #include <socket.h>
 #include <struct.h>
+#include <config.h>
 
 #include <commons/collections/list.h>
 

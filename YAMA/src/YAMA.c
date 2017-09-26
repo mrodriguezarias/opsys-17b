@@ -17,6 +17,7 @@
 #include <log.h>
 #include <serial.h>
 #include <struct.h>
+#include "funcionesYAMA.h"
 
 #define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
 int SocketBuscado_GLOBAL = 0;

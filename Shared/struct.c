@@ -106,8 +106,8 @@ char * obtener_archivo_temporal(char * archivos, char * archivo_a_obtener){
 	if(strstr(archivos,archivo_a_obtener) != NULL)
 		return archivo_a_obtener;
 	else{
-		log_report("El archivo %s no existe o no encuentra en esta etapa",archivo_a_obtener);
-		return "No existe el archivo que requiere";
+		printf("El archivo %s no existe o no encuentra en esta etapa",archivo_a_obtener);
+		return "No existe el archivo que se requiere";
 	}
 }
 

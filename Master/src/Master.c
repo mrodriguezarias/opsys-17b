@@ -13,10 +13,7 @@
 #define WORKER_IP "127.0.0.1"
 #define WORKER_PORT "5050"
 
-struct {
-	t_socket yama_socket;
-	t_socket worker_socket;
-} master;
+
 
 
 int main(int argc,char*argv[]) {

@@ -1,7 +1,7 @@
 #ifndef STRUCT_H
 #define STRUCT_H
 
-
+#include <stdio.h>
 #include <protocol.h>
 #include <serial.h>
 #include <string.h>

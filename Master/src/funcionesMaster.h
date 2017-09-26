@@ -10,6 +10,7 @@
 #include <socket.h>
 #include <serial.h>
 #include <struct.h>
+#include <config.h>
 
 #include<commons/log.h>
 #include<commons/config.h>
