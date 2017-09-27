@@ -15,8 +15,8 @@
 
 #define FILE_PERMS 0664
 
-char *system_upath(const char *path);
 void show_error_and_exit(t_file *file, const char *type);
+static t_file *open_file(const char *path, bool create);
 
 // ========== Funciones públicas ==========
 
@@ -89,6 +89,23 @@ const char *file_name(const char *path) {
 	return slash ? slash + 1 : path;
 }
 
+void file_create(const char *path) {
+	char *upath = system_upath(path);
+	int fd = open(upath, O_CREAT, FILE_PERMS);
+	if(fd == -1) {
+		fprintf(stderr, "Error al crear archivo %s: %s\n", upath, strerror(errno));
+		free(upath);
+		exit(EXIT_FAILURE);
+	}
+	free(upath);
+	close(fd);
+}
+
+void file_recreate(const char *path) {
+	file_delete(path);
+	file_create(path);
+}
+
 void file_copy(const char *source, const char *target) {
 	char *usource = system_upath(source);
 	int fd_from = open(source, O_RDONLY);
@@ -125,16 +142,18 @@ void file_copy(const char *source, const char *target) {
 	if(fd_to != -1) close(fd_to);
 }
 
-t_file *file_open(const char *path) {
+void file_delete(const char *path) {
 	char *upath = system_upath(path);
-	t_file *file = fopen(upath, "r+");
-	if(file == NULL) {
-		log_report("Error al abrir archivo %s: %s", upath, strerror(errno));
-		free(upath);
-		exit(EXIT_FAILURE);
-	}
+	remove(upath);
 	free(upath);
-	return file;
+}
+
+t_file *file_new(const char *path) {
+	return open_file(path, true);
+}
+
+t_file *file_open(const char *path) {
+	return open_file(path, false);
 }
 
 char *file_path(t_file *file) {
@@ -176,12 +195,65 @@ char *file_readlines(t_file *file) {
 	return lines;
 }
 
+void file_writeline(const char *line, t_file *file) {
+	fputs(line, file);
+	if(line[strlen(line)-1] != '\n') {
+		fputs("\n", file);
+	}
+}
+
 void file_truncate(const char *path, size_t size) {
 	char *upath = system_upath(path);
 	int fd = open(upath, O_CREAT | O_WRONLY, FILE_PERMS);
 	free(upath);
 	ftruncate(fd, size);
 	close(fd);
+}
+
+void file_merge(mlist_t *sources, const char *target) {
+	typedef struct {
+		t_file *file;
+		char *line;
+	} t_cont;
+	t_cont *map_cont(const char *source) {
+		t_cont *cont = malloc(sizeof(cont));
+		cont->file = file_open(source);
+		cont->line = NULL;
+		return cont;
+	}
+	bool line_set(t_cont *cont) {
+		return cont->line != NULL;
+	}
+	void read_file(t_cont *cont) {
+		if(!line_set(cont)) {
+			char *aux = file_readline(cont->file);
+			free(cont->line);
+			cont->line = aux;
+		}
+	}
+	bool compare_lines(t_cont *cont1, t_cont *cont2) {
+		return mstring_asc(cont1->line, cont2->line);
+	}
+	t_file *file = file_new(target);
+	mlist_t *files = mlist_map(sources, map_cont);
+	mlist_t *list = mlist_copy(files);
+	while(true) {
+		mlist_traverse(list, read_file);
+		mlist_t *aux = mlist_filter(list, line_set);
+		mlist_destroy(list, NULL);
+		list = aux;
+		if(mlist_length(list) == 0) break;
+		mlist_sort(list, compare_lines);
+		t_cont *cont = mlist_first(list);
+		file_writeline(cont->line, file);
+		free(cont->line);
+		cont->line = NULL;
+	}
+	void free_cont(t_cont *cont) {
+		file_close(cont->file);
+		free(cont);
+	}
+	mlist_destroy(files, free_cont);
 }
 
 void file_close(t_file *file) {
@@ -197,5 +269,17 @@ void show_error_and_exit(t_file *file, const char *type) {
 	log_report("Error al %s archivo %s: %s", type, path, strerror(errno));
 	free(path);
 	exit(EXIT_FAILURE);
+}
+
+static t_file *open_file(const char *path, bool create) {
+	char *upath = system_upath(path);
+	t_file *file = fopen(upath, create ? "w+" : "r+");
+	if(file == NULL) {
+		fprintf(stderr, "Error al abrir archivo %s: %s\n", path, strerror(errno));
+		free(upath);
+		exit(EXIT_FAILURE);
+	}
+	free(upath);
+	return file;
 }
 

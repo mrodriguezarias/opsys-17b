@@ -74,6 +74,14 @@ int mstring_toint(const char *string) {
 	return (int) strtol(string, NULL, 0);
 }
 
+bool mstring_asc(const char *str1, const char *str2) {
+	return strcmp(str1, str2) <= 0;
+}
+
+bool mstring_desc(const char *str1, const char *str2) {
+	return strcmp(str1, str2) >= 0;
+}
+
 // ========== Funciones privadas ==========
 
 static char *create_format_template(const char *format, va_list args) {

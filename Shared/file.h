@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <mlist.h>
 
 typedef FILE t_file;
 
@@ -64,6 +65,18 @@ char *file_dir(const char *path);
 const char *file_name(const char *path);
 
 /**
+ * Crea un archivo si no existía.
+ * @param path Ruta al archivo a crear.
+ */
+void file_create(const char *path);
+
+/**
+ * Crea un archivo si no existía. Si existía lo elimina y lo vuelve a crear.
+ * @param path Ruta al archivo a recrear.
+ */
+void file_recreate(const char *path);
+
+/**
  * Copia un archivo de un ruta (source) a otra (target).
  * Si el archivo destino ya existía, lo reemplaza.
  * @param source Ruta del archivo original.
@@ -72,7 +85,21 @@ const char *file_name(const char *path);
 void file_copy(const char *source, const char *target);
 
 /**
- * Abre un archivo para lectura o escritura.
+ * Elimina un archivo, un directorio o un enlace simbólico.
+ * @param path Ruta al archivo a eliminar.
+ */
+void file_delete(const char *path);
+
+/**
+ * Crea un archivo para lectura y escritura.
+ * La ruta raíz por defecto es el directorio del usuario (~/yatpos).
+ * @param path Ruta al archivo.
+ * @return Descriptor del archivo.
+ */
+t_file *file_new(const char *path);
+
+/**
+ * Abre un archivo para lectura y escritura.
  * La ruta raíz por defecto es el directorio del usuario (~/yatpos).
  * @param path Ruta al archivo.
  * @return Descriptor del archivo.
@@ -104,6 +131,14 @@ char *file_readline(t_file *file);
 char *file_readlines(t_file *file);
 
 /**
+ * Escribe una línea en un archivo de texto.
+ * Inserta un '\n' al final si no estaba.
+ * @param line Línea a escribir.
+ * @param file Archivo a escribir.
+ */
+void file_writeline(const char *line, t_file *file);
+
+/**
  * Crea un archivo con un determinado tamaño, rellenándolo con ceros.
  * Si ya existía y era de menor tamaño, lo agranda. Si era más grande,
  * lo achica.
@@ -111,6 +146,13 @@ char *file_readlines(t_file *file);
  * @param size Tamaño deseado del archivo.
  */
 void file_truncate(const char *path, size_t size);
+
+/**
+ * Aparea un conjunto de archivos, juntándolos en un solo.
+ * @param sources Lista con los archivos a aparear.
+ * @param target Ruta al archivo a crear con el resultado del apareo.
+ */
+void file_merge(mlist_t *sources, const char *target);
 
 /**
  * Cierra un archivo.

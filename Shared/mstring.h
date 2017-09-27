@@ -59,4 +59,20 @@ bool mstring_equali(const char *str1, const char *str2);
  */
 int mstring_toint(const char *string);
 
+/**
+ * Comparador de cadenas para ordenarlas de forma ascendente.
+ * @param str1 Cadena 1.
+ * @param str2 Cadena 2.
+ * @return 1 si str1 es alfabéticamente menor que str2, 0 si es mayor.
+ */
+bool mstring_asc(const char *str1, const char *str2);
+
+/**
+ * Comparador de cadenas para ordenarlas de forma descendente.
+ * @param str1 Cadena 1.
+ * @param str2 Cadena 2.
+ * @return 1 si str1 es alfabéticamente mayor que str2, 0 si es menor.
+ */
+bool mstring_desc(const char *str1, const char *str2);
+
 #endif /* MSTRING_H_ */
