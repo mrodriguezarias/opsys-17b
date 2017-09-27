@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdio.h>
-#include <limits.h>
 #include <sys/stat.h>
 #include <string.h>
 #include <fcntl.h>
@@ -12,10 +11,12 @@
 #include <mstring.h>
 #include <system.h>
 #include <log.h>
+#include <time.h>
 
 #define FILE_PERMS 0664
 
-void show_error_and_exit(t_file *file, const char *type);
+void checkfd(FILE *fd, char *path, const char *action);
+void show_error_and_exit(t_file *file, char *path, const char *action);
 static t_file *open_file(const char *path, bool create);
 
 // ========== Funciones públicas ==========
@@ -35,6 +36,34 @@ bool file_isdir(const char *path) {
 	bool isdir = s.st_mode & S_IFDIR;
 	free(upath);
 	return exists && isdir;
+}
+
+bool file_istext(const char *path) {
+	char *upath = system_upath(path);
+	t_file *fd = fopen(upath, "r");
+	size_t size = file_size(path);
+	int scansize = 64;
+	if(size < scansize) scansize = size;
+
+	bool istext = true;
+	while(scansize-- && istext) {
+		if(fgetc(fd) == '\0') istext = false;
+	}
+
+	if(!istext) goto istext_end;
+
+	char *cmd = mstring_create("file %s", upath);
+	t_file *pd = popen(cmd, "r");
+	free(cmd);
+	checkfd(pd, upath, "verificar");
+	char *output = file_readline(pd);
+	pclose(pd);
+	istext = mstring_contains(output, "text");
+	free(output);
+	istext_end:
+	fclose(fd);
+	free(upath);
+	return istext;
 }
 
 void file_mkdir(const char *path) {
@@ -89,8 +118,32 @@ const char *file_name(const char *path) {
 	return slash ? slash + 1 : path;
 }
 
+char *file_tmpname() {
+	static bool seed = false;
+	if(!seed) {
+		srand(time(NULL));
+		seed = true;
+	}
+	char *tmp = NULL, c;
+	int r;
+	do {
+		mstring_empty(&tmp);
+		while(strlen(tmp) < 32) {
+			r = rand();
+			c = r % 3 == 2 ? '0' + r % 10 : (r % 3 ? 'A' : 'a') + r % 26;
+			mstring_format(&tmp, "%s%c", tmp, c);
+		}
+		mstring_format(&tmp, "tmp/%s", tmp);
+	} while(file_exists(tmp));
+	return tmp;
+}
+
 void file_create(const char *path) {
 	char *upath = system_upath(path);
+	char *dir = file_dir(upath);
+	file_mkdir(dir);
+	free(dir);
+
 	int fd = open(upath, O_CREAT, FILE_PERMS);
 	if(fd == -1) {
 		fprintf(stderr, "Error al crear archivo %s: %s\n", upath, strerror(errno));
@@ -171,7 +224,7 @@ char *file_readline(t_file *file) {
 	size_t len = 0;
 	ssize_t read = getline(&line, &len, file);
 	if(read == -1) {
-		if(errno != 0) show_error_and_exit(file, "leer");
+		if(errno != 0) show_error_and_exit(file, NULL, "leer");
 		return NULL;
 	}
 	if(line[read - 1] == '\n') {
@@ -191,7 +244,7 @@ char *file_readlines(t_file *file) {
 		lines = tmp;
 	}
 	free(line);
-	if(errno != 0) show_error_and_exit(file, "leer");
+	if(errno != 0) show_error_and_exit(file, NULL, "leer");
 	return lines;
 }
 
@@ -234,8 +287,8 @@ void file_merge(mlist_t *sources, const char *target) {
 	bool compare_lines(t_cont *cont1, t_cont *cont2) {
 		return mstring_asc(cont1->line, cont2->line);
 	}
-	t_file *file = file_new(target);
 	mlist_t *files = mlist_map(sources, map_cont);
+	t_file *output = file_new(target);
 	mlist_t *list = mlist_copy(files);
 	while(true) {
 		mlist_traverse(list, read_file);
@@ -245,7 +298,7 @@ void file_merge(mlist_t *sources, const char *target) {
 		if(mlist_length(list) == 0) break;
 		mlist_sort(list, compare_lines);
 		t_cont *cont = mlist_first(list);
-		file_writeline(cont->line, file);
+		file_writeline(cont->line, output);
 		free(cont->line);
 		cont->line = NULL;
 	}
@@ -264,9 +317,15 @@ void file_close(t_file *file) {
 
 // ========== Funciones privadas ==========
 
-void show_error_and_exit(t_file *file, const char *type) {
-	char *path = file_path(file);
-	log_report("Error al %s archivo %s: %s", type, path, strerror(errno));
+void checkfd(FILE *fd, char *path, const char *action) {
+	if(fd == NULL) {
+		show_error_and_exit(fd, path, action);
+	}
+}
+
+void show_error_and_exit(t_file *file, char *path, const char *action) {
+	if(path == NULL) path = file_path(file);
+	log_report("Error al %s archivo %s: %s", action, path, strerror(errno));
 	free(path);
 	exit(EXIT_FAILURE);
 }
@@ -274,11 +333,7 @@ void show_error_and_exit(t_file *file, const char *type) {
 static t_file *open_file(const char *path, bool create) {
 	char *upath = system_upath(path);
 	t_file *file = fopen(upath, create ? "w+" : "r+");
-	if(file == NULL) {
-		fprintf(stderr, "Error al abrir archivo %s: %s\n", path, strerror(errno));
-		free(upath);
-		exit(EXIT_FAILURE);
-	}
+	checkfd(file, upath, "abrir");
 	free(upath);
 	return file;
 }

@@ -1,5 +1,17 @@
 #include "manejadores.h"
 
+#include <log.h>
+#include <protocol.h>
+#include <pthread.h>
+#include <serial.h>
+#include <socket.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <struct.h>
+
+#include "funcionesMaster.h"
+#include "Master.h"
+
 /*
  * INICIO
  * FORMA 1
@@ -22,7 +34,7 @@ void manejador_transformacion(tEtapaTransformacion * transformacion) {
 	t_serial serial = serial_pack("ssssii", transformacion->archivo_etapa,
 			transformacion->nodo, transformacion->ip, transformacion->puerto,
 			transformacion->bloque, transformacion->bytes_ocupados);
-	worker = protocol_packet(INICIAR_TRANSFORMACION, serial);
+	worker = protocol_packet(OP_INICIAR_TRANSFORMACION, serial);
 	protocol_send(worker, master.worker_socket);
 }
 
@@ -41,7 +53,7 @@ void manejador_yama(t_packet paquete) {
 	tEtapaReduccionGlobal etapa_rg;
 
 	switch (paquete.operation) {
-	case (INICIAR_TRANSFORMACION):
+	case OP_INICIAR_TRANSFORMACION:
 		printf("INICIAR_TRANSFORMACION\n");
 
 		etapa_transformacion = etapa_transformacion_unpack(paquete.content);
@@ -65,7 +77,7 @@ void manejador_yama(t_packet paquete) {
 //			free(etapa_transformacion->puerto);
 
 		break;
-	case (INICIAR_REDUCCION_LOCAL):
+	case OP_INICIAR_REDUCCION_LOCAL:
 		serial_unpack(paquete.content, "ssss", etapa_rl.archivo_etapa,
 				etapa_rl.ip, etapa_rl.nodo, etapa_rl.puerto);
 
@@ -79,7 +91,7 @@ void manejador_yama(t_packet paquete) {
 //		free(etapa_rl->nodo);
 //		free(etapa_rl->puerto);
 		break;
-	case (INICIAR_REDUCCION_GLOBAL):
+	case OP_INICIAR_REDUCCION_GLOBAL:
 		serial_unpack(paquete.content, "sssssi", etapa_rg.archivo_etapa,
 				etapa_rg.ip, etapa_rg.nodo, etapa_rg.puerto,
 				etapa_rg.archivo_temporal_de_rl, &etapa_rg.encargado);

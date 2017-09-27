@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <mlist.h>
+#include <limits.h>
 
 typedef FILE t_file;
 
@@ -26,6 +27,13 @@ bool file_exists(const char *path);
  * @return Valor lógico indicando si es un directorio.
  */
 bool file_isdir(const char *path);
+
+/**
+ * Determina si un archivo es de texto o binario.
+ * @param path Ruta al archivo a verificar.
+ * @return 1 si es un archivo de texto, 0 si es binario.
+ */
+bool file_istext(const char *path);
 
 /**
  * Crea un directorio en el sistema.
@@ -63,6 +71,12 @@ char *file_dir(const char *path);
  * @return Nombre del archivo.
  */
 const char *file_name(const char *path);
+
+/**
+ * Crea una ruta aleatoria para un nuevo archivo temporal.
+ * @return Ruta al archivo temporal (debe liberarse con free()).
+ */
+char *file_tmpname(void);
 
 /**
  * Crea un archivo si no existía.

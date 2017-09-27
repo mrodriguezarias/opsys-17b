@@ -8,18 +8,19 @@
 typedef enum {
 	OP_UNDEFINED,
 	OP_HANDSHAKE,
+	OP_INIT_JOB,
 
-	INICIAR_TRANSFORMACION = 3,        //yama -> master
-  	INICIAR_REDUCCION_LOCAL = 4,	 //yama -> master
-	INICIAR_REDUCCION_GLOBAL = 5, 	//yama -> master
-	INICIAR_ALMACENAMIENTO = 6,		//yama -> master
+	OP_INICIAR_TRANSFORMACION,		// yama -> master
+  	OP_INICIAR_REDUCCION_LOCAL,		// yama -> master
+	OP_INICIAR_REDUCCION_GLOBAL,	// yama -> master
+	OP_INICIAR_ALMACENAMIENTO,		// yama -> master
 
-	TRANSFORMACION_LISTA = 7,  //master->yama
-	REDUCCION_LOCAL_LISTA = 8, //master->yama
-	REDUCCION_GLOBAL_LISTA = 9,//master->yama
+	OP_TRANSFORMACION_LISTA,		// master -> yama
+	OP_REDUCCION_LOCAL_LISTA,		// master -> yama
+	OP_REDUCCION_GLOBAL_LISTA,		// master -> yama
 
-	GETBLOQUE, //Filesystem -> Datanode
-	SETBLOQUE, //Filesystem -> Datanode
+	OP_GETBLOQUE,					// filesystem -> datanode
+	OP_SETBLOQUE,					// filesystem -> datanode
 
 } t_operation;
 

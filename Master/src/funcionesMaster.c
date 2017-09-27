@@ -1,5 +1,9 @@
 #include "funcionesMaster.h"
-#include "manejadores.h"
+
+#include <string.h>
+
+#include "Master.h"
+
 //t_log * logTrace;
 //void crearLogger() {
 //   char *pathLogger = string_new();
@@ -65,50 +69,9 @@ void liberarConfiguracionMaster(tMaster*masterAux) {
 }
 
 void iniciar_master(tMaster * masterAux){
-	//	crearLogger();
-		masterAux = getConfigMaster();
-		mostrar_configuracion();
-		connect_to_yama(masterAux);
-	}
-
-
-
-
-void connect_to_yama() {
-	const char *ip = config_get("YAMA_IP");
-	const char *port = config_get("YAMA_PUERTO");
-
-	t_socket socket = socket_connect(ip, port);
-	if(socket == -1) {
-		//logep("YAMA no está corriendo en %s:%s", ip, port);
-		exit(EXIT_FAILURE);
-	}
-
-	protocol_handshake(socket);
-	//logif("Conectado a YAMA en %s:%s por el socket %i", ip, port, socket);
-	master.yama_socket = socket;
+	masterAux = getConfigMaster();
+	connect_to_yama(masterAux);
 }
-
-void connect_to_worker(const char* ip,const char * port) { //La ip y el puerto son obtenidos mediante YAMA
-
-	t_socket socket = socket_connect(ip, port);
-	if(socket == -1) {
-		log_report("Worker no está corriendo en %s:%s", ip, port);
-		exit(EXIT_FAILURE);
-	}
-
-	protocol_handshake(socket);
-	log_inform("Conectado a Worker en %s:%s por el socket %i", ip, port, socket);
-	master.worker_socket = socket;
-}
-
-void terminate() {
-	socket_close(master.yama_socket);
-	socket_close(master.worker_socket);
-}
-
-
-
 
 
 void liberarRecursos(tMaster * masterAux){

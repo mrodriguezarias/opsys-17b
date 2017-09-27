@@ -45,17 +45,6 @@ typedef struct {
 } tMaster;
 
 
-struct {
-	t_socket yama_socket;
-	t_socket worker_socket;
-} master;
-
-
-
-
-
-
-
 int socket_yama,socket_worker;
 struct sockaddr_in direccion_master;
 pthread_t * hilo_worker;

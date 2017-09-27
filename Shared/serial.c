@@ -353,7 +353,7 @@ void serial_unpack(t_serial serial, const char *format, ...)
 	double *g;
 	unsigned long long int fhold;
 
-	char *s;
+	char **s;
 	unsigned int len, maxstrlen=0, count;
 
 	va_start(ap, format);
@@ -423,13 +423,15 @@ void serial_unpack(t_serial serial, const char *format, ...)
 			break;
 
 		case 's': // string
-			s = va_arg(ap, char*);
+			s = va_arg(ap, char**);
 			len = unpacku16((unsigned char *)buf);
 			buf += 2;
 			if (maxstrlen > 0 && len > maxstrlen) count = maxstrlen - 1;
 			else count = len;
-			memcpy(s, buf, count);
-			s[count] = '\0';
+			char *str = malloc(count + 1);
+			memcpy(str, buf, count);
+			str[count] = '\0';
+			*s = str;
 			buf += len;
 			break;
 

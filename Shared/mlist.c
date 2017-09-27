@@ -10,6 +10,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <mstring.h>
 #include "thread.h"
 
 #define is_empty(list) (list->length == 0)
@@ -239,6 +242,49 @@ void mlist_clear(mlist_t *list, void *destroyer) {
 
 	list->head = list->tail = NULL;
 	list->length = 0;
+}
+
+mlist_t *mlist_fromstring(const char *format, ...) {
+	char buffer[1024];
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer, sizeof buffer, format, args);
+	va_end(args);
+
+	char *string = buffer;
+	char *last = string + strlen(string) - 1;
+	if(*string == '[') string++;
+	if(*last == ']') *last = '\0';
+
+	const char delimiters[] = ", ";
+	char *token;
+	mlist_t *list = mlist_create();
+
+	while(token = strsep(&string, delimiters), token != NULL) {
+		if(*token == '\0') continue;
+		mlist_append(list, strdup(token));
+	}
+
+	return list;
+}
+
+char *mlist_tostring(mlist_t *list) {
+	if(list->length == 0) {
+		return strdup("[]");
+	}
+	node_t *node = list->head;
+	char *string = mstring_create("[%s", node->elem);
+	while(node = node->next, node != NULL) {
+		mstring_format(&string, "%s, %s", string, node->elem);
+	}
+	mstring_format(&string, "%s]", string);
+	return string;
+}
+
+void mlist_print(mlist_t *list) {
+	char *string = mlist_tostring(list);
+	printf("%s\n", string);
+	free(string);
 }
 
 void mlist_destroy(mlist_t *list, void *destroyer) {

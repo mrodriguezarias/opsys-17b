@@ -43,7 +43,7 @@ void listen_to_master() {
 
 			t_packet packet = protocol_receive(socketFor);
 			switch (packet.operation) {
-			case (INICIAR_TRANSFORMACION):
+			case OP_INICIAR_TRANSFORMACION:
 					manejador_fork();
 				printf("Socket sock: %d\n", socketFor);
 				break;

@@ -22,18 +22,34 @@ char *mstring_trim(char *string);
 char *mstring_create(const char *format, ...);
 
 /**
- * Modifica una usando el formato especificado.
+ * Modifica una cadena usando el formato especificado.
  * @param Puntero a la cadena a modificar.
  * @param format Formato de la cadena.
  */
 void mstring_format(char **string, const char *format, ...);
 
 /**
+ * Crea una cadena copiando parte de otra.
+ * @param string Cadena a copiar.
+ * @param start Índice inicial.
+ * @param end Índice final (-1 para copiar hasta el final).
+ * @return Nueva cadena con la copia (debe liberarse con free()).
+ */
+char *mstring_copy(const char *string, int start, int end);
+
+/**
  * Verifica si una cadena está vacía.
  * @param string Cadena a verificar.
  * @return Valor lógico indicando si la cadena está vacía.
  */
-bool mstring_empty(const char *string);
+bool mstring_isempty(const char *string);
+
+/**
+ * Crea una cadena vacía o borra el contenido de una cadena existente.
+ * @param string Puntero a la cadena.
+ * @return La cadena vacía.
+ */
+char *mstring_empty(char **string);
 
 /**
  * Verifica si dos cadenas son iguales.
@@ -51,6 +67,14 @@ bool mstring_equal(const char *str1, const char *str2);
  * @return Valor lógico indicando si las cadenas son iguales.
  */
 bool mstring_equali(const char *str1, const char *str2);
+
+/**
+ * Verifica si una cadena contiene a otra.
+ * @param string Cadena contenedora.
+ * @param substring Cadena a buscar.
+ * @return Valor lógico indicando si se encontró la cadena.
+ */
+bool mstring_contains(const char *string, const char *substring);
 
 /**
  * Convierte una cadena a un valor entero.

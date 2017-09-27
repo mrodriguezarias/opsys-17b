@@ -43,7 +43,7 @@ tEtapaTransformacion etapa_transformacion_unpack(t_serial serial){
 
 void mandar_etapa_transformacion(tEtapaTransformacion et,t_socket sock){
 	t_serial serial = etapa_transformacion_pack(et);
-	t_packet paquete = protocol_packet(INICIAR_TRANSFORMACION, serial);
+	t_packet paquete = protocol_packet(OP_INICIAR_TRANSFORMACION, serial);
 	protocol_send(paquete, sock);
 }
 
@@ -113,7 +113,7 @@ char * obtener_archivo_temporal(char * archivos, char * archivo_a_obtener){
 
 void mandar_etapa_rl(tEtapaReduccionLocal rl,t_socket sock){
 	t_serial serial = etapa_rl_pack(rl);
-	t_packet paquete = protocol_packet(INICIAR_REDUCCION_LOCAL, serial);
+	t_packet paquete = protocol_packet(OP_INICIAR_REDUCCION_LOCAL, serial);
 	protocol_send(paquete, sock);
 }
 /*
@@ -164,7 +164,7 @@ tEtapaReduccionGlobal etapa_rg_unpack(t_serial serial){
 
 void mandar_etapa_rg(tEtapaReduccionGlobal rg,t_socket sock){
 	t_serial serial = etapa_rg_pack(rg);
-	t_packet paquete = protocol_packet(INICIAR_REDUCCION_GLOBAL, serial);
+	t_packet paquete = protocol_packet(OP_INICIAR_REDUCCION_GLOBAL, serial);
 	protocol_send(paquete, sock);
 }
 

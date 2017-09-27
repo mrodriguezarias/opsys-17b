@@ -53,7 +53,12 @@ void mstring_format(char **string, const char *format, ...) {
 	*string = str;
 }
 
-bool mstring_empty(const char *string) {
+char *mstring_copy(const char *string, int start, int end) {
+	if(end < 0) end = strlen(string) - 1;
+	return mstring_create("%.*s", end - start + 1, string + start);
+}
+
+bool mstring_isempty(const char *string) {
 	if(string == NULL) return true;
 	char *copy = strdup(string);
 	mstring_trim(copy);
@@ -62,12 +67,27 @@ bool mstring_empty(const char *string) {
 	return empty;
 }
 
+char *mstring_empty(char **string) {
+	if(string == NULL) {
+		return strdup("");
+	}
+	if(*string != NULL) {
+		free(*string);
+	}
+	*string = strdup("");
+	return *string;
+}
+
 bool mstring_equal(const char *str1, const char *str2) {
 	return strcmp(str1, str2) == 0;
 }
 
 bool mstring_equali(const char *str1, const char *str2) {
 	return strcasecmp(str1, str2) == 0;
+}
+
+bool mstring_contains(const char *string, const char *substring) {
+	return strstr(string, substring) != NULL;
 }
 
 int mstring_toint(const char *string) {

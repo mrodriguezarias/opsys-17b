@@ -61,10 +61,10 @@ void listen_for_operations(){
 	while(1){
 		t_packet packet = protocol_receive(socket_FileSystem);
 
-		if(packet.sender == PROC_FILESYSTEM && packet.operation == GETBLOQUE){ //HABRIA QUE AGREGAR A LA LISTA DE OPERACIONES OP_AUTH_GETBLOQUE
+		if(packet.sender == PROC_FILESYSTEM && packet.operation == OP_GETBLOQUE){ //HABRIA QUE AGREGAR A LA LISTA DE OPERACIONES OP_AUTH_GETBLOQUE
 			t_getBloque getBloque = getBloque_unpack(packet.content);
 			getBloque_operation(getBloque.nroBloque);
-		}else if(packet.sender == PROC_FILESYSTEM && packet.operation == SETBLOQUE){ //HABRIA QUE AGREGAR A LA LISTA DE OPERACIONES OP_AUTH_SETBLOQUE
+		}else if(packet.sender == PROC_FILESYSTEM && packet.operation == OP_SETBLOQUE){ //HABRIA QUE AGREGAR A LA LISTA DE OPERACIONES OP_AUTH_SETBLOQUE
 			t_setBloque setBloque = setBloque_unpack(packet.content);
 			setBloque_operation(setBloque.nroBloque, setBloque.datos);
 		}

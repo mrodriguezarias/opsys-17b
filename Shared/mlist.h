@@ -60,6 +60,12 @@ bool mlist_all(mlist_t *list, void *condition);
 
 void mlist_clear(mlist_t *list, void *destroyer);
 
+mlist_t *mlist_fromstring(const char *format, ...);
+
+char *mlist_tostring(mlist_t *list);
+
+void mlist_print(mlist_t *list);
+
 void mlist_destroy(mlist_t *list, void *destroyer);
 
 #endif /* mlist_h */
