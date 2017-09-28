@@ -91,8 +91,7 @@ void server() {
 						(maximo_Sockets < nuevoSocket) ?
 								nuevoSocket : maximo_Sockets;
 				printf("Ya acepte un datanode \n ");
-				handshakeConDataNode(nuevoSocket, remoteaddr, master, read_fds,
-						maximo_Sockets);
+				handshakeConDataNode(nuevoSocket, remoteaddr, master, read_fds,maximo_Sockets);
 				inicializarNodo(nuevoSocket);
 				//ejecuto lo que tengo que hacerr para el datanodee....
 			}
@@ -144,27 +143,23 @@ void server() {
 
 void handshakeConDataNode(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set master,
 		fd_set read_fds, int maximo_Sockets) {
-	char buffer_select[MAXIMO_TAMANIO_DATOS];
-	int cantidadBytes;
+	t_packet packet = protocol_receive(nuevoSocket);
+		if(packet.operation == OP_HANDSHAKE && packet.sender == PROC_DATANODE) {
+			printf("FileSystem: nueva conexion desde %s en socket %d\n",
+					inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
+			if (send(nuevoSocket, "Bienvenido al FileSystem!", 26, 0) == -1) {
+				perror("Error en el send");
+			}
+		} else {
+			printf(
+					"El proceso que requirio acceso, no posee los permisos adecuados\n");
+			if (send(nuevoSocket, "Usted no esta autorizado!", MAXIMO_TAMANIO_DATOS,
+					0) == -1) {
+				perror("Error en el send");
+			}
+			close(nuevoSocket);
+		}
 
-	cantidadBytes = recv(nuevoSocket, buffer_select, sizeof(buffer_select), 0);
-	buffer_select[cantidadBytes] = '\0';
-	printf("Credencial recibida: %s\n", buffer_select);
-	if (!strcmp(buffer_select, "Yatpos-DataNode\0")) { //Yatpos es la credencial que autoriza al proceso a seguir conectado
-		printf("FileSystem: nueva conexion desde %s en socket %d\n",
-				inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
-		if (send(nuevoSocket, "Bienvenido al FileSystem!", 26, 0) == -1) {
-			perror("Error en el send");
-		}
-	} else {
-		printf(
-				"El proceso que requirio acceso, no posee los permisos adecuados\n");
-		if (send(nuevoSocket, "Usted no esta autorizado!", MAXIMO_TAMANIO_DATOS,
-				0) == -1) {
-			perror("Error en el send");
-		}
-		close(nuevoSocket);
-	}
 }
 
 void handshakeConYama(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set master,
@@ -191,6 +186,7 @@ void handshakeConYama(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set mas
 void inicializarNodo(int socketNodo){
 	int operacion = REGISTRARNODO;
 	send(socketNodo,&operacion,sizeof(int),0);
+	printf("mande la inicializacion  \n");
 	//recibo lo que necesito.
 	Nodo* infoDelNodo;
 	t_packet packet  = protocol_receive(socketNodo);

@@ -7,6 +7,8 @@
 #include <serial.h>
 #include <socket.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
 //Estructuras
 typedef struct{
@@ -32,7 +34,7 @@ typedef struct {
 } t_cabecera;
 
 typedef struct {
-	char* nombreNodo;
+	const char* nombreNodo;
 	int total;
 } Nodo;
 
@@ -45,6 +47,9 @@ t_getBloque getBloque_unpack(t_serial);
 t_setBloque setBloque_unpack(t_serial);
 void getBloque_operation(int);
 void setBloque_operation(int, char*);
+void inicializarNodo();
+t_serial nodo_pack(Nodo infoNodo);
+void handshakeconFS(int);
 
 int main() {
 	process_init(PROC_DATANODE);
@@ -58,9 +63,19 @@ int main() {
 void connect_to_filesystem(){
 	t_socket socket = socket_connect(config_get("IP_FILESYSTEM"), config_get("PUERTO_DATANODE"));
 	protocol_handshake(socket);
+	printf("socket%d \n",socket);
+	//handshakeconFS(socket);
 	log_inform("Conectado a proceso FileSystem por socket %i", socket);
 	socket_FileSystem = socket;
 	inicializarNodo();
+	while(1);
+}
+void handshakeconFS(int socket){
+ char buffer_select[256];
+ strcpy(buffer_select, "");
+ strcpy(buffer_select, "Yatpos-DataNode");
+ send(socket, &buffer_select, sizeof(buffer_select), 0);
+ recv(socket, buffer_select, 26, 0);
 }
 
 void listen_for_operations(){
@@ -102,7 +117,8 @@ void setBloque_operation(int nroBloque, char* datos){
 void inicializarNodo(){
 	int operacion;
 	//Recibo la operacion
-	recv(socket_FileSystem, operacion, sizeof(int), 0);
+	recv(socket_FileSystem, &operacion, sizeof(int), 0);
+	printf("entre a ininicializar nodo \n");
 	if(operacion == REGISTRARNODO){
 		Nodo infoNodo;
 		infoNodo.nombreNodo = config_get("NOMBRE_NODO");
@@ -111,7 +127,7 @@ void inicializarNodo(){
 		t_serial packed_nodo = nodo_pack(infoNodo);
 		t_packet packet = protocol_packet(REGISTRARNODO, packed_nodo);
 		//Envio
-		protocol_send(packet, socket);
+		protocol_send(packet, socket_FileSystem);
 	}
 }
 
@@ -119,62 +135,3 @@ t_serial nodo_pack(Nodo infoNodo) {
 	return serial_pack("si", infoNodo.nombreNodo, infoNodo.total);
 }
 
-//Adentro del main iba esto:
-/*
-	struct sockaddr_in addr_FileSystem;
-	char* path = "/home/utnso/datanode_config";
-	t_config* archivoConfig = config_create(path);
-	logDataNode = log_create("logDataNode.log", "DataNode", true,LOG_LEVEL_TRACE);
-	tinformacion informacion_socket;
-	t_cabecera header;
-
-	//VALIDACIONES
-
-	if (archivoConfig == NULL) {
-		log_error(logDataNode,"Archivo configuracion: error al intentar leer ruta");
-		return 1;
-	}
-	if (!config_has_property(archivoConfig, "IP_FILESYSTEM")) {
-		log_error(logDataNode, "Archivo configuracion: error al leer IP_FILESYSTEM");
-		return 1;
-	}
-	if (!config_has_property(archivoConfig, "NOMBRE_NODO")) {
-		log_error(logDataNode, "Archivo configuracion: error al leer NOMBRE_NODO");
-	}
-	if (!config_has_property(archivoConfig, "PUERTO_WORKER")) {
-		log_error(logDataNode, "Archivo configuracion: error al leer PUERTO_WORKER");
-	}
-	if (!config_has_property(archivoConfig, "PUERTO_DATANODE")) {
-		log_error(logDataNode, "Archivo configuracion: error al leer PUERTO_DATANODE");
-	}
-	if (!config_has_property(archivoConfig, "RUTA_DATABIN")) {
-		log_error(logDataNode, "Archivo configuracion: error al leer RUTA_DATABIN");
-	}
-	//fin VALIDACIONES
-
-	//configuracion del archivo configuracion
-	informacion_socket.IP_FILESYSTEM = config_get_string_value(archivoConfig, "IP_FILESYSTEM");
-	informacion_socket.NOMBRE_NODO = config_get_string_value(archivoConfig, "NOMBRE_NODO");
-	informacion_socket.PUERTO_WORKER = config_get_string_value(archivoConfig, "PUERTO_WORKER");
-	informacion_socket.PUERTO_DATANODE = config_get_string_value(archivoConfig, "PUERTO_DATANODE");
-	informacion_socket.RUTA_DATABIN = config_get_string_value(archivoConfig, "RUTA_DATABIN");
-
-	socket_FileSystem = crearSocket();
-	inicializarSOCKADDR_IN(&addr_FileSystem,informacion_socket.IP_FILESYSTEM,informacion_socket.PUERTO_DATANODE);
-
-	if(connect(socket_FileSystem,(struct sockaddr*) &addr_FileSystem,sizeof(struct sockaddr)) == -1){
-		perror("Error en la conexion con el FileSystem");
-	}
-
-	handshakeConFS();
-
-	//Aca comenzaria el ciclo de escucha de mensajes
-	while(1){
-		recv(socket_FileSystem,&header,sizeof(header),0);
-		switch (header.id){
-		case '1': //aca deberia ir como recibamos el opcion, queda a gusto del equipo :)
-		break;
-		}
-
-	}
-	*/

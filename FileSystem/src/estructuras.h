@@ -11,7 +11,7 @@
 #include <commons/collections/list.h>
 #include <commons/config.h>
 #include <stdbool.h>
-
+#include <serial.h>
 
 struct t_directory {
 	int index;
