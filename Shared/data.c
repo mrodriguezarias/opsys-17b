@@ -16,10 +16,6 @@
 #include <system.h>
 #include "data.h"
 
-static struct {
-	void *content;
-	size_t size;
-} data;
 
 void data_open(const char *path, size_t size) {
 	if(!file_exists(path)) {

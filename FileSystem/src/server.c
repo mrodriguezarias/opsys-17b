@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <config.h>
 #include <protocol.h>
+#include "estructuras.h"
 
 #define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
 
@@ -92,6 +93,7 @@ void server() {
 				printf("Ya acepte un datanode \n ");
 				handshakeConDataNode(nuevoSocket, remoteaddr, master, read_fds,
 						maximo_Sockets);
+				inicializarNodo(nuevoSocket);
 				//ejecuto lo que tengo que hacerr para el datanodee....
 			}
 		} else if (FD_ISSET(socketEscuchandoYama, &read_fds)) { // ¡¡tenemos datos de un Yama!!
@@ -185,3 +187,78 @@ void handshakeConYama(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set mas
 		close(nuevoSocket);
 	}
 }
+
+void inicializarNodo(int socketNodo){
+	int operacion = REGISTRARNODO;
+	send(socketNodo,&operacion,sizeof(int),0);
+	//recibo lo que necesito.
+	Nodo* infoDelNodo;
+	t_packet packet  = protocol_receive(socketNodo);
+	if(packet.sender == PROC_DATANODE){
+		 infoDelNodo = infoNodo_unpack(packet.content);
+	}
+	free(packet.content.data);
+	registrarNodo(infoDelNodo,socketNodo);
+}
+
+Nodo* infoNodo_unpack(t_serial serial){
+	Nodo* infoDelNodo = malloc(sizeof(Nodo));
+	serial_unpack(serial, "si", &infoDelNodo->nombreNodo, &infoDelNodo->total);
+	return infoDelNodo;
+}
+
+void registrarNodo(Nodo* unNodo,int socketNodo){
+	if(estadoAnteriorexistente){
+		busquedaNodo_GLOBAL =  unNodo->nombreNodo;
+		listaNodosConectados = list_create();
+		if(list_find(tablaNodos.nodos,*encontreNodo)){
+		list_add(listaNodosConectados,unNodo->nombreNodo);
+		}
+		else{
+			close(socketNodo);
+		}
+	}
+	else{
+		tablaNodos.tamanio += unNodo->total;
+		tablaNodos.libre += unNodo->total;
+		list_add(tablaNodos.nodos,unNodo);
+		config_set_value(archivoNodos,"TAMANIO",(char*)tablaNodos.tamanio);
+		config_set_value(archivoNodos,"LIBRE",(char*)tablaNodos.libre);
+		config_set_value(archivoNodos,"NODOS",(char*)tablaNodos.nodos);
+		char* key =  malloc(8*sizeof(char*));
+		sprintf(key,"%sTotal",unNodo->nombreNodo);
+		config_set_value(archivoNodos,key,(char*)unNodo->total);
+		sprintf(key,"%sLibre",unNodo->nombreNodo);
+		config_set_value(archivoNodos,key,(char*)unNodo->total);
+		free(key);
+		//debo crear el bitmap de ese nodo
+		t_config* configBitmapNodo;
+		char* nombreEstructura = malloc(sizeof(char)*16);
+		sprintf(nombreEstructura,"bitmaps/%s",unNodo->nombreNodo);
+		char* rutaArchivo = config_file(nombreEstructura,"dat");
+		fopen(rutaArchivo,"w+");
+		configBitmapNodo = config_create(rutaArchivo);
+		char* bitmap = generarBitmap(unNodo->total);
+		config_set_value(configBitmapNodo,"BITMAP",bitmap);
+		config_save(configBitmapNodo);
+		free(nombreEstructura);
+
+	}
+}
+
+bool encontreNodo(void* nombreNodo){
+	return (char*) nombreNodo == busquedaNodo_GLOBAL ? true : false;
+}
+
+char* generarBitmap(int totalBloquesNodo){
+	char* bitmap = malloc(sizeof(char)*totalBloquesNodo);
+	strcpy(bitmap,"");
+	strcat(bitmap,"[0");
+	int i;
+	for(i=1;i<totalBloquesNodo;i++){
+		strcat(bitmap,",0");
+	}
+	strcat(bitmap,"]");
+	return bitmap;
+}
+

@@ -22,6 +22,8 @@ typedef enum {
 	OP_GETBLOQUE,					// filesystem -> datanode
 	OP_SETBLOQUE,					// filesystem -> datanode
 
+	REGISTRARNODO,					// filesystem -> datanode
+
 } t_operation;
 
 typedef struct {

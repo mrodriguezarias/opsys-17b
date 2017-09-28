@@ -3,6 +3,11 @@
 
 #include <stddef.h>
 
+static struct {
+	void *content;
+	size_t size;
+} data;
+
 // Tamaño de bloque = 1 MiB
 #define BLOCK_SIZE 1048576
 

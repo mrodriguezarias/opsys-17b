@@ -31,6 +31,11 @@ typedef struct {
  int tamanio;
 } t_cabecera;
 
+typedef struct {
+	char* nombreNodo;
+	int total;
+} Nodo;
+
 t_socket socket_FileSystem;
 
 //Funciones
@@ -55,6 +60,7 @@ void connect_to_filesystem(){
 	protocol_handshake(socket);
 	log_inform("Conectado a proceso FileSystem por socket %i", socket);
 	socket_FileSystem = socket;
+	inicializarNodo();
 }
 
 void listen_for_operations(){
@@ -73,16 +79,15 @@ void listen_for_operations(){
 	}
 }
 
-//ESTAS 2 DEBERIAN ESTAR EN COMUN O NO? YA QUE SOLO SE USAN EN DATANODE
 t_getBloque getBloque_unpack(t_serial serial){
 	t_getBloque getBloque;
-	serial_unpack(serial, "scIlhhh", &getBloque.nroBloque);
+	serial_unpack(serial, "i", &getBloque.nroBloque);
 	return getBloque;
 }
 
 t_setBloque setBloque_unpack(t_serial serial){
 	t_setBloque setBloque;
-	serial_unpack(serial, "scIlhhh", &setBloque.nroBloque, &setBloque.datos);
+	serial_unpack(serial, "is", &setBloque.nroBloque, &setBloque.datos);
 	return setBloque;
 }
 
@@ -92,6 +97,26 @@ void getBloque_operation(int nroBloque){
 
 void setBloque_operation(int nroBloque, char* datos){
 
+}
+
+void inicializarNodo(){
+	int operacion;
+	//Recibo la operacion
+	recv(socket_FileSystem, operacion, sizeof(int), 0);
+	if(operacion == REGISTRARNODO){
+		Nodo infoNodo;
+		infoNodo.nombreNodo = config_get("NOMBRE_NODO");
+		infoNodo.total = data.size;
+		//Empaqueto
+		t_serial packed_nodo = nodo_pack(infoNodo);
+		t_packet packet = protocol_packet(REGISTRARNODO, packed_nodo);
+		//Envio
+		protocol_send(packet, socket);
+	}
+}
+
+t_serial nodo_pack(Nodo infoNodo) {
+	return serial_pack("si", infoNodo.nombreNodo, infoNodo.total);
 }
 
 //Adentro del main iba esto:
