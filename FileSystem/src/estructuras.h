@@ -22,6 +22,7 @@ struct t_directory {
 typedef struct {
 	char* nombreNodo;
 	int total;
+	int libre;
 } Nodo;
 
 typedef struct{
