@@ -16,6 +16,11 @@
 #include <system.h>
 #include "data.h"
 
+static struct {
+	void *content;
+	size_t size;
+} data;
+
 
 void data_open(const char *path, size_t size) {
 	if(!file_exists(path)) {
@@ -53,6 +58,10 @@ void *data_get(int blockno) {
 void *data_get_copy(int blockno) {
 	void *block = malloc(BLOCK_SIZE);
 	return memcpy(block, data.content + blockno * BLOCK_SIZE, BLOCK_SIZE);
+}
+
+size_t data_size() {
+	return data.size;
 }
 
 void data_close() {

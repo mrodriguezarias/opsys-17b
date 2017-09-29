@@ -12,11 +12,14 @@
 #include <system.h>
 #include <log.h>
 #include <time.h>
+#include <sys/mman.h>
 
 #define FILE_PERMS 0664
 
-void checkfd(FILE *fd, char *path, const char *action);
-void show_error_and_exit(t_file *file, char *path, const char *action);
+char *fpath(int fd);
+void checkfd(int fd, const char *path, const char *action);
+void checkfp(FILE *fp, const char *path, const char *action);
+void show_error_and_exit(int fd, const char *path, const char *action);
 static t_file *open_file(const char *path, bool create);
 
 // ========== Funciones públicas ==========
@@ -55,7 +58,7 @@ bool file_istext(const char *path) {
 	char *cmd = mstring_create("file %s", upath);
 	t_file *pd = popen(cmd, "r");
 	free(cmd);
-	checkfd(pd, upath, "verificar");
+	checkfp(pd, upath, "verificar");
 	char *output = file_readline(pd);
 	pclose(pd);
 	istext = mstring_contains(output, "text");
@@ -210,12 +213,7 @@ t_file *file_open(const char *path) {
 }
 
 char *file_path(t_file *file) {
-	char link[PATH_MAX];
-	snprintf(link, PATH_MAX, "/proc/self/fd/%i", fileno(file));
-
-	char path[PATH_MAX];
-	readlink(link, path, PATH_MAX);
-	return strdup(path);
+	return fpath(fileno(file));
 }
 
 char *file_readline(t_file *file) {
@@ -224,7 +222,7 @@ char *file_readline(t_file *file) {
 	size_t len = 0;
 	ssize_t read = getline(&line, &len, file);
 	if(read == -1) {
-		if(errno != 0) show_error_and_exit(file, NULL, "leer");
+		if(errno != 0) show_error_and_exit(fileno(file), NULL, "leer");
 		return NULL;
 	}
 	if(line[read - 1] == '\n') {
@@ -244,7 +242,7 @@ char *file_readlines(t_file *file) {
 		lines = tmp;
 	}
 	free(line);
-	if(errno != 0) show_error_and_exit(file, NULL, "leer");
+	if(errno != 0) show_error_and_exit(fileno(file), NULL, "leer");
 	return lines;
 }
 
@@ -309,6 +307,25 @@ void file_merge(mlist_t *sources, const char *target) {
 	mlist_destroy(files, free_cont);
 }
 
+t_fmap *file_map(const char *path) {
+	int fd = open(path, O_RDWR);
+	checkfd(fd, path, "abrir");
+	size_t size = file_size(path);
+	void *addr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	if(addr == MAP_FAILED) {
+		show_error_and_exit(fd, path, "mapear a memoria");
+	}
+	t_fmap *map = malloc(sizeof(t_fmap));
+	map->data = addr;
+	map->size = size;
+	return map;
+}
+
+void file_unmap(t_fmap *map) {
+	munmap(map->data, map->size);
+	free(map);
+}
+
 void file_close(t_file *file) {
 	if(file != NULL) {
 		fclose(file);
@@ -317,23 +334,37 @@ void file_close(t_file *file) {
 
 // ========== Funciones privadas ==========
 
-void checkfd(FILE *fd, char *path, const char *action) {
-	if(fd == NULL) {
+char *fpath(int fd) {
+	char link[PATH_MAX], path[PATH_MAX];
+	snprintf(link, PATH_MAX, "/proc/self/fd/%i", fd);
+	readlink(link, path, PATH_MAX);
+	return strdup(path);
+}
+
+void checkfd(int fd, const char *path, const char *action) {
+	if(fd == -1) {
 		show_error_and_exit(fd, path, action);
 	}
 }
 
-void show_error_and_exit(t_file *file, char *path, const char *action) {
-	if(path == NULL) path = file_path(file);
-	log_report("Error al %s archivo %s: %s", action, path, strerror(errno));
-	free(path);
+void checkfp(FILE *fp, const char *path, const char *action) {
+	if(fp == NULL) {
+		show_error_and_exit(fileno(fp), path, action);
+	}
+}
+
+void show_error_and_exit(int fd, const char *path, const char *action) {
+	char *ppath = (char*) path;
+	if(ppath == NULL) ppath = fpath(fd);
+	log_report("Error al %s archivo %s: %s", action, ppath, strerror(errno));
+	free(ppath);
 	exit(EXIT_FAILURE);
 }
 
 static t_file *open_file(const char *path, bool create) {
 	char *upath = system_upath(path);
 	t_file *file = fopen(upath, create ? "w+" : "r+");
-	checkfd(file, upath, "abrir");
+	checkfp(file, upath, "abrir");
 	free(upath);
 	return file;
 }

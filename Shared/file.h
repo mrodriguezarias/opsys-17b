@@ -9,6 +9,11 @@
 
 typedef FILE t_file;
 
+typedef struct {
+	void *data;
+	size_t size;
+} t_fmap;
+
 /*
  * Para todas estas funciones, si se les pasa por parámetro una ruta relativa,
  * se la considera relativa al directorio del usuario (~/yatpos).
@@ -167,6 +172,19 @@ void file_truncate(const char *path, size_t size);
  * @param target Ruta al archivo a crear con el resultado del apareo.
  */
 void file_merge(mlist_t *sources, const char *target);
+
+/**
+ * Mapea a memoria un archivo.
+ * @param path Ruta al archivo a mapear.
+ * @return Puntero al mapeo de memoria (debe ser liberado con file_unmap).
+ */
+t_fmap *file_map(const char *path);
+
+/**
+ * Libera un mapeo de memoria hecho por file_map().
+ * @param mapping Mapeo de memoria.
+ */
+void file_unmap(t_fmap *map);
 
 /**
  * Cierra un archivo.

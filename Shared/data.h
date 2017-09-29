@@ -3,11 +3,6 @@
 
 #include <stddef.h>
 
-static struct {
-	void *content;
-	size_t size;
-} data;
-
 // Tamaño de bloque = 1 MiB
 #define BLOCK_SIZE 1048576
 
@@ -40,6 +35,12 @@ void *data_get(int blockno);
  * @return Puntero a la copia del bloque.
  */
 void *data_get_copy(int blockno);
+
+/**
+ * Devuelve el tamaño del espacio de datos.
+ * @return Tamaño del espacio de datos.
+ */
+size_t data_size(void);
 
 /**
  * Descarga el espacio de datos de memoria.

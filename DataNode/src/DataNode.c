@@ -52,7 +52,7 @@ t_serial nodo_pack(Nodo infoNodo);
 void handshakeconFS(int);
 
 int main() {
-	process_init(PROC_DATANODE);
+	process_init();
 	data_open(config_get("RUTA_DATABIN"), mstring_toint(config_get("DATABIN_SIZE")));
 	connect_to_filesystem();
 	//listen_for_operations();
@@ -122,7 +122,7 @@ void inicializarNodo(){
 	if(operacion == REGISTRARNODO){
 		Nodo infoNodo;
 		infoNodo.nombreNodo = config_get("NOMBRE_NODO");
-		infoNodo.total = data.size;
+		infoNodo.total = data_size();
 		//Empaqueto
 		t_serial packed_nodo = nodo_pack(infoNodo);
 		t_packet packet = protocol_packet(REGISTRARNODO, packed_nodo);

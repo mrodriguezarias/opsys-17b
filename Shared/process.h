@@ -15,9 +15,8 @@ typedef enum {
 /**
  * Inicializa un proceso.
  * Debe llamarse al inicio de cada proceso.
- * @param process Proceso a inicializar.
  */
-void process_init(t_process process);
+void process_init(void);
 
 /**
  * Devuelve el proceso actual en ejecución.
@@ -31,5 +30,12 @@ t_process process_current(void);
  * @return Nombre del proceso.
  */
 const char *process_name(t_process process);
+
+/**
+ * Devuelve el tipo de proceso de un determinado nombre.
+ * @param name Nombre del proceso.
+ * @return Proceso.
+ */
+t_process process_type(const char *name);
 
 #endif /* PROCESS_H_ */

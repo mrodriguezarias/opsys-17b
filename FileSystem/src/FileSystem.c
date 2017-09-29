@@ -21,7 +21,7 @@ int indexDirectorio = 0;
 
 
 int main() {
-	process_init(PROC_FILESYSTEM);
+	process_init();
 	inicializarEstructurasFilesystem();
 	server();
 	console();
@@ -38,7 +38,6 @@ void inicializarEstructurasFilesystem(){
 	inicializarTablaArchivos();
 	inicializarTablaNodos();
 	inicializarBitmap();
-
 }
 
 void guardarEstructuras(){
@@ -62,32 +61,32 @@ void crearDirectorio(int padre,char* nombreDirectorio){
 
 void inicializarTablaDirectorio(){
 	//al iniciar debe verificar si existe un estado anterior
-		char* rutaArchivo = config_file("directorios","dat");
+	char* rutaArchivo = mstring_create("%s/metadata/directorios.dat", system_userdir());
+	archivoDirectorio = config_create(rutaArchivo);
+	if(archivoDirectorio == NULL){
+		estadoAnteriorexistente = false;
+		printf("El archivo no existe \n"); //en caso que no exista, se crea uno.
+		fopen(rutaArchivo,"w+");
 		archivoDirectorio = config_create(rutaArchivo);
-		if(archivoDirectorio == NULL){
-			estadoAnteriorexistente = false;
-			printf("El archivo no existe \n"); //en caso que no exista, se crea uno.
-			fopen(rutaArchivo,"w+");
-			archivoDirectorio = config_create(rutaArchivo);
-			crearDirectorio((-1),"root");
-			config_save(archivoDirectorio); //momentaneamente para probar que funciona
+		crearDirectorio((-1),"root");
+		config_save(archivoDirectorio); //momentaneamente para probar que funciona
+	}
+	else{
+		//las debe levantar y esperar conexion de datanodes
+		printf("El archivo existe y será levantado \n");
+		estadoAnteriorexistente = true;
+		char* indice = malloc(sizeof(char));
+		for(indexDirectorio=0;indexDirectorio<config_keys_amount(archivoDirectorio);indexDirectorio++){
+			sprintf(indice,"%d",indexDirectorio);
+			char** arrayAuxiliar = config_get_array_value(archivoDirectorio,indice);
+			tablaDirectorio[indexDirectorio].index = atoi(arrayAuxiliar[0]);
+			strcpy(tablaDirectorio[indexDirectorio].nombre,arrayAuxiliar[1]);
+			tablaDirectorio[indexDirectorio].padre = atoi(arrayAuxiliar[2]);
+			printf("%d		%s		%d	\n",tablaDirectorio[indexDirectorio].index,tablaDirectorio[indexDirectorio].nombre,tablaDirectorio[indexDirectorio].padre);
 		}
-		else{
-			//las debe levantar y esperar conexion de datanodes
-			printf("El archivo existe y será levantado \n");
-			estadoAnteriorexistente = true;
-			char* indice = malloc(sizeof(char));
-			for(indexDirectorio=0;indexDirectorio<config_keys_amount(archivoDirectorio);indexDirectorio++){
-				sprintf(indice,"%d",indexDirectorio);
-				char** arrayAuxiliar = config_get_array_value(archivoDirectorio,indice);
-				tablaDirectorio[indexDirectorio].index = atoi(arrayAuxiliar[0]);
-				strcpy(tablaDirectorio[indexDirectorio].nombre,arrayAuxiliar[1]);
-				tablaDirectorio[indexDirectorio].padre = atoi(arrayAuxiliar[2]);
-				printf("%d		%s		%d	\n",tablaDirectorio[indexDirectorio].index,tablaDirectorio[indexDirectorio].nombre,tablaDirectorio[indexDirectorio].padre);
-			}
-			free(indice);
-			free(rutaArchivo);
-		}
+		free(indice);
+	}
+	free(rutaArchivo);
 }
 
 
