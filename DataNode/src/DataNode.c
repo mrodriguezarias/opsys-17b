@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 
 //Estructuras
 typedef struct{
@@ -49,13 +50,17 @@ void getBloque_operation(int);
 void setBloque_operation(int, char*);
 void inicializarNodo();
 t_serial nodo_pack(Nodo infoNodo);
-void handshakeconFS(int);
 
 int main() {
 	process_init(PROC_DATANODE);
 	data_open(config_get("RUTA_DATABIN"), mstring_toint(config_get("DATABIN_SIZE")));
 	connect_to_filesystem();
 	//listen_for_operations();
+	int a;
+	if(recv(socket_FileSystem, &a, sizeof(int), 0) <= 0){
+	 close(socket_FileSystem);
+	 printf("Cerre el socket \n");
+	}
 	data_close();
 	return EXIT_SUCCESS;
 }
@@ -64,18 +69,9 @@ void connect_to_filesystem(){
 	t_socket socket = socket_connect(config_get("IP_FILESYSTEM"), config_get("PUERTO_DATANODE"));
 	protocol_handshake(socket);
 	printf("socket%d \n",socket);
-	//handshakeconFS(socket);
 	log_inform("Conectado a proceso FileSystem por socket %i", socket);
 	socket_FileSystem = socket;
 	inicializarNodo();
-	while(1);
-}
-void handshakeconFS(int socket){
- char buffer_select[256];
- strcpy(buffer_select, "");
- strcpy(buffer_select, "Yatpos-DataNode");
- send(socket, &buffer_select, sizeof(buffer_select), 0);
- recv(socket, buffer_select, 26, 0);
 }
 
 void listen_for_operations(){
@@ -115,14 +111,17 @@ void setBloque_operation(int nroBloque, char* datos){
 }
 
 void inicializarNodo(){
-	int operacion;
+	int operacion = 0;
 	//Recibo la operacion
-	recv(socket_FileSystem, &operacion, sizeof(int), 0);
-	printf("entre a ininicializar nodo \n");
+	printf("socket %d \n",socket_FileSystem);
+	printf("antes del recv  \n");
+	int recepcion = recv(socket_FileSystem, &operacion, sizeof(operacion), 0);
+	printf("entre a ininicializar nodo con %d\n",recepcion);
 	if(operacion == REGISTRARNODO){
 		Nodo infoNodo;
 		infoNodo.nombreNodo = config_get("NOMBRE_NODO");
-		infoNodo.total = data.size;
+		infoNodo.total = ((data.size)/1048576); //pasado a megas.
+		printf("mi total es %d \n",infoNodo.total);
 		//Empaqueto
 		t_serial packed_nodo = nodo_pack(infoNodo);
 		t_packet packet = protocol_packet(REGISTRARNODO, packed_nodo);

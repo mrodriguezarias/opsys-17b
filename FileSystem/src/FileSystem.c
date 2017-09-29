@@ -164,6 +164,7 @@ void inicializarTablaNodos(){
 		for(i=0;i<(sizeof(arrayAuxiliar)-1);i++){
 			Nodo* nodo = malloc(sizeof(Nodo));
 			nodo->nombreNodo = arrayAuxiliar[i];
+			printf("nombre del nodo es %s \n",nodo->nombreNodo);
 			sprintf(key,"%sTotal",arrayAuxiliar[i]);
 			nodo->total = config_get_int_value(archivoNodos,key);
 			sprintf(key,"%sLibre",arrayAuxiliar[i]);

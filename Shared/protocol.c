@@ -44,4 +44,6 @@ t_packet protocol_receive(t_socket socket) {
 
 void protocol_handshake(t_socket socket) {
 	protocol_send(protocol_packet(OP_HANDSHAKE, (t_serial){NULL, 0}), socket);
+	char saludo[19];
+	recv(socket,&saludo,19,0);
 }

@@ -11,6 +11,7 @@
 #include <config.h>
 #include <protocol.h>
 #include "estructuras.h"
+#include <mlist.h>
 
 #define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
 
@@ -147,13 +148,13 @@ void handshakeConDataNode(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set
 		if(packet.operation == OP_HANDSHAKE && packet.sender == PROC_DATANODE) {
 			printf("FileSystem: nueva conexion desde %s en socket %d\n",
 					inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
-			if (send(nuevoSocket, "Bienvenido al FileSystem!", 26, 0) == -1) {
+			if (send(nuevoSocket, "Acceso concedido!!", 19, 0) == -1) {
 				perror("Error en el send");
 			}
 		} else {
 			printf(
 					"El proceso que requirio acceso, no posee los permisos adecuados\n");
-			if (send(nuevoSocket, "Usted no esta autorizado!", MAXIMO_TAMANIO_DATOS,
+			if (send(nuevoSocket, "No esta autorizado", 19,
 					0) == -1) {
 				perror("Error en el send");
 			}
@@ -169,13 +170,13 @@ void handshakeConYama(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set mas
 	if(packet.operation == OP_HANDSHAKE && packet.sender == PROC_YAMA) {
 		printf("FileSystem: nueva conexion desde %s en socket %d\n",
 				inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
-		if (send(nuevoSocket, "Bienvenido al FileSystem!", 26, 0) == -1) {
+		if (send(nuevoSocket, "Acceso concedido!!", 19, 0) == -1) {
 			perror("Error en el send");
 		}
 	} else {
 		printf(
 				"El proceso que requirio acceso, no posee los permisos adecuados\n");
-		if (send(nuevoSocket, "Usted no esta autorizado!", MAXIMO_TAMANIO_DATOS,
+		if (send(nuevoSocket, "No esta autorizado", 19,
 				0) == -1) {
 			perror("Error en el send");
 		}
@@ -185,11 +186,12 @@ void handshakeConYama(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set mas
 
 void inicializarNodo(int socketNodo){
 	int operacion = REGISTRARNODO;
-	send(socketNodo,&operacion,sizeof(int),0);
-	printf("mande la inicializacion  \n");
+	int envio = send(socketNodo,&operacion,sizeof(operacion),0);
+	printf("mande la inicializacion %d \n",envio);
 	//recibo lo que necesito.
 	Nodo* infoDelNodo;
 	t_packet packet  = protocol_receive(socketNodo);
+	printf("pase el receive del protocolo \n");
 	if(packet.sender == PROC_DATANODE){
 		 infoDelNodo = infoNodo_unpack(packet.content);
 	}
@@ -207,7 +209,7 @@ void registrarNodo(Nodo* unNodo,int socketNodo){
 	if(estadoAnteriorexistente){
 		busquedaNodo_GLOBAL =  unNodo->nombreNodo;
 		listaNodosConectados = list_create();
-		if(list_find(tablaNodos.nodos,*encontreNodo)){
+		if(list_any_satisfy(tablaNodos.nodos,*encontreNodo)){
 		list_add(listaNodosConectados,unNodo->nombreNodo);
 		}
 		else{
@@ -217,15 +219,26 @@ void registrarNodo(Nodo* unNodo,int socketNodo){
 	else{
 		tablaNodos.tamanio += unNodo->total;
 		tablaNodos.libre += unNodo->total;
+		unNodo->libre = unNodo->total;
 		list_add(tablaNodos.nodos,unNodo);
-		config_set_value(archivoNodos,"TAMANIO",(char*)tablaNodos.tamanio);
-		config_set_value(archivoNodos,"LIBRE",(char*)tablaNodos.libre);
-		config_set_value(archivoNodos,"NODOS",(char*)tablaNodos.nodos);
-		char* key =  malloc(8*sizeof(char*));
+		char* datosAguardar = malloc(sizeof(char)*((list_size(tablaNodos.nodos)*9)+4));
+		sprintf(datosAguardar,"%d",tablaNodos.tamanio);
+		config_set_value(archivoNodos,"TAMANIO",datosAguardar);
+		sprintf(datosAguardar,"%d",tablaNodos.libre);
+		config_set_value(archivoNodos,"LIBRE",datosAguardar);
+		datosAguardar = pasarlistaDenodosAChar(tablaNodos.nodos);
+		printf("el nombre del nodo es %s \n",unNodo->nombreNodo);
+
+		config_set_value(archivoNodos,"NODOS",datosAguardar); ///ROMPE ESTA LINEA
+
+		char* key =  malloc(12*sizeof(char*));
+
 		sprintf(key,"%sTotal",unNodo->nombreNodo);
-		config_set_value(archivoNodos,key,(char*)unNodo->total);
+		sprintf(datosAguardar,"%d",unNodo->total);
+		config_set_value(archivoNodos,key,datosAguardar);
+		sprintf(datosAguardar,"%d",unNodo->total);
 		sprintf(key,"%sLibre",unNodo->nombreNodo);
-		config_set_value(archivoNodos,key,(char*)unNodo->total);
+		config_set_value(archivoNodos,key,datosAguardar);
 		free(key);
 		//debo crear el bitmap de ese nodo
 		t_config* configBitmapNodo;
@@ -242,8 +255,25 @@ void registrarNodo(Nodo* unNodo,int socketNodo){
 	}
 }
 
-bool encontreNodo(void* nombreNodo){
-	return (char*) nombreNodo == busquedaNodo_GLOBAL ? true : false;
+char* pasarlistaDenodosAChar(t_list* listaDeNodos){
+ int i = 0;
+ Nodo* unNodo = list_get(listaDeNodos, i);
+ char* datosAguardar = malloc(sizeof(char)*((list_size(tablaNodos.nodos)*9)+4));
+ sprintf(datosAguardar, "[%s", unNodo->nombreNodo);
+ for(i=1; i < list_size(listaDeNodos); i++){
+  unNodo = list_get(listaDeNodos, i);
+  sprintf(datosAguardar,",%s",unNodo->nombreNodo);
+ }
+ //sprintf(datosAguardar, ",%s]", unNodo->nombreNodo);
+ strcat(datosAguardar,"]");
+ printf("datos a guardar %s \n",datosAguardar);
+ free(unNodo);
+ return datosAguardar;
+}
+
+bool encontreNodo(void* unNodo){
+	printf("nodo que voy a comprar: %s \n",((Nodo*) unNodo)->nombreNodo);
+	return !strcmp(((Nodo*) unNodo)->nombreNodo,busquedaNodo_GLOBAL) ? true : false;
 }
 
 char* generarBitmap(int totalBloquesNodo){
