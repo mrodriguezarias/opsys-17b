@@ -30,8 +30,7 @@ int socket_FileSystem;
 t_yama yama;
 
 int main() {
-	process_init(PROC_YAMA);
-
+	process_init();
 	connect_to_filesystem();
 	listen_to_master();
 	return EXIT_SUCCESS;

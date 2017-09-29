@@ -56,18 +56,13 @@ char *system_upath(const char *path) {
 
 void system_init() {
 	file_mkdir(system_userdir());
+	char *dirs[] = {"config", "logs", "tmp", "metadata/archivos", "metadata/bitmaps", NULL};
 
-	char *confdir = mstring_create("%s/config", system_userdir());
-	file_mkdir(confdir);
-	free(confdir);
-
-	char *logdir = mstring_create("%s/logs", system_userdir());
-	file_mkdir(logdir);
-	free(logdir);
-
-	char *tmpdir = mstring_create("%s/tmp", system_userdir());
-	file_mkdir(tmpdir);
-	free(tmpdir);
+	for(char **dir = dirs; *dir != NULL; dir++) {
+		char *path = mstring_create("%s/%s", system_userdir(), *dir);
+		file_mkdir(path);
+		free(path);
+	}
 }
 
 const char *system_proc() {

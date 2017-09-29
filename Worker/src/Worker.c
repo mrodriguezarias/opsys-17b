@@ -18,7 +18,7 @@
 
 
 int main(int argc, char* argv[]) {
-	process_init(PROC_WORKER);
+	process_init();
 	data_open(config_get("RUTA_DATABIN"), mstring_toint(config_get("DATABIN_SIZE")));
 
 	mostrar_configuracion();

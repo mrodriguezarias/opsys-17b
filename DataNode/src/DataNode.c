@@ -52,7 +52,7 @@ void inicializarNodo();
 t_serial nodo_pack(Nodo infoNodo);
 
 int main() {
-	process_init(PROC_DATANODE);
+	process_init();
 	data_open(config_get("RUTA_DATABIN"), mstring_toint(config_get("DATABIN_SIZE")));
 	connect_to_filesystem();
 	//listen_for_operations();
@@ -120,7 +120,7 @@ void inicializarNodo(){
 	if(operacion == REGISTRARNODO){
 		Nodo infoNodo;
 		infoNodo.nombreNodo = config_get("NOMBRE_NODO");
-		infoNodo.total = ((data.size)/1048576); //pasado a megas.
+		infoNodo.total = (data_size()/1048576); //pasado a megas.
 		printf("mi total es %d \n",infoNodo.total);
 		//Empaqueto
 		t_serial packed_nodo = nodo_pack(infoNodo);

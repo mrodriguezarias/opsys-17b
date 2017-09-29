@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 		return EXIT_SUCCESS;
 	}
 
-	process_init(PROC_MASTER);
+	process_init();
 
 	connect_to_yama();
 	request_job_for_file(argv[1]);
