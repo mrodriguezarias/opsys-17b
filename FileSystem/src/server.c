@@ -52,7 +52,6 @@ void server() {
 	asignarDirecciones(socketEscuchandoYama, (struct sockaddr *) &direccion_Yama);
 
 	//Preparo para escuchar los 2 puertos en el master
-	printf("Esperando conexiones entrantes \n");
 	FD_ZERO(&master);
 	FD_SET(socketEscuchandoDataNode, &master);
 	FD_SET(socketEscuchandoYama, &master);
@@ -73,6 +72,7 @@ void server() {
 		struct sockaddr_in remoteaddr;
 		socklen_t addrlen;
 		read_fds = master; // cópialo
+		printf("Esperando conexiones entrantes \n");
 		if (select((maximo_Sockets) + 1, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("select");
 			exit(1);
@@ -186,12 +186,10 @@ void handshakeConYama(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set mas
 
 void inicializarNodo(int socketNodo){
 	int operacion = REGISTRARNODO;
-	int envio = send(socketNodo,&operacion,sizeof(operacion),0);
-	printf("mande la inicializacion %d \n",envio);
+	send(socketNodo,&operacion,sizeof(operacion),0);
 	//recibo lo que necesito.
 	Nodo* infoDelNodo;
 	t_packet packet  = protocol_receive(socketNodo);
-	printf("pase el receive del protocolo \n");
 	if(packet.sender == PROC_DATANODE){
 		 infoDelNodo = infoNodo_unpack(packet.content);
 	}
@@ -217,6 +215,7 @@ void registrarNodo(Nodo* unNodo,int socketNodo){
 		}
 	}
 	else{
+		t_config* configBitmapNodo;
 		tablaNodos.tamanio += unNodo->total;
 		tablaNodos.libre += unNodo->total;
 		unNodo->libre = unNodo->total;
@@ -226,10 +225,8 @@ void registrarNodo(Nodo* unNodo,int socketNodo){
 		config_set_value(archivoNodos,"TAMANIO",datosAguardar);
 		sprintf(datosAguardar,"%d",tablaNodos.libre);
 		config_set_value(archivoNodos,"LIBRE",datosAguardar);
-		datosAguardar = pasarlistaDenodosAChar(tablaNodos.nodos);
-		printf("el nombre del nodo es %s \n",unNodo->nombreNodo);
-
-		config_set_value(archivoNodos,"NODOS",datosAguardar); ///ROMPE ESTA LINEA
+		strcpy(datosAguardar, pasarlistaDenodosAChar(tablaNodos.nodos));
+		config_set_value(archivoNodos,"NODOS",datosAguardar);
 
 		char* key =  malloc(12*sizeof(char*));
 
@@ -239,45 +236,43 @@ void registrarNodo(Nodo* unNodo,int socketNodo){
 		sprintf(datosAguardar,"%d",unNodo->total);
 		sprintf(key,"%sLibre",unNodo->nombreNodo);
 		config_set_value(archivoNodos,key,datosAguardar);
+		config_save(archivoNodos);
 		free(key);
 		//debo crear el bitmap de ese nodo
-		t_config* configBitmapNodo;
 		char* nombreEstructura = malloc(sizeof(char)*16);
 		sprintf(nombreEstructura,"bitmaps/%s",unNodo->nombreNodo);
 		char* rutaArchivo = config_file(nombreEstructura,"dat");
 		fopen(rutaArchivo,"w+");
 		configBitmapNodo = config_create(rutaArchivo);
-		char* bitmap = generarBitmap(unNodo->total);
-		config_set_value(configBitmapNodo,"BITMAP",bitmap);
-		config_save(configBitmapNodo);
+		generarBitmap(unNodo->total,configBitmapNodo);
 		free(nombreEstructura);
+
 
 	}
 }
 
 char* pasarlistaDenodosAChar(t_list* listaDeNodos){
  int i = 0;
- Nodo* unNodo = list_get(listaDeNodos, i);
+ Nodo* nodoObtenido = list_get(listaDeNodos, i);
  char* datosAguardar = malloc(sizeof(char)*((list_size(tablaNodos.nodos)*9)+4));
- sprintf(datosAguardar, "[%s", unNodo->nombreNodo);
+ char* datosAguardarAuxiliar = malloc(sizeof(char)*6);
+ sprintf(datosAguardar, "[%s", nodoObtenido->nombreNodo);
  for(i=1; i < list_size(listaDeNodos); i++){
-  unNodo = list_get(listaDeNodos, i);
-  sprintf(datosAguardar,",%s",unNodo->nombreNodo);
+	 nodoObtenido = list_get(listaDeNodos, i);
+  sprintf(datosAguardarAuxiliar,",%s",nodoObtenido->nombreNodo);
+	 strcat(datosAguardar,datosAguardarAuxiliar);
  }
- //sprintf(datosAguardar, ",%s]", unNodo->nombreNodo);
  strcat(datosAguardar,"]");
- printf("datos a guardar %s \n",datosAguardar);
- free(unNodo);
+ free(datosAguardarAuxiliar);
  return datosAguardar;
 }
 
 bool encontreNodo(void* unNodo){
-	printf("nodo que voy a comprar: %s \n",((Nodo*) unNodo)->nombreNodo);
 	return !strcmp(((Nodo*) unNodo)->nombreNodo,busquedaNodo_GLOBAL) ? true : false;
 }
 
-char* generarBitmap(int totalBloquesNodo){
-	char* bitmap = malloc(sizeof(char)*totalBloquesNodo);
+void generarBitmap(int totalBloquesNodo,t_config* archivoBitmap){
+	char* bitmap = malloc(sizeof(char)*totalBloquesNodo+2+(totalBloquesNodo-1));
 	strcpy(bitmap,"");
 	strcat(bitmap,"[0");
 	int i;
@@ -285,6 +280,9 @@ char* generarBitmap(int totalBloquesNodo){
 		strcat(bitmap,",0");
 	}
 	strcat(bitmap,"]");
-	return bitmap;
+	config_set_value(archivoBitmap,"BITMAP",bitmap);
+	config_save(archivoBitmap);
+
+	free(bitmap);
 }
 

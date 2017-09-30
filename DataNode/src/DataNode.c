@@ -68,7 +68,6 @@ int main() {
 void connect_to_filesystem(){
 	t_socket socket = socket_connect(config_get("IP_FILESYSTEM"), config_get("PUERTO_DATANODE"));
 	protocol_handshake(socket);
-	printf("socket%d \n",socket);
 	log_inform("Conectado a proceso FileSystem por socket %i", socket);
 	socket_FileSystem = socket;
 	inicializarNodo();
@@ -113,15 +112,11 @@ void setBloque_operation(int nroBloque, char* datos){
 void inicializarNodo(){
 	int operacion = 0;
 	//Recibo la operacion
-	printf("socket %d \n",socket_FileSystem);
-	printf("antes del recv  \n");
-	int recepcion = recv(socket_FileSystem, &operacion, sizeof(operacion), 0);
-	printf("entre a ininicializar nodo con %d\n",recepcion);
+	recv(socket_FileSystem, &operacion, sizeof(operacion), 0);
 	if(operacion == REGISTRARNODO){
 		Nodo infoNodo;
 		infoNodo.nombreNodo = config_get("NOMBRE_NODO");
 		infoNodo.total = (data_size()/1048576); //pasado a megas.
-		printf("mi total es %d \n",infoNodo.total);
 		//Empaqueto
 		t_serial packed_nodo = nodo_pack(infoNodo);
 		t_packet packet = protocol_packet(REGISTRARNODO, packed_nodo);
