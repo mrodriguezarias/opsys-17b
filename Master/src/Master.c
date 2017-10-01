@@ -22,21 +22,14 @@ int main(int argc, char *argv[]) {
 	}
 
 	process_init();
-
 	connect_to_yama();
 	request_job_for_file(argv[1]);
-
-//	connect_to_worker();
-
-	return 0;
-
+//	return 0;
 	t_packet packet;
-
 	do {
 		packet = protocol_receive(master.yama_socket);
-		manejador_yama(packet);
+		manejador_yama(packet,argv[1],argv[2],argv[3]);
 	} while(true);
-
 	terminate();
 	return EXIT_SUCCESS;
 }

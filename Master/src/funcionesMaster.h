@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <string.h>
+#include <fcntl.h>
 
 #include <protocol.h>
 #include <log.h>
@@ -17,12 +19,10 @@
 #include<commons/collections/list.h>
 #include<commons/collections/queue.h>
 
-
-
-
-
-
-#include<pthread.h>
+#include <sys/wait.h>
+#include <sys/sendfile.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #define PORT "3790"
 #define MAXSIZE 1024
@@ -39,7 +39,6 @@ struct data {
 	char s[16];
 };
 
-
 typedef struct {
 	char * YAMA_IP, *YAMA_PUERTO,*WORKER_IP ,*PUERTO_WORKER;
 } tMaster;
@@ -51,9 +50,10 @@ pthread_t * hilo_worker;
 //pthread_t * hilo_yama;
 
 
-
-
-
+typedef struct {
+	int bytelen;
+	char *bytes;
+}tSrcCode;
 
 
 void crearLogger();
@@ -72,5 +72,6 @@ void terminate(void);
 
 void liberarRecursos();
 
+void mandar_script(int,char*);
 
 #endif //MASTER_H

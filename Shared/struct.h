@@ -2,6 +2,7 @@
 #define STRUCT_H
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <protocol.h>
 #include <serial.h>
 #include <string.h>
@@ -19,13 +20,19 @@ typedef struct {
 } tDatosEtapa, tAlmacenadoFinal;
 
 typedef struct {
-	char nodo[64];                 //Nodo 1
-	char ip[64];   //192.168.1.10:5000  aaa.ddd.c.dd:ppppp contando \0
-	char puerto[64]; //Divido en dos al puerto y la ip, para tener mas facilidad en su uso
+	char *nodo;                 //Nodo 1
+	char *ip;   //192.168.1.10:5000  aaa.ddd.c.dd:ppppp contando \0
+	char *puerto; //Divido en dos al puerto y la ip, para tener mas facilidad en su uso
 	int bloque;				  //38
 	int bytes_ocupados;		  //10180
-	char archivo_etapa[64];
+	char *archivo_etapa;
 } tEtapaTransformacion;
+
+typedef struct{
+	tEtapaTransformacion et;
+	char * archivo_trans;
+	char * srcipt_tranformador;
+}tEtapaTransformacionBis;
 
 typedef struct {
 	char nodo[64];                 //Nodo 1

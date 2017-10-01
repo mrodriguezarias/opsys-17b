@@ -24,6 +24,7 @@ void connect_to_yama() {
 }
 
 void request_job_for_file(const char *file) {
+	log_print("Solicitud de job a YAMA");
 	t_serial content = serial_pack("s", file);
 	t_packet packet = protocol_packet(OP_INIT_JOB, content);
 	protocol_send(packet, master.yama_socket);

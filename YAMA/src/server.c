@@ -10,14 +10,15 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <struct.h>
 
 void init_job(t_serial content);
 
 void listen_to_master() {
+	log_print("Escuchando puertos de master");
 	t_socket sv_sock = socket_init(NULL, config_get("MASTER_PUERTO"));
 	t_fdset sockets = socket_set_create();
 	socket_set_add(sv_sock, &sockets);
-	log_inform("Escuchando puertos de master");
 	while(true) {
 		t_fdset selected = socket_select(sockets);
 
@@ -41,7 +42,11 @@ void listen_to_master() {
 				}
 
 				switch(packet.operation) {
-				case OP_INIT_JOB: init_job(packet.content); break;
+				case OP_INIT_JOB: init_job(packet.content);
+					log_print("OP_INIT_JOB");
+					tEtapaTransformacion et = new_etapa_transformacion("Nodo1","127.0.0.1","5050",35,100,"/tmp/Master1-temp38");
+					mandar_etapa_transformacion(et,sock);
+					break;
 				default:
 					log_report("Operación desconocida: %s", packet.operation);
 				}

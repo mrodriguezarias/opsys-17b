@@ -10,11 +10,15 @@ tEtapaTransformacion new_etapa_transformacion(const char*nodo,const char*ip,cons
 			.bloque = bloque,
 			.bytes_ocupados = bytes_ocuapdos
 	};
-
+	et.nodo = malloc(20);
+	et.ip = malloc(20);
+	et.puerto = malloc(20);
+	et.archivo_etapa = malloc(20);
 	strcpy(et.nodo,nodo);
 	strcpy(et.ip,ip);
 	strcpy(et.puerto,puerto);
 	strcpy(et.archivo_etapa,archivo_etapa);
+
 
 	return et;
 }
@@ -31,18 +35,25 @@ t_serial etapa_transformacion_pack(tEtapaTransformacion transformacion){
 
 tEtapaTransformacion etapa_transformacion_unpack(t_serial serial){
 	tEtapaTransformacion et;
-	serial_unpack(serial,"sssiis",et.nodo,
-			et.ip,
-			et.puerto,
+	serial_unpack(serial,"sssiis",&et.nodo,
+			&et.ip,
+			&et.puerto,
 			&et.bloque,
 			&et.bytes_ocupados,
-			et.archivo_etapa);
+			&et.archivo_etapa);
 	return et;
 }
 
 
 void mandar_etapa_transformacion(tEtapaTransformacion et,t_socket sock){
+	printf("archivo etapa: %s\n"
+						"ip worker: %s \n"
+						"puerto worker: %s \n",
+						et.archivo_etapa,
+						et.ip,
+						et.puerto);
 	t_serial serial = etapa_transformacion_pack(et);
+	free(et.nodo);free(et.ip);free(et.puerto);free(et.archivo_etapa);
 	t_packet paquete = protocol_packet(OP_INICIAR_TRANSFORMACION, serial);
 	protocol_send(paquete, sock);
 }

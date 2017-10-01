@@ -8,6 +8,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <struct.h>
+#include <sys/wait.h>
+#include <sys/sendfile.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+
+#include <string.h>
+#include <fcntl.h>
 
 #include "funcionesMaster.h"
 #include "Master.h"
@@ -17,64 +25,73 @@
  * FORMA 1
  *
  * */
-pthread_t hilo_transformacion;
-pthread_t hilo_rl;
-pthread_t hilo_rg;
 
-void manejador_transformacion(tEtapaTransformacion * transformacion) {
-	puts("\nManejador_transformacion");
-	log_inform("Hilo ETAPA_TRANSFORMACION");
-	connect_to_worker(transformacion->ip, transformacion->puerto);
-	printf("Socket worker: %d \n", master.worker_socket);
+
+void manejador_transformacion(tEtapaTransformacionBis * transformacion) {
+	log_print("Hilo ETAPA_TRANSFORMACION");
+	connect_to_worker(transformacion->et.ip, transformacion->et.puerto);
+//	printf("Socket worker: %d \n", master.worker_socket);
 	char * buffer = socket_receive_string(master.worker_socket);
 	t_packet worker = protocol_receive(socket_worker);
-	free(worker.content.data);
-	printf("Respuesta handshake de Worker %s \n", buffer);
-
-	t_serial serial = serial_pack("ssssii", transformacion->archivo_etapa,
-			transformacion->nodo, transformacion->ip, transformacion->puerto,
-			transformacion->bloque, transformacion->bytes_ocupados);
+	free(worker.content.data);worker.operation = 0;worker.sender=PROC_MASTER;
+//	printf("Respuesta handshake de Worker: %s \n", buffer);
+	t_serial serial = serial_pack("sii",
+			transformacion->et.archivo_etapa,
+			transformacion->et.bloque,
+			transformacion->et.bytes_ocupados);
+//	printf("archivo etapa:%s\n"
+//			"script:%s\n"
+//			"bloque:%d\n"
+//			"bytes ocupados:%d\n",transformacion->et.archivo_etapa,transformacion->srcipt_tranformador,
+//			transformacion->et.bloque,
+//			transformacion->et.bytes_ocupados);
 	worker = protocol_packet(OP_INICIAR_TRANSFORMACION, serial);
 	protocol_send(worker, master.worker_socket);
+	char * respuesta = socket_receive_string(master.worker_socket);
+//	printf("%s\n",respuesta);
+	mandar_script(master.worker_socket,transformacion->srcipt_tranformador);
 }
 
 void manejador_rl(tEtapaReduccionLocal * etapa_rl) {
-	log_inform("Hilo ETAPA_REDUCCION_LOCAL");
+	log_print("Hilo ETAPA_REDUCCION_LOCAL");
 	connect_to_worker(etapa_rl->ip, etapa_rl->puerto);
 }
 void manejador_rg(tEtapaReduccionGlobal * etapa_rg) {
-	log_inform("Hilo ETAPA_REDUCCION_GLOBAL");
+	log_print("Hilo ETAPA_REDUCCION_GLOBAL");
 	connect_to_worker(etapa_rg->ip, etapa_rg->puerto);
 }
 
-void manejador_yama(t_packet paquete) {
-	tEtapaTransformacion etapa_transformacion;
+
+
+void manejador_yama(t_packet paquete,char * archivo_a_transformar,char*script_tranformador,char*script_reductor) {
+	tEtapaTransformacionBis etapa_transformacion;
 	tEtapaReduccionLocal etapa_rl;
 	tEtapaReduccionGlobal etapa_rg;
-
 	switch (paquete.operation) {
 	case OP_INICIAR_TRANSFORMACION:
-		printf("INICIAR_TRANSFORMACION\n");
+		log_print("OP_INICIAR_TRANSFORMACION");
 
-		etapa_transformacion = etapa_transformacion_unpack(paquete.content);
-
-		printf("archivo etapa: %s\n"
-				"ip worker: %s \n"
-				"puerto worker: %s \n",
-				etapa_transformacion.archivo_etapa,
-				etapa_transformacion.ip,
-				etapa_transformacion.puerto);
-
+		etapa_transformacion.et = etapa_transformacion_unpack(paquete.content);
+		etapa_transformacion.archivo_trans = malloc(64);
+		etapa_transformacion.srcipt_tranformador = malloc(64);
+		strcpy(etapa_transformacion.archivo_trans,archivo_a_transformar);
+		strcpy(etapa_transformacion.srcipt_tranformador,script_tranformador);
+//		printf("archivo etapa: %s\n"
+//				"ip worker: %s \n"
+//				"puerto worker: %s \n"
+//				"archivo_a_transformar:%s\n"
+//				"script_transformador: %s \n",
+//				etapa_transformacion.et.archivo_etapa,
+//				etapa_transformacion.et.ip,
+//				etapa_transformacion.et.puerto,
+//				archivo_a_transformar,
+//				script_tranformador);
 
 		if (pthread_create(&hilo_transformacion, NULL,(void*) manejador_transformacion, &etapa_transformacion) < 0) {
 			log_report("Error al crear hilo en INICIAR_TRANSFORMACION");
 			perror("Error al crear el hilo_transformacion");
 		}
 		pthread_join(hilo_transformacion, NULL);
-//			free(etapa_transformacion->archivo_etapa);
-//			free(etapa_transformacion->ip);
-//			free(etapa_transformacion->nodo);
-//			free(etapa_transformacion->puerto);
 
 		break;
 	case OP_INICIAR_REDUCCION_LOCAL:
@@ -86,10 +103,6 @@ void manejador_yama(t_packet paquete) {
 			log_report("Error al crear hilo en INICIAR_REDUCCION_LOCAL");
 		}
 		pthread_join(hilo_rl, NULL);
-//		free(etapa_rl->archivo_etapa);
-//		free(etapa_rl->ip);
-//		free(etapa_rl->nodo);
-//		free(etapa_rl->puerto);
 		break;
 	case OP_INICIAR_REDUCCION_GLOBAL:
 		serial_unpack(paquete.content, "sssssi", etapa_rg.archivo_etapa,
@@ -102,11 +115,6 @@ void manejador_yama(t_packet paquete) {
 		}
 		pthread_join(hilo_rg, NULL);
 
-//			free(etapa_rg->archivo_etapa);
-//			free(etapa_rg->ip);
-//			free(etapa_rg->nodo);
-//			free(etapa_rg->puerto);
-//			free(etapa_rg->archivo_temporal_de_rl);
 		break;
 	default:
 		break;
