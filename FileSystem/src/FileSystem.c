@@ -65,7 +65,6 @@ void inicializarTablaDirectorio(){
 	archivoDirectorio = config_create(rutaArchivo);
 	if(archivoDirectorio == NULL){
 		estadoAnteriorexistente = false;
-		printf("El archivo no existe \n"); //en caso que no exista, se crea uno.
 		fopen(rutaArchivo,"w+");
 		archivoDirectorio = config_create(rutaArchivo);
 		crearDirectorio((-1),"root");
@@ -73,7 +72,6 @@ void inicializarTablaDirectorio(){
 	}
 	else{
 		//las debe levantar y esperar conexion de datanodes
-		printf("El archivo existe y será levantado \n");
 		estadoAnteriorexistente = true;
 		char* indice = malloc(sizeof(char));
 		for(indexDirectorio=0;indexDirectorio<config_keys_amount(archivoDirectorio);indexDirectorio++){
@@ -82,7 +80,6 @@ void inicializarTablaDirectorio(){
 			tablaDirectorio[indexDirectorio].index = atoi(arrayAuxiliar[0]);
 			strcpy(tablaDirectorio[indexDirectorio].nombre,arrayAuxiliar[1]);
 			tablaDirectorio[indexDirectorio].padre = atoi(arrayAuxiliar[2]);
-			printf("%d		%s		%d	\n",tablaDirectorio[indexDirectorio].index,tablaDirectorio[indexDirectorio].nombre,tablaDirectorio[indexDirectorio].padre);
 		}
 		free(indice);
 	}
@@ -102,11 +99,8 @@ void inicializarTablaArchivos(){
 	char** arrayAuxiliar;
 	while((entradaArchivo = readdir(directory)) != NULL && strcmp(entradaArchivo->d_name, ".")) {
 		t_Archivo* tablaArchivo = malloc(sizeof(t_Archivo));
-		printf("Existen archivos y serán levantados \n");
 	  /* Cualquier entrada en este ciclo se trata de un archivo existente en el directorio */
-		printf("%s \n",entradaArchivo->d_name);
 		sprintf(rutaArchivo,"/home/utnso/yatpos/metadata/archivos/%s/ejemplo.csv",entradaArchivo->d_name);
-		printf("%s \n",rutaArchivo);
 		configArchivos = config_create(rutaArchivo);
 		tablaArchivo->tamanio = config_get_long_value(configArchivos,"TAMANIO");
 		tablaArchivo->tipo = config_get_string_value(configArchivos,"TIPO");
@@ -132,10 +126,6 @@ void inicializarTablaArchivos(){
 
 	}
 	free(indice);
-	if(readdir(directory) == NULL){
-		printf("No existen archivos \n"); //en caso que no exista
-
-	}
 	closedir(directory);
 	free(rutaArchivo);
 }
@@ -148,13 +138,12 @@ void inicializarTablaNodos(){
 	tablaNodos.tamanio = 0;
 	tablaNodos.libre = 0;
 	if(archivoNodos == NULL){
-		printf("El archivo no existe \n"); //en caso que no exista, se crea uno.
+		//en caso que no exista, se crea uno.
 		fopen(rutaArchivo,"w+");
 		archivoNodos = config_create(rutaArchivo);
 	}
 	else{
 		//las debe levantar y esperar conexion de datanodes
-		printf("El archivo existe y será levantado \n");
 		tablaNodos.tamanio = config_get_int_value(archivoNodos,"TAMANIO");
 		tablaNodos.libre = config_get_int_value(archivoNodos,"LIBRE");
 		char** arrayAuxiliar = config_get_array_value(archivoNodos,"NODOS");
@@ -184,16 +173,9 @@ void inicializarBitmap(){
 	char* rutaArchivo = malloc(22*sizeof(char*)+sizeof(int));
 	directory = opendir("/home/utnso/yatpos/metadata/bitmaps");
 	while((entradaArchivo = readdir(directory)) != NULL && strcmp(entradaArchivo->d_name, ".")) {
-		printf("%s \n",entradaArchivo->d_name);
 		sprintf(rutaArchivo,"/home/utnso/yatpos/metadata/bitmaps/%s",entradaArchivo->d_name);
-		printf("%s \n",rutaArchivo);
 		configBitmapNodo = config_create(rutaArchivo);
 		char** bitmap = config_get_array_value(configBitmapNodo,"BITMAP");
 		list_add(listaBitmaps,bitmap);
-	}
-
-	if(readdir(directory) == NULL){
-		printf("No existen archivos \n"); //en caso que no exista
-
 	}
 }

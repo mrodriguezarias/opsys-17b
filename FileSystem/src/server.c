@@ -11,6 +11,7 @@
 #include <config.h>
 #include <protocol.h>
 #include "estructuras.h"
+#include <mlist.h>
 
 #define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
 
@@ -51,7 +52,6 @@ void server() {
 	asignarDirecciones(socketEscuchandoYama, (struct sockaddr *) &direccion_Yama);
 
 	//Preparo para escuchar los 2 puertos en el master
-	printf("Esperando conexiones entrantes \n");
 	FD_ZERO(&master);
 	FD_SET(socketEscuchandoDataNode, &master);
 	FD_SET(socketEscuchandoYama, &master);
@@ -72,6 +72,7 @@ void server() {
 		struct sockaddr_in remoteaddr;
 		socklen_t addrlen;
 		read_fds = master; // cópialo
+		printf("Esperando conexiones entrantes \n");
 		if (select((maximo_Sockets) + 1, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("select");
 			exit(1);
@@ -147,13 +148,13 @@ void handshakeConDataNode(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set
 		if(packet.operation == OP_HANDSHAKE && packet.sender == PROC_DATANODE) {
 			printf("FileSystem: nueva conexion desde %s en socket %d\n",
 					inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
-			if (send(nuevoSocket, "Bienvenido al FileSystem!", 26, 0) == -1) {
+			if (send(nuevoSocket, "Acceso concedido!!", 19, 0) == -1) {
 				perror("Error en el send");
 			}
 		} else {
 			printf(
 					"El proceso que requirio acceso, no posee los permisos adecuados\n");
-			if (send(nuevoSocket, "Usted no esta autorizado!", MAXIMO_TAMANIO_DATOS,
+			if (send(nuevoSocket, "No esta autorizado", 19,
 					0) == -1) {
 				perror("Error en el send");
 			}
@@ -169,13 +170,13 @@ void handshakeConYama(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set mas
 	if(packet.operation == OP_HANDSHAKE && packet.sender == PROC_YAMA) {
 		printf("FileSystem: nueva conexion desde %s en socket %d\n",
 				inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
-		if (send(nuevoSocket, "Bienvenido al FileSystem!", 26, 0) == -1) {
+		if (send(nuevoSocket, "Acceso concedido!!", 19, 0) == -1) {
 			perror("Error en el send");
 		}
 	} else {
 		printf(
 				"El proceso que requirio acceso, no posee los permisos adecuados\n");
-		if (send(nuevoSocket, "Usted no esta autorizado!", MAXIMO_TAMANIO_DATOS,
+		if (send(nuevoSocket, "No esta autorizado", 19,
 				0) == -1) {
 			perror("Error en el send");
 		}
@@ -185,8 +186,7 @@ void handshakeConYama(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set mas
 
 void inicializarNodo(int socketNodo){
 	int operacion = REGISTRARNODO;
-	send(socketNodo,&operacion,sizeof(int),0);
-	printf("mande la inicializacion  \n");
+	send(socketNodo,&operacion,sizeof(operacion),0);
 	//recibo lo que necesito.
 	Nodo* infoDelNodo;
 	t_packet packet  = protocol_receive(socketNodo);
@@ -207,7 +207,7 @@ void registrarNodo(Nodo* unNodo,int socketNodo){
 	if(estadoAnteriorexistente){
 		busquedaNodo_GLOBAL =  unNodo->nombreNodo;
 		listaNodosConectados = list_create();
-		if(list_find(tablaNodos.nodos,*encontreNodo)){
+		if(list_any_satisfy(tablaNodos.nodos,*encontreNodo)){
 		list_add(listaNodosConectados,unNodo->nombreNodo);
 		}
 		else{
@@ -215,39 +215,64 @@ void registrarNodo(Nodo* unNodo,int socketNodo){
 		}
 	}
 	else{
+		t_config* configBitmapNodo;
 		tablaNodos.tamanio += unNodo->total;
 		tablaNodos.libre += unNodo->total;
+		unNodo->libre = unNodo->total;
 		list_add(tablaNodos.nodos,unNodo);
-		config_set_value(archivoNodos,"TAMANIO",(char*)tablaNodos.tamanio);
-		config_set_value(archivoNodos,"LIBRE",(char*)tablaNodos.libre);
-		config_set_value(archivoNodos,"NODOS",(char*)tablaNodos.nodos);
-		char* key =  malloc(8*sizeof(char*));
+		char* datosAguardar = malloc(sizeof(char)*((list_size(tablaNodos.nodos)*9)+4));
+		sprintf(datosAguardar,"%d",tablaNodos.tamanio);
+		config_set_value(archivoNodos,"TAMANIO",datosAguardar);
+		sprintf(datosAguardar,"%d",tablaNodos.libre);
+		config_set_value(archivoNodos,"LIBRE",datosAguardar);
+		strcpy(datosAguardar, pasarlistaDenodosAChar(tablaNodos.nodos));
+		config_set_value(archivoNodos,"NODOS",datosAguardar);
+
+		char* key =  malloc(12*sizeof(char*));
+
 		sprintf(key,"%sTotal",unNodo->nombreNodo);
-		config_set_value(archivoNodos,key,(char*)unNodo->total);
+		sprintf(datosAguardar,"%d",unNodo->total);
+		config_set_value(archivoNodos,key,datosAguardar);
+		sprintf(datosAguardar,"%d",unNodo->total);
 		sprintf(key,"%sLibre",unNodo->nombreNodo);
-		config_set_value(archivoNodos,key,(char*)unNodo->total);
+		config_set_value(archivoNodos,key,datosAguardar);
+		config_save(archivoNodos);
 		free(key);
 		//debo crear el bitmap de ese nodo
-		t_config* configBitmapNodo;
 		char* nombreEstructura = malloc(sizeof(char)*16);
 		sprintf(nombreEstructura,"bitmaps/%s",unNodo->nombreNodo);
 		char* rutaArchivo = config_file(nombreEstructura,"dat");
 		fopen(rutaArchivo,"w+");
 		configBitmapNodo = config_create(rutaArchivo);
-		char* bitmap = generarBitmap(unNodo->total);
-		config_set_value(configBitmapNodo,"BITMAP",bitmap);
-		config_save(configBitmapNodo);
+		generarBitmap(unNodo->total,configBitmapNodo);
 		free(nombreEstructura);
+
 
 	}
 }
 
-bool encontreNodo(void* nombreNodo){
-	return (char*) nombreNodo == busquedaNodo_GLOBAL ? true : false;
+char* pasarlistaDenodosAChar(t_list* listaDeNodos){
+ int i = 0;
+ Nodo* nodoObtenido = list_get(listaDeNodos, i);
+ char* datosAguardar = malloc(sizeof(char)*((list_size(tablaNodos.nodos)*9)+4));
+ char* datosAguardarAuxiliar = malloc(sizeof(char)*6);
+ sprintf(datosAguardar, "[%s", nodoObtenido->nombreNodo);
+ for(i=1; i < list_size(listaDeNodos); i++){
+	 nodoObtenido = list_get(listaDeNodos, i);
+  sprintf(datosAguardarAuxiliar,",%s",nodoObtenido->nombreNodo);
+	 strcat(datosAguardar,datosAguardarAuxiliar);
+ }
+ strcat(datosAguardar,"]");
+ free(datosAguardarAuxiliar);
+ return datosAguardar;
 }
 
-char* generarBitmap(int totalBloquesNodo){
-	char* bitmap = malloc(sizeof(char)*totalBloquesNodo);
+bool encontreNodo(void* unNodo){
+	return !strcmp(((Nodo*) unNodo)->nombreNodo,busquedaNodo_GLOBAL) ? true : false;
+}
+
+void generarBitmap(int totalBloquesNodo,t_config* archivoBitmap){
+	char* bitmap = malloc(sizeof(char)*totalBloquesNodo+2+(totalBloquesNodo-1));
 	strcpy(bitmap,"");
 	strcat(bitmap,"[0");
 	int i;
@@ -255,6 +280,9 @@ char* generarBitmap(int totalBloquesNodo){
 		strcat(bitmap,",0");
 	}
 	strcat(bitmap,"]");
-	return bitmap;
+	config_set_value(archivoBitmap,"BITMAP",bitmap);
+	config_save(archivoBitmap);
+
+	free(bitmap);
 }
 

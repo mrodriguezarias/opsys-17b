@@ -65,6 +65,7 @@ void inicializarBitmap();
 void inicializarNodo(int);
 void registrarNodo(Nodo*,int);
 bool encontreNodo(void*);
-char* generarBitmap(int);
+void generarBitmap(int,t_config*);
+char* pasarlistaDenodosAChar(t_list*);
 
 #endif /* ESTRUCTURAS_H_ */
