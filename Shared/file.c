@@ -53,7 +53,7 @@ FILE *file_pointer(t_file *file) {
 }
 
 char *file_readline(t_file *file) {
-	if(file == NULL || file->type != FTYPE_TXT) return NULL;
+	if(file == NULL) return NULL;
 	char *line = get_line(file->fp);
 	if(line != NULL) {
 		char *end = mstring_end(line);
@@ -63,7 +63,7 @@ char *file_readline(t_file *file) {
 }
 
 void file_writeline(t_file *file, const char *line) {
-	if(file == NULL || file->type != FTYPE_TXT) return;
+	if(file == NULL) return;
 	fputs(line, file->fp);
 	if(*mstring_end(line) != '\n') {
 		fputs("\n", file->fp);
@@ -134,7 +134,7 @@ static char *get_line(FILE *fp) {
 	char *line = NULL;
 	size_t len = 0;
 	int r = getline(&line, &len, fp);
-	if(r == -1 && errno != 0) {
+	if(r == -1 && !feof(fp) && errno != 0) {
 		show_error_and_exit(fpath(fileno(fp)), "leer línea de");
 	}
 	return r != -1 ? line : NULL;

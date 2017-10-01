@@ -262,6 +262,7 @@ void path_sort(const char *path) {
 	}
 	mlist_traverse(lines, writer);
 	mlist_destroy(lines, free);
+	file_close(file);
 }
 
 void path_merge(mlist_t *sources, const char *target) {
@@ -292,6 +293,8 @@ void path_merge(mlist_t *sources, const char *target) {
 
 	t_file *output = file_create(target);
 	mlist_t *list = mlist_copy(files);
+	mlist_traverse(list, read_file);
+
 	while(true) {
 		mlist_traverse(list, read_file);
 		mlist_t *aux = mlist_filter(list, line_set);
@@ -309,6 +312,7 @@ void path_merge(mlist_t *sources, const char *target) {
 		free(cont);
 	}
 	mlist_destroy(files, free_cont);
+	file_close(output);
 }
 
 // ========== Funciones privadas ==========

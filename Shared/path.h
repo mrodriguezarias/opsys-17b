@@ -132,7 +132,8 @@ void path_truncate(const char *path, size_t size);
 void path_sort(const char *path);
 
 /**
- * Aparea un conjunto de archivos, juntándolos en un solo.
+ * Aparea un conjunto de archivos, juntándolos en uno solo.
+ * Precondición: los archivos fuente deben estar ordenados.
  * @param sources Lista con los archivos a aparear.
  * @param target Ruta al archivo a crear con el resultado del apareo.
  */
