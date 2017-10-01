@@ -307,10 +307,10 @@ void file_merge(mlist_t *sources, const char *target) {
 	mlist_destroy(files, free_cont);
 }
 
-t_fmap *file_map(const char *path) {
+t_fmap *file_map(const char *path, size_t size) {
 	int fd = open(path, O_RDWR);
 	checkfd(fd, path, "abrir");
-	size_t size = file_size(path);
+	if(size == 0) size = file_size(path);
 	void *addr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if(addr == MAP_FAILED) {
 		show_error_and_exit(fd, path, "mapear a memoria");

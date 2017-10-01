@@ -30,6 +30,7 @@ void mstring_format(char **string, const char *format, ...);
 
 /**
  * Crea una cadena copiando parte de otra.
+ * Nota: excluye el carácter en el índice final.
  * @param string Cadena a copiar.
  * @param start Índice inicial.
  * @param end Índice final (-1 para copiar hasta el final).
@@ -77,6 +78,22 @@ bool mstring_equali(const char *str1, const char *str2);
 bool mstring_contains(const char *string, const char *substring);
 
 /**
+ * Devuelve un puntero a una subcadena dentro de una cadena.
+ * @param string Cadena contenedora.
+ * @param substring Cadena a buscar.
+ * @return Puntero a la subcadena (NULL si no existe).s
+ */
+char *mstring_find(const char *string, const char *substring);
+
+/**
+ * Devuelve el índice de una subcadena dentro de una cadena.
+ * @param string Cadena contenedora.
+ * @param substring Cadena a buscar.
+ * @return Índice de la subcadena (-1 si no existe).
+ */
+int mstring_index(const char *string, const char *substring);
+
+/**
  * Convierte una cadena a un valor entero.
  * @param string Cadena a convertir.
  * @return Valor entero.
@@ -98,5 +115,38 @@ bool mstring_asc(const char *str1, const char *str2);
  * @return 1 si str1 es alfabéticamente mayor que str2, 0 si es menor.
  */
 bool mstring_desc(const char *str1, const char *str2);
+
+/**
+ * Repite una cadena un número determinado de veces.
+ * @param string Cadena a repetir.
+ * @param times Número de veces.
+ * @return Cadena con la repetición (a liberar con free()).
+ */
+char *mstring_repeat(const char *string, int times);
+
+/**
+ * Reemplaza una subcadena de una cadena por otra cadena.
+ * @param string Puntero a la cadena original.
+ * @param substring Subcadena a reemplazar.
+ * @param replacement Cadena de reemplazo.
+ * @return Valor lógico indicando si se realizó el reemplazo.
+ */
+bool mstring_replace(char **string, const char *substring, const char *replacement);
+
+/**
+ * Verifica si una cadena tiene determinado prefijo.
+ * @param string Cadena a verificar.
+ * @param Prefijo.
+ * @return Valor lógico con el resultado.
+ */
+bool mstring_hasprefix(const char *string, const char *prefix);
+
+/**
+ * Verifica si una cadena tiene determinado sufijo.
+ * @param string Cadena a verificar.
+ * @param Sufijo.
+ * @return Valor lógico con el resultado.
+ */
+bool mstring_hassuffix(const char *string, const char *suffix);
 
 #endif /* MSTRING_H_ */

@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define MAX_SIZE 1024
+
 static char *create_format_template(const char *format, va_list args);
 
 // ========== Funciones públicas ==========
@@ -54,8 +56,8 @@ void mstring_format(char **string, const char *format, ...) {
 }
 
 char *mstring_copy(const char *string, int start, int end) {
-	if(end < 0) end = strlen(string) - 1;
-	return mstring_create("%.*s", end - start + 1, string + start);
+	if(end < 0) end = strlen(string);
+	return mstring_create("%.*s", end - start, string + start);
 }
 
 bool mstring_isempty(const char *string) {
@@ -87,7 +89,16 @@ bool mstring_equali(const char *str1, const char *str2) {
 }
 
 bool mstring_contains(const char *string, const char *substring) {
-	return strstr(string, substring) != NULL;
+	return mstring_find(string, substring) != NULL;
+}
+
+char *mstring_find(const char *string, const char *substring) {
+	return strstr(string, substring);
+}
+
+int mstring_index(const char *string, const char *substring) {
+	char *p = mstring_find(string, substring);
+	return p != NULL ? p - string : -1;
 }
 
 int mstring_toint(const char *string) {
@@ -102,10 +113,39 @@ bool mstring_desc(const char *str1, const char *str2) {
 	return strcmp(str1, str2) >= 0;
 }
 
+char *mstring_repeat(const char *string, int times) {
+	char *repeated = mstring_empty(NULL);
+	while(times--) {
+		mstring_format(&repeated, "%s%s", repeated, string);
+	}
+	return repeated;
+}
+
+bool mstring_replace(char **string, const char *substring, const char *replacement) {
+	int i = mstring_index(*string, substring);
+	if(i == -1) return false;
+
+	char *result = mstring_copy(*string, 0, i);
+	mstring_format(&result, "%s%s%s", result, replacement, *string + i + strlen(substring));
+
+	free(*string);
+	*string = result;
+	return true;
+}
+
+bool mstring_hasprefix(const char *string, const char *prefix) {
+	return strncmp(string, prefix, strlen(prefix)) == 0;
+}
+
+bool mstring_hassuffix(const char *string, const char *suffix) {
+	int suffix_len = strlen(suffix);
+	return strncmp(string + strlen(string) - suffix_len, suffix, suffix_len) == 0;
+}
+
 // ========== Funciones privadas ==========
 
 static char *create_format_template(const char *format, va_list args) {
-	char buffer[1024];
+	char buffer[MAX_SIZE];
 	vsnprintf(buffer, sizeof buffer, format, args);
 	return strdup(buffer);
 }

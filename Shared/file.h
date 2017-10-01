@@ -176,9 +176,10 @@ void file_merge(mlist_t *sources, const char *target);
 /**
  * Mapea a memoria un archivo.
  * @param path Ruta al archivo a mapear.
+ * @param size Tamaño a mapear (0 para mapear el archivo completo).
  * @return Puntero al mapeo de memoria (debe ser liberado con file_unmap).
  */
-t_fmap *file_map(const char *path);
+t_fmap *file_map(const char *path, size_t size);
 
 /**
  * Libera un mapeo de memoria hecho por file_map().

@@ -50,7 +50,6 @@ static void sort_nodes(node_t **nodes, void *cmp, bool fwd);
 mlist_t *mlist_create() {
 	mlist_t *list = malloc(sizeof(mlist_t));
 	list->head = NULL;
-	list->tail = NULL;
 	list->length = 0;
 	pthread_mutex_init(&list->mutex, NULL);
 	return list;
