@@ -1,4 +1,5 @@
 #include "dirtree.h"
+#include <path.h>
 #include <file.h>
 #include <mstring.h>
 #include <stdbool.h>
@@ -7,7 +8,7 @@
 #include <system.h>
 #include <mlist.h>
 
-#define DAT_FILE "metadata/directorios.dat"
+#define DAT_PATH "metadata/directorios.dat"
 #define MAX_SIZE 100
 
 #define dir_exists(dir) ((dir) != NULL && (dir)->parent >= -1)
@@ -38,15 +39,10 @@ static void remove_directory(t_directory *dir);
 // ========== Funciones públicas ==========
 
 void dirtree_load() {
-	if(file != NULL) return;
-	char *path = mstring_create("%s/%s", system_userdir(), DAT_FILE);
-	bool existed = file_exists(path);
-	if(!existed) file_create(path);
-	file = file_open(path);
-	free(path);
-	if(existed) {
-		fread(&capacity, sizeof capacity, 1, file);
-		fread(dirs, sizeof(t_directory), MAX_SIZE, file);
+	if(path_exists(DAT_PATH)) {
+		file = file_open(DAT_PATH);
+		fread(&capacity, sizeof capacity, 1, file_pointer(file));
+		fread(dirs, sizeof(t_directory), MAX_SIZE, file_pointer(file));
 	} else {
 		for(int i = 0; i < MAX_SIZE; i++) {
 			t_directory *dir = dirs + i;
@@ -208,10 +204,11 @@ void dirtree_clear() {
 }
 
 void dirtree_save() {
-	if(file == NULL) return;
-	rewind(file);
-	fwrite(&capacity, sizeof capacity, 1, file);
-	fwrite(dirs, sizeof(t_directory), MAX_SIZE, file);
+	if(file == NULL) file = file_create(DAT_PATH);
+	FILE *fp = file_pointer(file);
+	rewind(fp);
+	fwrite(&capacity, sizeof capacity, 1, fp);
+	fwrite(dirs, sizeof(t_directory), MAX_SIZE, fp);
 }
 
 // ========== Funciones privadas ==========
@@ -284,20 +281,5 @@ static void remove_children(t_directory *dir) {
 static void remove_directory(t_directory *dir) {
 	if(dir != NULL) {
 		dir->parent = -2;
-	}
-}
-
-void print_dir(t_directory *dir) {
-	if(!dir_exists(dir)) {
-		puts("dir does not exist");
-	} else {
-		printf("dir %d: %s (parent: %d)\n", dir->index, dir->name, dir->parent);
-	}
-}
-
-void print_dirs() {
-	for(t_directory *dir = dirs; dir < dirs + capacity; dir++) {
-		puts("Index\tName\tParent");
-		printf("%d\t%s\t%d\n", dir->index, dir->name, dir->parent);
 	}
 }

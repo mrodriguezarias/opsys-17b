@@ -2,7 +2,7 @@
 #include <process.h>
 #include <system.h>
 #include <mstring.h>
-#include <file.h>
+#include <path.h>
 
 static t_process current = PROC_UNDEFINED;
 
@@ -11,7 +11,7 @@ static char *names[] = {"(Undefined)", "YAMA", "FileSystem", "Master", "Worker",
 // ========== Funciones públicas ==========
 
 void process_init() {
-	current = process_type(file_name(system_proc()));
+	current = process_type(path_name(system_proc()));
 	system_init();
 	config_load();
 }

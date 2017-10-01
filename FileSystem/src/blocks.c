@@ -1,6 +1,6 @@
 #include "blocks.h"
 
-#include <file.h>
+#include <path.h>
 
 static void divide_in_blocks_txt(const char *path);
 static void divide_in_blocks_bin(const char *path);
@@ -13,7 +13,7 @@ static void divide_in_blocks_bin(const char *path);
 // en el caso de los binarios.
 
 void divide_in_blocks(const char *path) {
-	if(file_istext(path)) {
+	if(path_istext(path)) {
 		divide_in_blocks_txt(path);
 	} else {
 		divide_in_blocks_bin(path);

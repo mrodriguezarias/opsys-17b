@@ -3,7 +3,7 @@
  * Para ser usado únicamente por procesos Worker y DataNode.
  */
 
-#include <file.h>
+#include <path.h>
 #include <fcntl.h>
 #include <process.h>
 #include <sys/mman.h>
@@ -23,10 +23,10 @@ static struct {
 
 
 void data_open(const char *path, size_t size) {
-	if(!file_exists(path)) {
-		file_truncate(path, size);
+	if(!path_exists(path)) {
+		path_truncate(path, size);
 	} else {
-		size = file_size(path);
+		size = path_size(path);
 	}
 	data.size = size;
 	int mode, prot;

@@ -1,11 +1,12 @@
-#include <file.h>
 #include <limits.h>
 #include <mstring.h>
+#include <path.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <stdarg.h>
 #include <string.h>
+#include <unistd.h>
 #include "system.h"
 
 const char *system_homedir() {
@@ -19,7 +20,7 @@ const char *system_homedir() {
 const char *system_basedir() {
 	static char dir[PATH_MAX] = {0};
 	if(!*dir) {
-		char *execdir = file_dir(system_proc());
+		char *execdir = path_dir(system_proc());
 		char *path = mstring_create("%s/../..", execdir);
 		free(execdir);
 		realpath(path, dir);
@@ -55,12 +56,12 @@ char *system_upath(const char *path) {
 }
 
 void system_init() {
-	file_mkdir(system_userdir());
+	path_mkdir(system_userdir());
 	char *dirs[] = {"config", "logs", "tmp", "metadata/archivos", "metadata/bitmaps", NULL};
 
 	for(char **dir = dirs; *dir != NULL; dir++) {
 		char *path = mstring_create("%s/%s", system_userdir(), *dir);
-		file_mkdir(path);
+		path_mkdir(path);
 		free(path);
 	}
 }
@@ -71,4 +72,20 @@ const char *system_proc() {
 		readlink("/proc/self/exe", proc, PATH_MAX);
 	}
 	return proc;
+}
+
+void system_exit(const char *error, ...) {
+	if(mstring_isempty(error)) exit(EXIT_SUCCESS);
+
+	char *err = mstring_duplicate(error);
+	char *end = mstring_end(err);
+	if(*end != '\n') mstring_format(&err, "%s\n", err);
+
+	va_list args;
+	va_start(args, error);
+	vfprintf(stderr, err, args);
+	va_end(args);
+
+	free(err);
+	exit(EXIT_FAILURE);
 }

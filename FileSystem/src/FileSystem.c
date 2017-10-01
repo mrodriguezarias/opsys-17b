@@ -15,12 +15,14 @@
 #include <mlist.h>
 #include <string.h>
 #include <file.h>
+#include <path.h>
 
+#include "dirtree.h"
 
 int indexDirectorio = 0;
 
 
-int main() {
+int main(int argc, char *argv[]) {
 	process_init();
 	inicializarEstructurasFilesystem();
 	server();

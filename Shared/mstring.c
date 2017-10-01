@@ -5,11 +5,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAX_SIZE 1024
+#define MAX_SIZE mstring_maxsize()
 
 static char *create_format_template(const char *format, va_list args);
 
 // ========== Funciones públicas ==========
+
+char *mstring_duplicate(const char *string) {
+	return strdup(string);
+}
 
 char *mstring_trim(char *string) {
 	if(string == NULL || string[0] == '\0') {
@@ -140,6 +144,11 @@ bool mstring_hasprefix(const char *string, const char *prefix) {
 bool mstring_hassuffix(const char *string, const char *suffix) {
 	int suffix_len = strlen(suffix);
 	return strncmp(string + strlen(string) - suffix_len, suffix, suffix_len) == 0;
+}
+
+char *mstring_end(const char *string) {
+	int len = strlen(string);
+	return (char*)(len > 0 ? string + len - 1 : string);
 }
 
 // ========== Funciones privadas ==========

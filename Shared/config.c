@@ -1,4 +1,4 @@
-#include <file.h>
+#include <path.h>
 #include <process.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -22,7 +22,7 @@ void config_load() {
 	if(config != NULL) return;
 
 	char *config_path = config_file(true);
-	if(!file_exists(config_path)) {
+	if(!path_exists(config_path)) {
 		set_defaults();
 	}
 	config = config_create(config_path);
@@ -59,7 +59,7 @@ static char *config_file(bool user) {
 static void set_defaults() {
 	char *user_config = config_file(true);
 	char *default_config = config_file(false);
-	file_copy(default_config, user_config);
+	path_copy(default_config, user_config);
 	free(default_config);
 	free(user_config);
 }

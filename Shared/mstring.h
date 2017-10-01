@@ -2,6 +2,20 @@
 #define MSTRING_H_
 
 #include <stdbool.h>
+#include <alloca.h>
+
+// Tamaño máximo de buffer.
+#define mstring_maxsize() 1024
+
+// Devuelve un buffer que se libera automáticamente al finalizar la función que lo llamó.
+#define mstring_buffer() ((char*)alloca(mstring_maxsize()))
+
+/**
+ * Crea una nueva cadena con el mismo contenido que otra.
+ * @param string Cadena a copiar el contenido.
+ * @return Puntero a la nueva cadena.
+ */
+char *mstring_duplicate(const char *string);
 
 /**
  * Recorta una cadena, eliminando todos los espacios en sus extremos.
@@ -148,5 +162,12 @@ bool mstring_hasprefix(const char *string, const char *prefix);
  * @return Valor lógico con el resultado.
  */
 bool mstring_hassuffix(const char *string, const char *suffix);
+
+/**
+ * Devuelve un puntero al final de una cadena.
+ * @param string Cadena.
+ * @return Puntero al final de la cadena.
+ */
+char *mstring_end(const char *string);
 
 #endif /* MSTRING_H_ */

@@ -7,118 +7,19 @@
 #include <mlist.h>
 #include <limits.h>
 
-typedef FILE t_file;
-
-typedef struct {
-	void *data;
-	size_t size;
-} t_fmap;
-
-/*
- * Para todas estas funciones, si se les pasa por parámetro una ruta relativa,
- * se la considera relativa al directorio del usuario (~/yatpos).
- */
+typedef enum {FTYPE_TXT, FTYPE_BIN} t_ftype;
+typedef struct file t_file;
 
 /**
- * Verifica si un archivo existe en el sistema.
- * @param path Ruta al archivo a verificar.
- * @return Valor lógico indicando si existe el archivo.
- */
-bool file_exists(const char *path);
-
-/**
- * Verifica si un archivo es un directorio.
- * @param path Ruta al archivo a verificar.
- * @return Valor lógico indicando si es un directorio.
- */
-bool file_isdir(const char *path);
-
-/**
- * Determina si un archivo es de texto o binario.
- * @param path Ruta al archivo a verificar.
- * @return 1 si es un archivo de texto, 0 si es binario.
- */
-bool file_istext(const char *path);
-
-/**
- * Crea un directorio en el sistema.
- * También crea los directorios intermedios, si no existían.
- * @param path Ruta del directorio a crear.
- */
-void file_mkdir(const char *path);
-
-/**
- * Devuelve el tamaño de un archivo.
- * @param path Ruta al archivo.
- * @return Tamaño del archivo en bytes.
- */
-size_t file_size(const char *path);
-
-/**
- * Devuelve el tamaño de un archivo con prefijo binario (KiB, MiB, etc.).
- * La cadena devuelta debe ser liberada con free().
- * @param path Ruta al archivo.
- * @return Cadena con el tamaño del archivo.
- */
-char *file_sizep(const char *path);
-
-/**
- * Devuelve la ruta al directorio donde se encuentra un archivo.
- * La cadena devuelta debe ser liberada con free().
- * @param Ruta al archivo.
- * @return Directorio del archivo.
- */
-char *file_dir(const char *path);
-
-/**
- * Devuelve el nombre de un archivo.
- * @param path Ruta al archivo.
- * @return Nombre del archivo.
- */
-const char *file_name(const char *path);
-
-/**
- * Crea una ruta aleatoria para un nuevo archivo temporal.
- * @return Ruta al archivo temporal (debe liberarse con free()).
- */
-char *file_tmpname(void);
-
-/**
- * Crea un archivo si no existía.
- * @param path Ruta al archivo a crear.
- */
-void file_create(const char *path);
-
-/**
- * Crea un archivo si no existía. Si existía lo elimina y lo vuelve a crear.
- * @param path Ruta al archivo a recrear.
- */
-void file_recreate(const char *path);
-
-/**
- * Copia un archivo de un ruta (source) a otra (target).
- * Si el archivo destino ya existía, lo reemplaza.
- * @param source Ruta del archivo original.
- * @param target Ruta de la copia.
- */
-void file_copy(const char *source, const char *target);
-
-/**
- * Elimina un archivo, un directorio o un enlace simbólico.
- * @param path Ruta al archivo a eliminar.
- */
-void file_delete(const char *path);
-
-/**
- * Crea un archivo para lectura y escritura.
+ * Abre un archivo para escritura y lectura. Si ya existía lo vacía.
  * La ruta raíz por defecto es el directorio del usuario (~/yatpos).
  * @param path Ruta al archivo.
  * @return Descriptor del archivo.
  */
-t_file *file_new(const char *path);
+t_file *file_create(const char *path);
 
 /**
- * Abre un archivo para lectura y escritura.
+ * Abre un archivo para lectura y escritura. Si no existía lo crea.
  * La ruta raíz por defecto es el directorio del usuario (~/yatpos).
  * @param path Ruta al archivo.
  * @return Descriptor del archivo.
@@ -126,12 +27,32 @@ t_file *file_new(const char *path);
 t_file *file_open(const char *path);
 
 /**
- * Devuelve la ruta un archivo abierto.
- * La cadena devuelta debe ser liberada con free().
+ * Devuelve la ruta de un archivo abierto.
  * @param file Archivo abierto.
  * @return Ruta al archivo.
  */
-char *file_path(t_file *file);
+const char *file_path(t_file *file);
+
+/**
+ * Devuelve el tipo de un archivo abierto (si es texto o binario).
+ * @param file Archivo abierto.
+ * @return Tipo del archivo.
+ */
+t_ftype file_type(t_file *file);
+
+/**
+ * Devuelve el tamaño de un archivo abierto.
+ * @param file Archivo abierto.
+ * @return Tamaño del archivo.
+ */
+size_t file_size(t_file *file);
+
+/**
+ * Devuelve un puntero al descriptor de un archivo (FILE).
+ * @param file Archivo abierto.
+ * @return Puntero al descriptor interno del archivo.
+ */
+FILE *file_pointer(t_file *file);
 
 /**
  * Lee la siguiente línea de un archivo de texto.
@@ -142,50 +63,38 @@ char *file_path(t_file *file);
 char *file_readline(t_file *file);
 
 /**
- * Lee todas las líneas de un archivo de texto.
- * La cadena devuelta debe ser liberada con free().
- * @param file Archivo a leer.
- * @return Líneas del archivo.
- */
-char *file_readlines(t_file *file);
-
-/**
- * Escribe una línea en un archivo de texto.
- * Inserta un '\n' al final si no estaba.
- * @param line Línea a escribir.
+ * Escribe la siguiente línea de un archivo de texto.
  * @param file Archivo a escribir.
+ * @param line Línea a escribir.
  */
-void file_writeline(const char *line, t_file *file);
+void file_writeline(t_file *file, const char *line);
 
 /**
- * Crea un archivo con un determinado tamaño, rellenándolo con ceros.
- * Si ya existía y era de menor tamaño, lo agranda. Si era más grande,
- * lo achica.
- * @param path Ruta al archivo.
- * @param size Tamaño deseado del archivo.
+ * Itera sobre cada línea de un archivo de texto.
+ * @param file Archivo de texto a recorrer.
+ * @param routine Rutina a ejecutar para cada línea.
  */
-void file_truncate(const char *path, size_t size);
+void file_traverse(t_file *file, void (*routine)(const char *line));
 
 /**
- * Aparea un conjunto de archivos, juntándolos en un solo.
- * @param sources Lista con los archivos a aparear.
- * @param target Ruta al archivo a crear con el resultado del apareo.
+ * Elimina el contenido de un archivo.
+ * @param file Archivo abierto.
  */
-void file_merge(mlist_t *sources, const char *target);
+void file_clear(t_file *file);
 
 /**
- * Mapea a memoria un archivo.
- * @param path Ruta al archivo a mapear.
- * @param size Tamaño a mapear (0 para mapear el archivo completo).
- * @return Puntero al mapeo de memoria (debe ser liberado con file_unmap).
+ * Mapea a memoria un archivo abierto.
+ * @param file Archivo a mapear.
+ * @return Puntero al mapeo (debe ser liberado con file_unmap).
  */
-t_fmap *file_map(const char *path, size_t size);
+void *file_map(t_file *file);
 
 /**
  * Libera un mapeo de memoria hecho por file_map().
- * @param mapping Mapeo de memoria.
+ * @param file Archivo sobre el que se hizo el mapeo.
+ * @param map Mapeo de memoria.
  */
-void file_unmap(t_fmap *map);
+void file_unmap(t_file *file, void *map);
 
 /**
  * Cierra un archivo.

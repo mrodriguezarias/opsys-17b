@@ -46,4 +46,11 @@ void system_init(void);
  */
 const char *system_proc(void);
 
+/**
+ * Termina la ejecución del proceso corriendo.
+ * Opcionalmente imprime por pantalla un mensaje de error.
+ * @param error Mensaje de error (puede ser NULL o vacío).
+ */
+void system_exit(const char *error, ...);
+
 #endif /* SYSTEM_H_ */
