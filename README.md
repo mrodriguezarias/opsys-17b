@@ -24,4 +24,4 @@ Para instalar, ejecutar `sudo apt install libreadline6 libreadline6-dev`. Para e
 
 Biblioteca _ssl_ de OpenSSL, usada para calcular el MD5 de los archivos del **FileSystem**.
 
-Para instalar, ejecutar `sudo apt install libssl-dev`. Para enlazar, agregar `-lssl` a los parámetros de compilación.
+Para instalar, ejecutar `sudo apt install libssl-dev`. Para enlazar, agregar `-lssl -lcrypto` a los parámetros de compilación.
