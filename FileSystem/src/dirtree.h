@@ -10,10 +10,14 @@ typedef struct {
 } t_directory;
 
 /**
- * Carga la estructura de directorios del archivo metadata/directorios.dat,
- * o la crea si no existía el archivo.
+ * Esta estructura se mantiene sincronizada y almacenada en un archivo
+ * ubicado en la ruta ~/yatpos/metadata/directorios.dat.
  */
-void dirtree_load(void);
+
+/**
+ * Levanta la estructura del archivo o la crea si no existía.
+ */
+void dirtree_init(void);
 
 /**
  * Determina la cantidad de entradas en la tabla de directorios.
@@ -24,8 +28,9 @@ int dirtree_size(void);
 /**
  * Agrega los directorios de una ruta, incluyendo los intermedios si no existían.
  * @param path Ruta a agregar.
+ * @return Último directorio de la ruta.
  */
-void dirtree_add(const char *path);
+t_directory *dirtree_add(const char *path);
 
 /**
  * Busca un directorio en la tabla según su ruta.
@@ -42,16 +47,25 @@ t_directory *dirtree_find(const char *path);
 bool dirtree_contains(const char *path);
 
 /**
+ * Verifica si un directorio tiene hijos.
+ * @param Ruta al directorio.
+ * @return Valor lógico con el resultado.
+ */
+bool dirtree_haschildren(const char *path);
+
+/**
+ * Renombra un directorio.
+ * @param path Ruta al directorio a renombrar.
+ * @param new_name Nuevo nombre.
+ */
+void dirtree_rename(const char *path, const char *new_name);
+
+/**
  * Elimina un directorio de la tabla según su ruta.
  * Si tenía directorios hijos, los mismos también son eliminados.
  * @param Ruta a eliminar.
  */
-void dirtree_remove(const char *name);
-
-/**
- * Imprime el árbol de directorios.
- */
-void dirtree_print(void);
+void dirtree_remove(const char *path);
 
 /**
  * Elimina todos los directorios.
@@ -59,8 +73,8 @@ void dirtree_print(void);
 void dirtree_clear(void);
 
 /**
- * Guarda la estructura de directorios en el archivo metadata/directorios.dat.
+ * Imprime el árbol de directorios.
  */
-void dirtree_save(void);
+void dirtree_print(void);
 
 #endif /* DIRTREE_H_ */

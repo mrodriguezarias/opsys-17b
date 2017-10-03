@@ -29,14 +29,6 @@ void data_set(int blockno, void *block);
 void *data_get(int blockno);
 
 /**
- * Obtiene una copia del bloque especificado.
- * El bloque debe ser liberado con free() después de usarlo.
- * @param blockno Número de bloque.
- * @return Puntero a la copia del bloque.
- */
-void *data_get_copy(int blockno);
-
-/**
  * Devuelve el tamaño del espacio de datos.
  * @return Tamaño del espacio de datos.
  */

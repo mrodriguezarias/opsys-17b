@@ -90,6 +90,13 @@ void file_clear(t_file *file);
 void *file_map(t_file *file);
 
 /**
+ * Sincroniza un mapeo de memoria hecho por file_map().
+ * @param file Archivo sobre el que se hizo el mapeo.
+ * @param map Mapeo de memoria.
+ */
+void file_sync(t_file *file, void *map);
+
+/**
  * Libera un mapeo de memoria hecho por file_map().
  * @param file Archivo sobre el que se hizo el mapeo.
  * @param map Mapeo de memoria.

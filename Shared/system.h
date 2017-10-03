@@ -35,6 +35,14 @@ const char *system_rscdir(void);
 char *system_upath(const char *path);
 
 /**
+ * Hace una ruta relativa al directorio del ejecutable.
+ * La cadena devuelta debe ser liberada con free().
+ * @param path Ruta de un archivo.
+ * @return Ruta relativa al directorio del ejecutable.
+ */
+char *system_lpath(const char *path);
+
+/**
  * Crea todos los directorios del sistema.
  * Solo debería llamarse por process_init().
  */
@@ -45,6 +53,12 @@ void system_init(void);
  * @return Ruta del ejecutable.
  */
 const char *system_proc(void);
+
+/**
+ * Devuelve el directorio actual donde se ejecutó el proceso.
+ * @return Ruta al directorio actual.
+ */
+const char *system_cwd();
 
 /**
  * Termina la ejecución del proceso corriendo.

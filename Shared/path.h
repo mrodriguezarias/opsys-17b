@@ -117,6 +117,13 @@ void path_move(const char *source, const char *target);
 void path_remove(const char *path);
 
 /**
+ * Calcula el hash MD5 de un archivo.
+ * @param path Ruta al archivo.
+ * @return MD5 del archivo (debe ser liberado).
+ */
+char *path_md5(const char *path);
+
+/**
  * Crea un archivo con un determinado tamaño, rellenándolo con ceros.
  * Si ya existía y era de menor tamaño, lo agranda.
  * Si era de mayor tamaño, lo achica.

@@ -221,6 +221,15 @@ mlist_t *mlist_map(mlist_t *list, void *mapper) {
 	return new_list;
 }
 
+int mlist_reduce(mlist_t *list, void *adder) {
+	int (*add)(int, void*) = adder;
+	int sum = 0;
+	for(node_t *node = list->head; node != NULL; node = node->next) {
+		sum = add(sum, node->elem);
+	}
+	return sum;
+}
+
 bool mlist_any(mlist_t *list, void *condition) {
 	return mlist_find(list, condition) != NULL;
 }
@@ -268,21 +277,24 @@ mlist_t *mlist_fromstring(const char *format, ...) {
 	return list;
 }
 
-char *mlist_tostring(mlist_t *list) {
+char *mlist_tostring(mlist_t *list, void *formatter) {
+	char *(*fmt)(void*) = formatter;
 	if(list->length == 0) {
 		return strdup("[]");
 	}
-	node_t *node = list->head;
-	char *string = mstring_create("[%s", node->elem);
-	while(node = node->next, node != NULL) {
-		mstring_format(&string, "%s, %s", string, node->elem);
+	char *string = mstring_create("[");
+	for(node_t *node = list->head; node != NULL; node = node->next) {
+		char *curstr = fmt != NULL ? fmt(node->elem) : strdup(node->elem);
+		mstring_format(&string, "%s%s, ", string, curstr);
+		free(curstr);
 	}
+	*(mstring_end(string)-1) = '\0';
 	mstring_format(&string, "%s]", string);
 	return string;
 }
 
 void mlist_print(mlist_t *list) {
-	char *string = mlist_tostring(list);
+	char *string = mlist_tostring(list, NULL);
 	printf("%s\n", string);
 	free(string);
 }

@@ -16,14 +16,24 @@
 #include <string.h>
 #include <file.h>
 #include <path.h>
-
 #include "dirtree.h"
+#include "nodelist.h"
+#include "yfile.h"
 
 int indexDirectorio = 0;
 
+void print_node(t_node *node) {
+	if(node == NULL)
+		puts("node is null");
+	else
+		printf("node %i is%s available with %i/%i blocks\n", node->id,
+				node->available ? "" : " not", node->free_blocks, node->total_blocks);
+}
 
 int main(int argc, char *argv[]) {
 	process_init();
+	dirtree_init();
+	nodelist_init();
 	inicializarEstructurasFilesystem();
 	server();
 	console();

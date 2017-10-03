@@ -48,16 +48,13 @@ void data_open(const char *path, size_t size) {
 }
 
 void data_set(int blockno, void *block) {
-	memcpy(data.content + blockno * BLOCK_SIZE, block, BLOCK_SIZE);
+	void *pdata = data.content + blockno * BLOCK_SIZE;
+	memcpy(pdata, block, BLOCK_SIZE);
+	msync(pdata, BLOCK_SIZE, MS_SYNC);
 }
 
 void *data_get(int blockno) {
 	return data.content + blockno * BLOCK_SIZE;
-}
-
-void *data_get_copy(int blockno) {
-	void *block = malloc(BLOCK_SIZE);
-	return memcpy(block, data.content + blockno * BLOCK_SIZE, BLOCK_SIZE);
 }
 
 size_t data_size() {

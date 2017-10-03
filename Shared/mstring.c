@@ -106,7 +106,9 @@ int mstring_index(const char *string, const char *substring) {
 }
 
 int mstring_toint(const char *string) {
-	return (int) strtol(string, NULL, 0);
+	char *p = (char*) string;
+	while(*p != '\0' && !isdigit(*p)) p++;
+	return (int) strtol(p, NULL, 0);
 }
 
 bool mstring_asc(const char *str1, const char *str2) {

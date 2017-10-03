@@ -15,8 +15,9 @@
 
 static t_directory dirs[MAX_SIZE];
 static t_directory *root = dirs;
-static int capacity = 0;
+
 static t_file *file = NULL;
+static void *map = NULL;
 
 typedef struct {
 	char *name;
@@ -35,36 +36,39 @@ static char *create_normal_path(const char *path);
 static t_directory *find_directory(const char *name, int parent);
 static void remove_children(t_directory *dir);
 static void remove_directory(t_directory *dir);
+static void map_file(void);
+static void save_to_file(void);
 
 // ========== Funciones públicas ==========
 
-void dirtree_load() {
+void dirtree_init() {
 	if(path_exists(DAT_PATH)) {
-		file = file_open(DAT_PATH);
-		fread(&capacity, sizeof capacity, 1, file_pointer(file));
-		fread(dirs, sizeof(t_directory), MAX_SIZE, file_pointer(file));
-	} else {
-		for(int i = 0; i < MAX_SIZE; i++) {
-			t_directory *dir = dirs + i;
-			dir->index = i;
-			dir->parent = -2;
-		}
-		t_directory root = {.index = 0, .name = "/", .parent = -1};
-		dirs[0] = root;
-		capacity++;
+		map_file();
+		memcpy(dirs, map, sizeof(t_directory) * MAX_SIZE);
+		return;
 	}
+
+	for(int i = 0; i < MAX_SIZE; i++) {
+		t_directory *dir = dirs + i;
+		dir->index = i;
+		dir->parent = -2;
+	}
+	t_directory root = {.index = 0, .name = "/", .parent = -1};
+	dirs[0] = root;
+	save_to_file();
 }
 
 int dirtree_size() {
 	int size = 0;
-	for(t_directory *dir = dirs; dir < dirs + capacity; dir++) {
+	for(t_directory *dir = dirs; dir < dirs + MAX_SIZE; dir++) {
 		if(dir_exists(dir)) size++;
 	}
 	return size;
 }
 
-void dirtree_add(const char *path) {
-	if(dir_exists(dirs + MAX_SIZE -1)) return;
+t_directory *dirtree_add(const char *path) {
+	if(dir_exists(dirs + MAX_SIZE -1)) return NULL;
+	t_directory *dir = NULL;
 
 	char *npath = create_normal_path(path);
 	char *p = npath + 1;
@@ -77,13 +81,15 @@ void dirtree_add(const char *path) {
 		if(*p != '/') continue;
 		*p = '\0';
 		t_directory *parent = find_directory(par_name, par_parent);
-		add_directory(name, parent->index);
+		dir = add_directory(name, parent->index);
 		par_name = name;
 		par_parent = parent->index;
 		name = p + 1;
 	}
 
 	free(npath);
+	save_to_file();
+	return dir;
 }
 
 t_directory *dirtree_find(const char *path) {
@@ -116,11 +122,46 @@ bool dirtree_contains(const char *path) {
 	return dirtree_find(path) != NULL;
 }
 
+bool dirtree_haschildren(const char *path) {
+	t_directory *dir = dirtree_find(path);
+	if(dir == NULL) return false;
+	for(t_directory *cur = dirs; cur < dirs + MAX_SIZE; cur++) {
+		if(dir_exists(cur) && cur->parent == dir->index) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void dirtree_rename(const char *path, const char *new_name) {
+	t_directory *dir = dirtree_find(path);
+	if(dir == NULL || dir == root) return;
+
+	char *npath = create_normal_path(path);
+	*mstring_end(npath) = '\0';
+	*strrchr(npath, '/') = '\0';
+
+	mstring_format(&npath, "%s/%s", npath, new_name);
+	bool exists = dirtree_find(npath) != NULL;
+	free(npath);
+
+	if(exists) return;
+	strcpy(dir->name, new_name);
+	save_to_file();
+}
+
 void dirtree_remove(const char *path) {
-	if(mstring_equal(path, root->name)) return;
 	t_directory *dir = dirtree_find(path);
 	remove_children(dir);
 	remove_directory(dir);
+	save_to_file();
+}
+
+void dirtree_clear() {
+	for(t_directory *dir = dirs; dir < dirs + MAX_SIZE; dir++) {
+		remove_directory(dir);
+	}
+	save_to_file();
 }
 
 void dirtree_print() {
@@ -199,22 +240,10 @@ void dirtree_print() {
 	mlist_destroy(children, free);
 }
 
-void dirtree_clear() {
-	capacity = 1;
-}
-
-void dirtree_save() {
-	if(file == NULL) file = file_create(DAT_PATH);
-	FILE *fp = file_pointer(file);
-	rewind(fp);
-	fwrite(&capacity, sizeof capacity, 1, fp);
-	fwrite(dirs, sizeof(t_directory), MAX_SIZE, fp);
-}
-
 // ========== Funciones privadas ==========
 
 static void get_children(mlist_t *children, int index, int depth) {
-	for(t_directory *dir = dirs; dir < dirs + capacity; dir++) {
+	for(t_directory *dir = dirs; dir < dirs + MAX_SIZE; dir++) {
 		if(dir_exists(dir) && dir->parent == index) {
 			t_print_child *child = malloc(sizeof(t_print_child));
 			child->name = dir->name;
@@ -230,17 +259,17 @@ static t_directory *add_directory(const char *name, int parent) {
 	t_directory *pdir = find_directory(name, parent);
 	if(pdir != NULL) return pdir;
 
-	for(int i = 0; i < capacity; i++) {
+	for(int i = 0; i < MAX_SIZE; i++) {
 		if(!dir_exists(dirs + i)) {
 			pdir = dirs + i;
 			break;
 		}
 	}
 
-	if(pdir == NULL) {
-		pdir = dirs + capacity;
-		capacity++;
-	}
+//	if(pdir == NULL) {
+//		pdir = dirs + capacity;
+//		capacity++;
+//	}
 
 	strcpy(pdir->name, name);
 	pdir->parent = parent;
@@ -260,7 +289,7 @@ static char *create_normal_path(const char *path) {
 }
 
 static t_directory *find_directory(const char *name, int parent) {
-	for(t_directory *dir = dirs; dir < dirs + capacity; dir++) {
+	for(t_directory *dir = dirs; dir < dirs + MAX_SIZE; dir++) {
 		if(dir_exists(dir) && mstring_equal(dir->name, name) && dir->parent == parent) {
 			return dir;
 		}
@@ -270,7 +299,7 @@ static t_directory *find_directory(const char *name, int parent) {
 
 static void remove_children(t_directory *dir) {
 	if(dir == NULL) return;
-	for(t_directory *cur = dirs; cur < dirs + capacity; cur++) {
+	for(t_directory *cur = dirs; cur < dirs + MAX_SIZE; cur++) {
 		if(dir_exists(cur) && cur->parent == dir->index) {
 			remove_children(cur);
 			remove_directory(cur);
@@ -279,7 +308,23 @@ static void remove_children(t_directory *dir) {
 }
 
 static void remove_directory(t_directory *dir) {
-	if(dir != NULL) {
+	if(dir != NULL && dir->index != 0) {
 		dir->parent = -2;
 	}
+}
+
+static void map_file() {
+	if(file != NULL) return;
+	if(!path_exists(DAT_PATH)) {
+		path_truncate(DAT_PATH, sizeof(t_directory) * MAX_SIZE);
+	}
+	file = file_open(DAT_PATH);
+	map = file_map(file);
+}
+
+static void save_to_file() {
+	map_file();
+	size_t size = sizeof(t_directory) * MAX_SIZE;
+	memcpy(map, dirs, size);
+	file_sync(file, map);
 }

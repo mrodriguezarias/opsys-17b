@@ -46,13 +46,19 @@ const char *system_rscdir() {
 }
 
 char *system_upath(const char *path) {
-	char fullpath[PATH_MAX] = {0};
-	if(*path == '/') {
-		strcpy(fullpath, path);
-	} else {
-		snprintf(fullpath, PATH_MAX, "%s/%s", system_userdir(), path);
+	char *upath = mstring_duplicate(path);
+	if(*path != '/' && !mstring_hasprefix(path, "yamafs:")) {
+		mstring_format(&upath, "%s/%s", system_userdir(), upath);
 	}
-	return strdup(fullpath);
+	return upath;
+}
+
+char *system_lpath(const char *path) {
+	char *lpath = mstring_duplicate(path);
+	if(*path != '/') {
+		mstring_format(&lpath, "%s/%s", system_cwd(), lpath);
+	}
+	return lpath;
 }
 
 void system_init() {
@@ -72,6 +78,14 @@ const char *system_proc() {
 		readlink("/proc/self/exe", proc, PATH_MAX);
 	}
 	return proc;
+}
+
+const char *system_cwd() {
+	static char cwd[PATH_MAX] = {0};
+	if(!*cwd) {
+		getcwd(cwd, PATH_MAX);
+	}
+	return cwd;
 }
 
 void system_exit(const char *error, ...) {

@@ -54,6 +54,8 @@ mlist_t *mlist_filter(mlist_t *list, void *filter);
 
 mlist_t *mlist_map(mlist_t *list, void *mapper);
 
+int mlist_reduce(mlist_t *list, void *adder);
+
 bool mlist_any(mlist_t *list, void *condition);
 
 bool mlist_all(mlist_t *list, void *condition);
@@ -62,7 +64,7 @@ void mlist_clear(mlist_t *list, void *destroyer);
 
 mlist_t *mlist_fromstring(const char *format, ...);
 
-char *mlist_tostring(mlist_t *list);
+char *mlist_tostring(mlist_t *list, void *formatter);
 
 void mlist_print(mlist_t *list);
 

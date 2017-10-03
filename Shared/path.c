@@ -1,4 +1,5 @@
 #define _XOPEN_SOURCE 500
+#include <openssl/md5.h>
 #include <asm-generic/errno-base.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -234,6 +235,33 @@ void path_remove(const char *path) {
 		unlink(upath);
 	}
 	free(upath);
+}
+
+char *path_md5(const char *path) {
+	char *upath = system_upath(path);
+	FILE *fp = fopen(upath, "r");
+	if(fp == NULL) show_error_and_exit(upath, "abrir");
+	free(upath);
+
+	size_t length = 4096;
+	char *buffer = alloca(length);
+	int bytes = 0;
+
+	MD5_CTX ctx;
+	MD5_Init(&ctx);
+	while(bytes = fread(buffer, 1, length, fp), bytes != 0) {
+		MD5_Update(&ctx, buffer, bytes);
+	}
+
+	unsigned char hash[MD5_DIGEST_LENGTH];
+	MD5_Final(hash, &ctx);
+	fclose(fp);
+
+	char *md5 = mstring_empty(NULL);
+	for(int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+		mstring_format(&md5, "%s%02x", md5, hash[i]);
+	}
+	return md5;
 }
 
 void path_truncate(const char *path, size_t size) {

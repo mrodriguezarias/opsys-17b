@@ -92,6 +92,10 @@ void *file_map(t_file *file) {
 	return map;
 }
 
+void file_sync(t_file *file, void *map) {
+	msync(map, file_size(file), MS_SYNC);
+}
+
 void file_unmap(t_file *file, void *map) {
 	munmap(map, file_size(file));
 }
