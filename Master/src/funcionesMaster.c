@@ -77,34 +77,46 @@ void liberarRecursos(tMaster * masterAux) {
 	liberarConfiguracionMaster(masterAux);
 }
 
+#define MANDANDO_SCRIPT 1
+#define MANDAR_SCRIPT 2
 void mandar_script(int socket, char * ruta) {
 	log_print("mandar_script");
 	ssize_t len;
 	int fd;
 	int bytes_enviados = 0;
-	char file_size[256];
+	//char file_size[256];
 	struct stat file_stat;
 	int offset;
 	int data_restante;
+
 	fd = open(ruta, O_RDONLY);
 	if (fd == -1) {
 		log_report("No se pudo abrir el script de transformacion");
 	}
+	size_t size =path_size(ruta);
+	printf("Size del archivo:%d\n",size);
 	if (fstat(fd, &file_stat) < 0) {
 		log_report("No se pudieron obtener los datos del script:%s", ruta);
 	}
-	len = send(master.worker_socket, file_size, sizeof(file_size), 0);
+	len = send(master.worker_socket, &size, size, 0);
 	if (len < 0) {
 		log_report("No se pudo enviar el tamanio del script");
 	}
+	log_print("Tamanio del archivo mandado:%d",size);
+	t_packet packet = protocol_receive(master.worker_socket);
+	if(packet.operation == MANDAR_SCRIPT){
+		log_print("Señal recivida");
 
 	offset = 0;
-	data_restante = file_stat.st_size;
+		data_restante = file_stat.st_size;
 //	while (((bytes_enviados = sendfile(master.worker_socket, fd, &offset, BUFSIZ))> 0) && (data_restante > 0)) {
 //		                data_restante -= bytes_enviados;
 //	}
-	if(((bytes_enviados = sendfile(master.worker_socket, fd, &offset, BUFSIZ))< 0)){
-		log_report("No se pudo mandar todo el archivo");
+		if (((bytes_enviados = sendfile(master.worker_socket, fd, &offset,
+				BUFSIZ)) < 0)) {
+			log_report("No se pudo mandar todo el archivo");
+		}
+		log_print("Bytes_enviados:%d", bytes_enviados);
 	}
 }
 

@@ -31,7 +31,7 @@ t_yama yama;
 
 int main() {
 	process_init();
-	connect_to_filesystem();
+	//connect_to_filesystem();
 	listen_to_master();
 	return EXIT_SUCCESS;
 }

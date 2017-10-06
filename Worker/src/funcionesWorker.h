@@ -12,6 +12,7 @@
 
 #include <sys/select.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 
 #include <config.h>
@@ -40,6 +41,14 @@
 #define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
 #define MAXCONEXIONESLISTEN 10
 
+#define SIZE 1024
+
+#define LECTURA_HIJO pipe_hijoAPadre[0]
+#define ESCRITURA_HIJO pipe_hijoAPadre[1]
+#define LECTURA_PADRE pipe_padreAHijo[0]
+#define ESCRITURA_PADRE pipe_padreAHijo[1]
+
+
 typedef struct {
 	char * IP_FILESYSTEM, *PUERTO_FILESYSTEM, *NOMBRE_NODO, *PUERTO_WORKER,
 			*PUERTO_DATANODE, *RUTA_DATABIN;
@@ -50,5 +59,5 @@ typedef struct {
 void listen_to_master();
 
 void manejador_fork(t_packet packet,int socket);
-
+void manejador_fork2(t_packet packet, int socketFor);
 #endif

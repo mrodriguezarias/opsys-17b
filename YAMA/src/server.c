@@ -44,7 +44,7 @@ void listen_to_master() {
 				switch(packet.operation) {
 				case OP_INIT_JOB: init_job(packet.content);
 					log_print("OP_INIT_JOB");
-					tEtapaTransformacion et = new_etapa_transformacion("Nodo1","127.0.0.1","5050",35,100,"/tmp/Master1-temp38");
+					tEtapaTransformacion et = new_etapa_transformacion("Nodo1","127.0.0.1","5050",35,100,"tmp/Master1-temp38");
 					mandar_etapa_transformacion(et,sock);
 					break;
 				default:

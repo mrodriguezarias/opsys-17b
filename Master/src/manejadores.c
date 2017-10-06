@@ -32,6 +32,7 @@ void manejador_transformacion(tEtapaTransformacionBis * transformacion) {
 	connect_to_worker(transformacion->et.ip, transformacion->et.puerto);
 //	printf("Socket worker: %d \n", master.worker_socket);
 	char * buffer = socket_receive_string(master.worker_socket);
+	log_print("%s",buffer);
 	t_packet worker = protocol_receive(socket_worker);
 	free(worker.content.data);worker.operation = 0;worker.sender=PROC_MASTER;
 //	printf("Respuesta handshake de Worker: %s \n", buffer);
@@ -39,7 +40,8 @@ void manejador_transformacion(tEtapaTransformacionBis * transformacion) {
 			transformacion->et.archivo_etapa,
 			transformacion->et.bloque,
 			transformacion->et.bytes_ocupados);
-//	printf("archivo etapa:%s\n"
+
+			//	printf("archivo etapa:%s\n"
 //			"script:%s\n"
 //			"bloque:%d\n"
 //			"bytes ocupados:%d\n",transformacion->et.archivo_etapa,transformacion->srcipt_tranformador,

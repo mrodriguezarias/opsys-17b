@@ -13,6 +13,8 @@
 #include <serial.h>
 #include <struct.h>
 #include <config.h>
+#include <file.h>
+#include <path.h>
 
 #include<commons/log.h>
 #include<commons/config.h>
