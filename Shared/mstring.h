@@ -18,6 +18,13 @@
 char *mstring_duplicate(const char *string);
 
 /**
+ * Devuelve el tamaño de una cadena.
+ * @param string Cadena.
+ * @return Tamaño.
+ */
+size_t mstring_length(const char *string);
+
+/**
  * Recorta una cadena, eliminando todos los espacios en sus extremos.
  * No crea una nueva cadena, sino que modifica la que recibe.
  * @param string Cadena a recortar.
@@ -44,10 +51,11 @@ void mstring_format(char **string, const char *format, ...);
 
 /**
  * Crea una cadena copiando parte de otra.
- * Nota: excluye el carácter en el índice final.
+ * Excluye el carácter en el índice final.
+ * Si el índice final es negativo, se lo hace relativo desde el final.
  * @param string Cadena a copiar.
  * @param start Índice inicial.
- * @param end Índice final (-1 para copiar hasta el final).
+ * @param end Índice final.
  * @return Nueva cadena con la copia (debe liberarse con free()).
  */
 char *mstring_copy(const char *string, int start, int end);
@@ -98,6 +106,14 @@ bool mstring_contains(const char *string, const char *substring);
  * @return Puntero a la subcadena (NULL si no existe).s
  */
 char *mstring_find(const char *string, const char *substring);
+
+/**
+ * Calcula la cantidad de veces que aparece una subcadena.
+ * @param string Cadena contenedora.
+ * @param substring Cadena a contar.
+ * @return Veces que aparece la subcadena en la cadena.
+ */
+int mstring_count(const char *string, const char *substring);
 
 /**
  * Devuelve el índice de una subcadena dentro de una cadena.

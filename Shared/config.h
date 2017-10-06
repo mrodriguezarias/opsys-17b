@@ -7,7 +7,7 @@
  * Carga la configuración del proceso en ejecución.
  * @return Estructura de configuración.
  */
-void config_load(void);
+void config_init(void);
 
 /**
  * Obtiene una propiedad de la configuración del proceso actual.
@@ -15,5 +15,10 @@ void config_load(void);
  * @return Valor de la propiedad.
  */
 const char *config_get(const char *property);
+
+/**
+ * Cierra la configuración.
+ */
+void config_term(void);
 
 #endif /* MCONFIG_H_ */

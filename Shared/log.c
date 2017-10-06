@@ -8,10 +8,21 @@
 #define LOG_ENABLED true
 #define LOG_MAX 256
 
-static t_log *logger(bool print);
+static t_log *silent = NULL;
+static t_log *printer = NULL;
+
 static void template(bool error, bool print, const char *format, va_list args);
 
 // ========== Funciones públicas ==========
+
+void log_init() {
+	if(silent != NULL) return;
+	char *pname = (char*) process_name(process_current());
+	char *logfile = mstring_create("%s/logs/%s.log", system_userdir(), pname);
+	silent = log_create(logfile, pname, false, LOG_LEVEL_TRACE);
+	printer = log_create(logfile, pname, true, LOG_LEVEL_TRACE);
+	free(logfile);
+}
 
 void log_inform(const char *format, ...) {
 	va_list args;
@@ -34,19 +45,14 @@ void log_report(const char *format, ...) {
 	va_end(args);
 }
 
-// ========== Funciones privadas ==========
-
-static t_log *logger(bool print) {
-	static t_log *logger = NULL, *printer;
-	if(logger == NULL) {
-		char *pname = (char*) process_name(process_current());
-		char *logfile = mstring_create("%s/logs/%s.log", system_userdir(), pname);
-		logger = log_create(logfile, pname, false, LOG_LEVEL_TRACE);
-		printer = log_create(logfile, pname, true, LOG_LEVEL_TRACE);
-		free(logfile);
-	}
-	return print ? printer : logger;
+void log_term() {
+	log_destroy(silent);
+	log_destroy(printer);
+	silent = NULL;
+	printer = NULL;
 }
+
+// ========== Funciones privadas ==========
 
 static void template(bool error, bool print, const char *format, va_list args) {
 	if(!LOG_ENABLED || process_current() == PROC_UNDEFINED) return;
@@ -54,9 +60,7 @@ static void template(bool error, bool print, const char *format, va_list args) {
 	char log[LOG_MAX];
 	vsnprintf(log, LOG_MAX, format, args);
 
-	if(error) {
-		log_error(logger(print), log);
-	} else {
-		log_debug(logger(print), log);
-	}
+	t_log *logger = print ? printer : silent;
+	if(error) log_error(logger, log);
+	else log_debug(logger, log);
 }

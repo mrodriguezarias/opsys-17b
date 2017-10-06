@@ -38,4 +38,9 @@ const char *process_name(t_process process);
  */
 t_process process_type(const char *name);
 
+/**
+ * Libera los recursos inicializados por process_init().
+ */
+void process_term();
+
 #endif /* PROCESS_H_ */

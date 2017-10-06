@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <struct.h>
 
-void init_job(t_serial content);
+void init_job(t_serial *content);
 
 void listen_to_master() {
 	log_print("Escuchando puertos de master");
@@ -26,7 +26,7 @@ void listen_to_master() {
 			if(!socket_set_contains(sock, &selected)) continue;
 			if(sock == sv_sock) {
 				t_socket cli_sock = socket_accept(sv_sock);
-				t_packet packet = protocol_receive(cli_sock);
+				t_packet packet = protocol_receive_packet(cli_sock);
 				if(packet.operation == OP_HANDSHAKE && packet.sender == PROC_MASTER) {
 					socket_set_add(cli_sock, &sockets);
 					log_inform("Conectado proceso Master por socket %i", cli_sock);
@@ -34,7 +34,7 @@ void listen_to_master() {
 					socket_close(cli_sock);
 				}
 			} else {
-				t_packet packet = protocol_receive(sock);
+				t_packet packet = protocol_receive_packet(sock);
 				if(packet.operation == OP_UNDEFINED) {
 					socket_close(sock);
 					socket_set_remove(sock, &sockets);
@@ -51,7 +51,7 @@ void listen_to_master() {
 					log_report("Operación desconocida: %s", packet.operation);
 				}
 
-				free(packet.content.data);
+				serial_destroy(packet.content);
 
 //				char *string = socket_receive_string(sock);
 //				if(string) {
@@ -81,7 +81,7 @@ void listen_to_master() {
 	}
 }
 
-void init_job(t_serial content) {
+void init_job(t_serial *content) {
 	char *file = mstring_empty(NULL);
 	serial_unpack(content, "s", &file);
 	log_print("Comenzando tarea para archivo %s", file);

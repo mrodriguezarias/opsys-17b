@@ -121,7 +121,7 @@ static void show_error_and_exit(const char *path, const char *action) {
 
 static t_file *create_file(const char *path, bool trunc) {
 	if(path_isdir(path)) return NULL;
-	path_create(path);
+	path_mkfile(path);
 
 	char *upath = system_upath(path);
 	FILE *fp = fopen(upath, trunc ? "w+" : "r+");

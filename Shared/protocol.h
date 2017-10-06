@@ -4,11 +4,19 @@
 #include <process.h>
 #include <serial.h>
 #include <socket.h>
+#include <stdbool.h>
+
+#define RESPONSE_OK 0
+#define RESPONSE_ERROR -1
 
 typedef enum {
 	OP_UNDEFINED,
 	OP_HANDSHAKE,
+	OP_RESPONSE,
 	OP_INIT_JOB,
+	OP_NODE_INFO,
+	OP_SET_BLOCK,
+	OP_GET_BLOCK,
 
 	OP_INICIAR_TRANSFORMACION,		// yama -> master
   	OP_INICIAR_REDUCCION_LOCAL,		// yama -> master
@@ -29,7 +37,7 @@ typedef enum {
 typedef struct {
 	t_process sender;		// Proceso remitente
 	t_operation operation;	// Operación a realizar
-	t_serial content;		// Contenido serializado
+	t_serial *content;		// Contenido serializado
 } t_packet;
 
 /**
@@ -38,14 +46,15 @@ typedef struct {
  * @param content Contenido serializado.
  * @return Paquete.
  */
-t_packet protocol_packet(t_operation operation, t_serial content);
+t_packet protocol_packet(t_operation operation, t_serial *content);
 
 /**
  * Envía un packete a un determinado socket.
  * @param packet Paquete.
  * @param socket Descriptor del socket.
+ * @return Valor lógico indicando si se pudo enviar el paquete.
  */
-void protocol_send(t_packet packet, t_socket socket);
+bool protocol_send_packet(t_packet packet, t_socket socket);
 
 /**
  * Recibe un paquete de un determinado socket.
@@ -53,12 +62,34 @@ void protocol_send(t_packet packet, t_socket socket);
  * @param socket Descriptor del socket.
  * @return Paquete.
  */
-t_packet protocol_receive(t_socket socket);
+t_packet protocol_receive_packet(t_socket socket);
 
 /**
  * Envía un apretón de manos.
  * @param socket Descriptor del socket.
  */
-void protocol_handshake(t_socket socket);
+void protocol_send_handshake(t_socket socket);
+
+/**
+ * Recibe un apretón de manos y verifica que sea del proceso que corresponda.
+ * @param socket Descriptor del socket.
+ * @param process Proceso del que se espera recibir el apretón de manos.
+ * @return Valor lógico indicando si se recibió correctamente.
+ */
+bool protocol_receive_handshake(t_socket socket, t_process process);
+
+/**
+ * Envía un código de respuesta a un socket.
+ * @param socket Descriptor del socket.
+ * @param code Código de respuesta a enviar.
+ */
+void protocol_send_response(t_socket socket, int code);
+
+/**
+ * Recibe un código de respuesta de un socket.
+ * @param socket Descriptor del socket.
+ * @return Código de respuesta (-1 = error).
+ */
+int protocol_receive_response(t_socket socket);
 
 #endif /* PROTOCOL_H_ */

@@ -301,7 +301,7 @@ void mlist_print(mlist_t *list) {
 
 void mlist_destroy(mlist_t *list, void *destroyer) {
 	mlist_clear(list, destroyer);
-	thread_mutex_destroy(&list->mutex);
+	pthread_mutex_destroy(&list->mutex);
 	free(list);
 }
 

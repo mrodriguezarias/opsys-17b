@@ -23,7 +23,7 @@ tEtapaTransformacion new_etapa_transformacion(const char*nodo,const char*ip,cons
 	return et;
 }
 
-t_serial etapa_transformacion_pack(tEtapaTransformacion transformacion){
+t_serial *etapa_transformacion_pack(tEtapaTransformacion transformacion){
 	return serial_pack("sssiis",
 			transformacion.nodo,
 			transformacion.ip,
@@ -33,7 +33,7 @@ t_serial etapa_transformacion_pack(tEtapaTransformacion transformacion){
 			transformacion.archivo_etapa);
 }
 
-tEtapaTransformacion etapa_transformacion_unpack(t_serial serial){
+tEtapaTransformacion etapa_transformacion_unpack(t_serial *serial){
 	tEtapaTransformacion et;
 	serial_unpack(serial,"sssiis",&et.nodo,
 			&et.ip,
@@ -52,10 +52,10 @@ void mandar_etapa_transformacion(tEtapaTransformacion et,t_socket sock){
 						et.archivo_etapa,
 						et.ip,
 						et.puerto);
-	t_serial serial = etapa_transformacion_pack(et);
+	t_serial *serial = etapa_transformacion_pack(et);
 	free(et.nodo);free(et.ip);free(et.puerto);free(et.archivo_etapa);
 	t_packet paquete = protocol_packet(OP_INICIAR_TRANSFORMACION, serial);
-	protocol_send(paquete, sock);
+	protocol_send_packet(paquete, sock);
 }
 
 /*
@@ -83,7 +83,7 @@ tEtapaReduccionLocal new_etapa_rl(const char*nodo,const char*ip,const char*puert
 	}
 	return rl;
 }
-t_serial etapa_rl_pack(tEtapaReduccionLocal rl){
+t_serial *etapa_rl_pack(tEtapaReduccionLocal rl){
 	int cantidad_archivos = list_size(rl.archivos_temporales_de_transformacion);
 	int cantidad_letras_directorio_archivo = strlen(rl.archivo_etapa);
 	char * archivos[cantidad_archivos];
@@ -100,9 +100,9 @@ t_serial etapa_rl_pack(tEtapaReduccionLocal rl){
 			rl.archivo_etapa);
 
 }
-tEtapaReduccionLocal etapa_rl_unpack(t_serial serial){
+tEtapaReduccionLocal etapa_rl_unpack(t_serial *serial){
 	tEtapaReduccionLocal rl;
-	char archivos[serial.size];
+	char archivos[serial->size];
 	serial_unpack(serial,"sssss",
 			rl.nodo,
 			rl.ip,
@@ -123,9 +123,9 @@ char * obtener_archivo_temporal(char * archivos, char * archivo_a_obtener){
 }
 
 void mandar_etapa_rl(tEtapaReduccionLocal rl,t_socket sock){
-	t_serial serial = etapa_rl_pack(rl);
+	t_serial *serial = etapa_rl_pack(rl);
 	t_packet paquete = protocol_packet(OP_INICIAR_REDUCCION_LOCAL, serial);
-	protocol_send(paquete, sock);
+	protocol_send_packet(paquete, sock);
 }
 /*
  * **************************************************************************************FIN FUNCIONES
@@ -152,7 +152,7 @@ tEtapaReduccionGlobal new_etapa_rg(const char*nodo,const char*ip,const char*puer
 	return rg;
 	;
 }
-t_serial etapa_rg_pack(tEtapaReduccionGlobal rg){
+t_serial *etapa_rg_pack(tEtapaReduccionGlobal rg){
 	return serial_pack("ssssss",
 			rg.nodo,
 			rg.ip,
@@ -161,7 +161,7 @@ t_serial etapa_rg_pack(tEtapaReduccionGlobal rg){
 			rg.archivo_etapa,
 			rg.encargado);
 }
-tEtapaReduccionGlobal etapa_rg_unpack(t_serial serial){
+tEtapaReduccionGlobal etapa_rg_unpack(t_serial *serial){
 	tEtapaReduccionGlobal rg;
 	serial_unpack(serial,"ssssss",
 			rg.nodo,
@@ -174,9 +174,9 @@ tEtapaReduccionGlobal etapa_rg_unpack(t_serial serial){
 }
 
 void mandar_etapa_rg(tEtapaReduccionGlobal rg,t_socket sock){
-	t_serial serial = etapa_rg_pack(rg);
+	t_serial *serial = etapa_rg_pack(rg);
 	t_packet paquete = protocol_packet(OP_INICIAR_REDUCCION_GLOBAL, serial);
-	protocol_send(paquete, sock);
+	protocol_send_packet(paquete, sock);
 }
 
 /*

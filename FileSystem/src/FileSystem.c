@@ -1,3 +1,4 @@
+#include "FileSystem.h"
 #include <process.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,30 +17,62 @@
 #include <string.h>
 #include <file.h>
 #include <path.h>
+#include <thread.h>
 #include "dirtree.h"
 #include "nodelist.h"
 #include "yfile.h"
+#include <path.h>
+#include <bitmap.h>
+
+#include <protocol.h>
+#include <config.h>
 
 int indexDirectorio = 0;
 
-void print_node(t_node *node) {
-	if(node == NULL)
-		puts("node is null");
-	else
-		printf("node %i is%s available with %i/%i blocks\n", node->id,
-				node->available ? "" : " not", node->free_blocks, node->total_blocks);
-}
+static void init(void);
+static void clear_previous_state(void);
+static void term(void);
+
+// ========== Funciones públicas ==========
 
 int main(int argc, char *argv[]) {
+	init();
+
+	if(argc == 2 && mstring_equal(argv[1], "--clean")) {
+		clear_previous_state();
+	}
+
+	server();
+	console();
+
+	term();
+	return EXIT_SUCCESS;
+}
+
+// ========== Funciones privadas ==========
+
+static void init() {
 	process_init();
 	dirtree_init();
 	nodelist_init();
-	inicializarEstructurasFilesystem();
-	server();
-	console();
-	guardarEstructuras();
-	return EXIT_SUCCESS;
+
+	fs.formatted = false;
 }
+
+static void clear_previous_state() {
+	dirtree_clear();
+	nodelist_clear();
+}
+
+static void term() {
+	thread_killall();
+	nodelist_term();
+	dirtree_term();
+	process_term();
+}
+
+
+
 
 char *config_file(char* NombreEstructura,char* extension) {
 	return mstring_create("%s/metadata/%s.%s", system_userdir(), NombreEstructura,extension);

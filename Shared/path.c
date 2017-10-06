@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <system.h>
 #include <time.h>
+#include <stdarg.h>
 #include <file.h>
 #include <unistd.h>
 #ifndef __USE_XOPEN_EXTENDED
@@ -28,6 +29,36 @@ static int remove_routine(const char *fpath, const struct stat *sb, int typeflag
 static size_t size_of_file(const char *path);
 
 // ========== Funciones públicas ==========
+
+char *_path_create(t_ptype type, const char *scount, ...) {
+	va_list ap;
+	va_start(ap, scount);
+	int count = mstring_isempty(scount) ? 0 : mstring_count(scount, ",") + 1;
+	char *root = va_arg(ap, char*);
+	char *path = mstring_duplicate(root);
+	mstring_replace(&path, "yamafs:", "");
+	if(mstring_hasprefix(path, "./")) {
+		mstring_format(&path, "%s", path + 2);
+	}
+	if(*path != '/') {
+		switch(type) {
+		case PTYPE_YATPOS: mstring_format(&path, "%s/%s", system_userdir(), path); break;
+		case PTYPE_USER: mstring_format(&path, "%s/%s", system_cwd(), path); break;
+		case PTYPE_YAMA: mstring_format(&path, "yamafs:/%s", path); break;
+		}
+	}
+
+	while(--count) {
+		char *end = mstring_end(path);
+		if(*end == '/') *end = '\0';
+
+		char *cur = va_arg(ap, char*);
+		if(*cur == '/') cur++;
+		mstring_format(&path, "%s/%s", path, cur);
+	}
+	va_end(ap);
+	return path;
+}
 
 bool path_exists(const char *path) {
 	char *upath = system_upath(path);
@@ -168,7 +199,7 @@ char *path_temp() {
 	return tmp;
 }
 
-void path_create(const char *path) {
+void path_mkfile(const char *path) {
 	char *upath = system_upath(path);
 	char *dir = path_dir(upath);
 	path_mkdir(dir);

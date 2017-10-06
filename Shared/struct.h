@@ -54,14 +54,14 @@ typedef struct {
 
 
 tEtapaTransformacion new_etapa_transformacion(const char*nodo,const char*ip,const char*puerto,int bloque,int bytes_ocuapdos,const char * archivo_etapa);
-t_serial etapa_transformacion_pack(tEtapaTransformacion transformacion);
-tEtapaTransformacion etapa_transformacion_unpack(t_serial serial);
+t_serial *etapa_transformacion_pack(tEtapaTransformacion transformacion);
+tEtapaTransformacion etapa_transformacion_unpack(t_serial *serial);
 void mandar_etapa_transformacion(tEtapaTransformacion et,t_socket sock);
 
 
 tEtapaReduccionLocal new_etapa_rl(const char*nodo,const char*ip,const char*puerto,t_list*archivos_temporales,const char * archivo_etapa);
-t_serial etapa_rl_pack(tEtapaReduccionLocal);
-tEtapaReduccionLocal etapa_rl_unpack(t_serial);
+t_serial *etapa_rl_pack(tEtapaReduccionLocal);
+tEtapaReduccionLocal etapa_rl_unpack(t_serial*);
 void mandar_etapa_rl(tEtapaReduccionLocal rl,t_socket sock);
 /* Como no pude serializar y deserializar una lista, decidi meter en un string todos los directorios que se encuentra en etapa_temporal y de ahí ver si esta
  * el archivo que queremos
@@ -72,7 +72,7 @@ char * obtener_archivo_temporal(char * archivos, char * archivo_a_obtener);
 
 
 tEtapaReduccionGlobal new_etapa_rg(const char*nodo,const char*ip,const char*puerto,char*archivo_temporal_rl,const char * archivo_etapa,char * encargado);
-t_serial etapa_rg_pack(tEtapaReduccionGlobal rg);
-tEtapaReduccionGlobal etapa_rg_unpack(t_serial serial);
+t_serial *etapa_rg_pack(tEtapaReduccionGlobal rg);
+tEtapaReduccionGlobal etapa_rg_unpack(t_serial *serial);
 void mandar_etapa_rg(tEtapaReduccionGlobal rg,t_socket sock);
 #endif /* STRUCT_H */

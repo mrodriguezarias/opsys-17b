@@ -61,6 +61,10 @@ size_t data_size() {
 	return data.size;
 }
 
+int data_blocks() {
+	return data.size / BLOCK_SIZE;
+}
+
 void data_close() {
 	munmap(data.content, data.size);
 }

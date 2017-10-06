@@ -52,7 +52,7 @@ char* busquedaNodo_GLOBAL;
 t_list* listaNodosConectados;
 bool estadoAnteriorexistente;
 
-Nodo* infoNodo_unpack(t_serial);
+Nodo* infoNodo_unpack(t_serial*);
 void inicializarEstructurasFilesystem();
 void guardarEstructuras();
 char *config_file(char*,char*);

@@ -1,8 +1,10 @@
 #include <config.h>
-#include <process.h>
-#include <system.h>
+#include <log.h>
 #include <mstring.h>
 #include <path.h>
+#include <process.h>
+#include <system.h>
+#include <thread.h>
 
 static t_process current = PROC_UNDEFINED;
 
@@ -13,7 +15,10 @@ static char *names[] = {"(Undefined)", "YAMA", "FileSystem", "Master", "Worker",
 void process_init() {
 	current = process_type(path_name(system_proc()));
 	system_init();
-	config_load();
+
+	config_init();
+	log_init();
+	thread_init();
 }
 
 t_process process_current() {
@@ -30,4 +35,10 @@ t_process process_type(const char *name) {
 		if(mstring_equal(name, names[i])) return i;
 	}
 	return PROC_UNDEFINED;
+}
+
+void process_term() {
+	thread_term();
+	log_term();
+	config_term();
 }

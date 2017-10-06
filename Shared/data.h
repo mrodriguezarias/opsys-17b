@@ -35,6 +35,12 @@ void *data_get(int blockno);
 size_t data_size(void);
 
 /**
+ * Calcula cuántos bloques caben en el espacio de datos.
+ * @return Cantidad de bloques que entran.
+ */
+int data_blocks(void);
+
+/**
  * Descarga el espacio de datos de memoria.
  */
 void data_close(void);

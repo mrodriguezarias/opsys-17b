@@ -12,6 +12,11 @@
 #include <protocol.h>
 #include "estructuras.h"
 #include <mlist.h>
+#include <thread.h>
+#include <protocol.h>
+#include "nodelist.h"
+#include <log.h>
+#include "FileSystem.h"
 
 #define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
 
@@ -20,11 +25,78 @@ typedef struct {
 	int tamanio;
 } t_cabecera;
 
-//funciones
+static t_node *receive_node_info(t_socket socket);
+
 void handshakeConDataNode(int, struct sockaddr_in, fd_set,fd_set, int);
 void handshakeConYama(int, struct sockaddr_in, fd_set,fd_set, int);
 
+static void datanode_handler(t_node *node) {
+	while(thread_sleep(), thread_active()) {
+//		TODO: Enviar y recibir bloques del nodo.
+	}
+
+	node->available = false;
+	node->handler = NULL;
+	log_inform("DataNode del nodo %s desconectado", node->name);
+}
+
+static void datanode_listener() {
+	t_socket sv_sock = socket_init(NULL, config_get("PUERTO_DATANODE"));
+
+	while(thread_active()) {
+		t_socket cli_sock = socket_accept(sv_sock);
+
+		t_packet packet = protocol_receive_packet(cli_sock);
+		if(packet.operation != OP_HANDSHAKE || packet.sender != PROC_DATANODE) return;
+
+		t_node *node = receive_node_info(cli_sock);
+		if(node == NULL) {
+			protocol_send_response(cli_sock, RESPONSE_ERROR);
+			socket_close(cli_sock);
+			continue;
+		}
+
+		protocol_send_response(cli_sock, RESPONSE_OK);
+		log_inform("DataNode del nodo %s conectado", node->name);
+
+		node->socket = cli_sock;
+		node->handler = thread_create(datanode_handler, node);
+		node->available = true;
+	}
+
+	socket_close(sv_sock);
+}
+
+// ========== Funciones públicas ==========
+
 void server() {
+	thread_create(datanode_listener, NULL);
+}
+
+// ========== Funciones privadas ==========
+
+static t_node *receive_node_info(t_socket socket) {
+	t_packet packet = protocol_receive_packet(socket);
+	if(packet.operation != OP_NODE_INFO) return NULL;
+	char *name;
+	int blocks;
+	serial_unpack(packet.content, "si", &name, &blocks);
+	serial_destroy(packet.content);
+	t_node *node = nodelist_find(name);
+	if(node == NULL && fs.formatted) {
+		log_inform("El nodo %s se quiso conectar pero el FS ya estaba formateado", name);
+	} else if(node != NULL && node->available) {
+		node = NULL;
+		log_inform("El nodo %s se quiso conectar pero ya estaba activo en el FS", name);
+	} else {
+		node = nodelist_add(name, blocks, thread_self());
+	}
+	free(name);
+	return node;
+}
+
+
+void prev_server() {
 	fd_set master;
 	fd_set read_fds;
 	int maximo_Sockets;
@@ -144,7 +216,7 @@ void server() {
 
 void handshakeConDataNode(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set master,
 		fd_set read_fds, int maximo_Sockets) {
-	t_packet packet = protocol_receive(nuevoSocket);
+	t_packet packet = protocol_receive_packet(nuevoSocket);
 		if(packet.operation == OP_HANDSHAKE && packet.sender == PROC_DATANODE) {
 			printf("FileSystem: nueva conexion desde %s en socket %d\n",
 					inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
@@ -166,7 +238,7 @@ void handshakeConDataNode(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set
 void handshakeConYama(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set master,
 		fd_set read_fds, int maximo_Sockets) {
 
-	t_packet packet = protocol_receive(nuevoSocket);
+	t_packet packet = protocol_receive_packet(nuevoSocket);
 	if(packet.operation == OP_HANDSHAKE && packet.sender == PROC_YAMA) {
 		printf("FileSystem: nueva conexion desde %s en socket %d\n",
 				inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
@@ -189,15 +261,15 @@ void inicializarNodo(int socketNodo){
 	send(socketNodo,&operacion,sizeof(operacion),0);
 	//recibo lo que necesito.
 	Nodo* infoDelNodo;
-	t_packet packet  = protocol_receive(socketNodo);
+	t_packet packet = protocol_receive_packet(socketNodo);
 	if(packet.sender == PROC_DATANODE){
 		 infoDelNodo = infoNodo_unpack(packet.content);
 	}
-	free(packet.content.data);
+	serial_destroy(packet.content);
 	registrarNodo(infoDelNodo,socketNodo);
 }
 
-Nodo* infoNodo_unpack(t_serial serial){
+Nodo* infoNodo_unpack(t_serial *serial){
 	Nodo* infoDelNodo = malloc(sizeof(Nodo));
 	serial_unpack(serial, "si", &infoDelNodo->nombreNodo, &infoDelNodo->total);
 	return infoDelNodo;

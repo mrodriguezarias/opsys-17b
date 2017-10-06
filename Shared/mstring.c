@@ -15,6 +15,10 @@ char *mstring_duplicate(const char *string) {
 	return strdup(string);
 }
 
+size_t mstring_length(const char *string) {
+	return strlen(string);
+}
+
 char *mstring_trim(char *string) {
 	if(string == NULL || string[0] == '\0') {
 		return string;
@@ -60,7 +64,7 @@ void mstring_format(char **string, const char *format, ...) {
 }
 
 char *mstring_copy(const char *string, int start, int end) {
-	if(end < 0) end = strlen(string);
+	if(end <= 0) end = strlen(string) + end;
 	return mstring_create("%.*s", end - start, string + start);
 }
 
@@ -98,6 +102,17 @@ bool mstring_contains(const char *string, const char *substring) {
 
 char *mstring_find(const char *string, const char *substring) {
 	return strstr(string, substring);
+}
+
+int mstring_count(const char *string, const char *substring) {
+	int count = 0;
+	int len = strlen(substring);
+	char *p = (char*) string;
+	while(p = mstring_find(p, substring), p != NULL) {
+		p += len;
+		count++;
+	}
+	return count;
 }
 
 int mstring_index(const char *string, const char *substring) {

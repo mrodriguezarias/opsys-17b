@@ -32,11 +32,16 @@ void manejador_transformacion(tEtapaTransformacionBis * transformacion) {
 	connect_to_worker(transformacion->et.ip, transformacion->et.puerto);
 //	printf("Socket worker: %d \n", master.worker_socket);
 	char * buffer = socket_receive_string(master.worker_socket);
+<<<<<<< HEAD
 	log_print("%s",buffer);
 	t_packet worker = protocol_receive(socket_worker);
 	free(worker.content.data);worker.operation = 0;worker.sender=PROC_MASTER;
+=======
+	t_packet worker = protocol_receive_packet(socket_worker);
+	serial_destroy(worker.content);worker.operation = 0;worker.sender=PROC_MASTER;
+>>>>>>> stash
 //	printf("Respuesta handshake de Worker: %s \n", buffer);
-	t_serial serial = serial_pack("sii",
+	t_serial *serial = serial_pack("sii",
 			transformacion->et.archivo_etapa,
 			transformacion->et.bloque,
 			transformacion->et.bytes_ocupados);
@@ -48,7 +53,7 @@ void manejador_transformacion(tEtapaTransformacionBis * transformacion) {
 //			transformacion->et.bloque,
 //			transformacion->et.bytes_ocupados);
 	worker = protocol_packet(OP_INICIAR_TRANSFORMACION, serial);
-	protocol_send(worker, master.worker_socket);
+	protocol_send_packet(worker, master.worker_socket);
 	char * respuesta = socket_receive_string(master.worker_socket);
 //	printf("%s\n",respuesta);
 	mandar_script(master.worker_socket,transformacion->srcipt_tranformador);

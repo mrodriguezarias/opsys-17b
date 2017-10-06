@@ -18,7 +18,7 @@ static t_config *config = NULL;
 
 // ========== Funciones públicas ==========
 
-void config_load() {
+void config_init() {
 	if(config != NULL) return;
 
 	char *config_path = config_file(true);
@@ -38,6 +38,11 @@ void config_load() {
 
 const char *config_get(const char *property) {
 	return config_has_property(config, (char*)property) ? config_get_string_value(config, (char*)property) : NULL;
+}
+
+void config_term() {
+	config_destroy(config);
+	config = NULL;
 }
 
 // ========== Funciones privadas ==========

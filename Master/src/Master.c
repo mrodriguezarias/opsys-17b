@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
 //	return 0;
 	t_packet packet;
 	do {
-		packet = protocol_receive(master.yama_socket);
+		packet = protocol_receive_packet(master.yama_socket);
 		manejador_yama(packet,argv[1],argv[2],argv[3]);
 	} while(true);
 	terminate();

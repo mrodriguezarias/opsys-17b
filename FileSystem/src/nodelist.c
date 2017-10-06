@@ -7,19 +7,23 @@
 #include <system.h>
 #include <mstring.h>
 
+static char *path = NULL;
 static mlist_t *nodes = NULL;
 static t_config *config = NULL;
 
-static const char *save_file_path(void);
 static void init_config(void);
 static void update_file(void);
 static void add_node_to_file(t_node *node);
 static void remove_node_from_file(t_node *node);
+static void load_bitmap(t_node *node);
+static t_node *create_node(const char *name, int blocks);
+static void destroy_node(t_node *node);
 
 // ========== Funciones públicas ==========
 
 void nodelist_init() {
 	if(nodes != NULL) return;
+	path = mstring_create("%s/metadata/nodos.bin", system_userdir());
 	nodes = mlist_create();
 	init_config();
 
@@ -27,16 +31,13 @@ void nodelist_init() {
 	if(snodes == NULL) return;
 
 	for(char **pnode = snodes; *pnode != NULL; pnode++) {
-		t_node *node = malloc(sizeof(t_node));
-		node->id = mstring_toint(*pnode);
-		node->available = false;
-
 		char *key = mstring_create("%sTotal", *pnode);
-		node->total_blocks = config_get_int_value(config, key);
+		int blocks = config_get_int_value(config, key);
+
+		t_node *node = create_node(*pnode, blocks);
 		mstring_format(&key, "%sLibre", *pnode);
 		node->free_blocks = config_get_int_value(config, key);
 		free(key);
-
 		mlist_append(nodes, node);
 	}
 	free(snodes);
@@ -46,81 +47,91 @@ int nodelist_size() {
 	return mlist_length(nodes);
 }
 
-t_node *nodelist_add() {
-	t_node *node = calloc(1, sizeof(t_node));
-
-	int find_max(int prev, t_node *node) {
-		return node->id > prev ? node->id : prev;
+t_node *nodelist_add(const char *name, int blocks, thread_t *handler) {
+	t_node *node = nodelist_find(name);
+	if(node == NULL) {
+		node = create_node(name, blocks);
+		mlist_append(nodes, node);
+		add_node_to_file(node);
 	}
-	node->id = mlist_reduce(nodes, find_max) + 1;
+	node->handler = handler;
 	node->available = true;
-	mlist_append(nodes, node);
-	add_node_to_file(node);
 	return node;
 }
 
-t_node *nodelist_find(int id) {
+t_node *nodelist_find(const char *name) {
 	bool finder(t_node *elem) {
-		return elem->id == id;
+		return mstring_equal(elem->name, name);
 	}
 	return mlist_find(nodes, finder);
 }
 
-bool nodelist_contains(int id) {
-	return nodelist_find(id) != NULL;
+static t_node *best_node_available(t_block *block) {
+	int free_blocks = 0;
+	t_node *node = NULL;
+	t_node *prev = block->copies[0].node;
+	void routine(t_node *elem) {
+		if(!elem->available || elem->free_blocks <= free_blocks ||
+				(prev != NULL && mstring_equal(elem->name, prev->name))) return;
+		free_blocks = elem->free_blocks;
+		node = elem;
+	}
+	mlist_traverse(nodes, routine);
+	return node;
 }
 
-void nodelist_remove(int id) {
+void nodelist_addblock(t_block *block) {
+	for(int i = 0; i < 2; i++) {
+		t_node *node = best_node_available(block);
+		if(node == NULL) continue;
+		int blockno = bitmap_firstzero(node->bitmap);
+		block->copies[i].blockno = blockno;
+		block->copies[i].node = node;
+		bitmap_set(node->bitmap, blockno);
+		node->free_blocks--;
+		add_node_to_file(node);
+	}
+}
+
+void nodelist_remove(const char *name) {
 	bool condition(t_node *elem) {
-		return elem->id == id;
+		return mstring_equal(elem->name, name);
 	}
 	t_node *node = mlist_remove(nodes, condition, NULL);
 	if(node == NULL) return;
 
 	remove_node_from_file(node);
-	free(node);
+	destroy_node(node);
 }
 
 void nodelist_clear() {
-	mlist_clear(nodes, free);
+	mlist_clear(nodes, destroy_node);
 	dictionary_clean_and_destroy_elements(config->properties, free);
 	update_file();
 }
 
 void nodelist_print() {
-	puts("╭────┬────────────┬────────────────┬─────────────────╮");
-	puts("│ ID │ Disponible │ Bloques libres │ Bloques totales │");
-	if(mlist_length(nodes) == 0) {
-		puts("├────┴────────────┴────────────────┴─────────────────┤");
-		char *rpadding = mstring_repeat(" ", 19);
-		printf("│%20sNo hay nodos.%s│\n", "", rpadding);
-		puts("╰────────────────────────────────────────────────────╯");
-		free(rpadding);
-		return;
-	}
-	puts("├────┼────────────┼────────────────┼─────────────────┤");
+	puts("Nombre\tActivo\tLibre\tTotal");
 	void iterator(t_node *node) {
-		printf("│ %2i │ %s         │ %14i │ %15i │ \n", node->id, node->available ? "Sí" : "No"
+		printf("%s\t%s\t%i\t%i\n", node->name, node->available ? "Sí" : "No"
 				, node->free_blocks, node->total_blocks);
 	}
 	mlist_traverse(nodes, iterator);
-	puts("╰────┴────────────┴────────────────┴─────────────────╯");
+}
+
+void nodelist_term() {
+	update_file();
+	config_destroy(config);
+	free(path);
+	mlist_destroy(nodes, free);
 }
 
 // ========== Funciones privadas ==========
 
-static const char *save_file_path() {
-	static char *path = NULL;
-	if(path == NULL) {
-		path = mstring_create("%s/metadata/nodos.bin", system_userdir());
-	}
-	return path;
-}
-
 static void init_config() {
 	if(config != NULL) return;
-	path_create(save_file_path());
-	config = config_create((char*) save_file_path());
+	path_mkfile(path);
+	config = config_create(path);
 	if(config_has_property(config, "NODOS")) return;
 
 	config_set_value(config, "TAMANIO", "0");
@@ -143,7 +154,7 @@ static void update_file() {
 	}
 
 	char *formatter(t_node *elem) {
-		return mstring_create("Nodo%i", elem->id);
+		return mstring_duplicate(elem->name);
 	}
 
 	free(value);
@@ -155,7 +166,7 @@ static void update_file() {
 }
 
 static void add_node_to_file(t_node *node) {
-	char *key = mstring_create("Nodo%iTotal", node->id);
+	char *key = mstring_create("%sTotal", node->name);
 	char *value = mstring_create("%i", node->total_blocks);
 	config_set_value(config, key, value);
 
@@ -169,9 +180,30 @@ static void add_node_to_file(t_node *node) {
 }
 
 static void remove_node_from_file(t_node *node) {
-	char *key = mstring_create("Nodo%iTotal", node->id);
+	char *key = mstring_create("%sTotal", node->name);
 	dictionary_remove_and_destroy(config->properties, key, free);
 	mstring_replace(&key, "Total", "Libre");
 	dictionary_remove_and_destroy(config->properties, key, free);
 	update_file();
+}
+
+static void load_bitmap(t_node *node) {
+	char *path = mstring_create("metadata/bitmaps/%s.dat", node->name);
+	node->bitmap = bitmap_load(node->total_blocks, path);
+	free(path);
+}
+
+static t_node *create_node(const char *name, int blocks) {
+	t_node *node = malloc(sizeof(t_node));
+	node->name = mstring_duplicate(name);
+	node->available = false;
+	node->total_blocks = blocks;
+	node->free_blocks = blocks;
+	load_bitmap(node);
+	return node;
+}
+
+static void destroy_node(t_node *node) {
+	free(node->name);
+	free(node);
 }

@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 typedef struct serial {
-	char *data;
+	void *data;
 	size_t size;
 } t_serial;
 
@@ -23,16 +23,29 @@ typedef struct serial {
  * Letra mayúscula : unsigned
  */
 
+/**
+ * Crea una estructura de datos serializados.
+ * @param data Datos.
+ * @param size Tamaño de los datos.
+ */
+t_serial *serial_create(void *data, size_t size);
+
+/**
+ * Destruye una estructura de datos serializados.
+ * @param serial Estructura serial.
+ */
+void serial_destroy(t_serial *serial);
+
 /*
  * Serializa datos según el formato especificado.
  * @return Datos serializados (serial.data debe ser liberado con free()).
  */
-t_serial serial_pack(const char *format, ...);
+t_serial *serial_pack(const char *format, ...);
 
 /*
  * Deserializa datos según el formato especificado.
  * @param serial Datos serializados.
  */
-void serial_unpack(t_serial serial, const char *format, ...);
+void serial_unpack(t_serial *serial, const char *format, ...);
 
 #endif /* SERIAL_H_ */

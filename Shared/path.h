@@ -4,11 +4,27 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <mlist.h>
+#include <mstring.h>
+
+typedef enum {PTYPE_YATPOS, PTYPE_YAMA, PTYPE_USER} t_ptype;
 
 /*
  * Para todas estas funciones, si se les pasa por parámetro una ruta relativa,
  * se la considera relativa al directorio del usuario (~/yatpos).
  */
+
+/**
+ * Crea una ruta uniendo todas las cadenas pasadas por parámetro.
+ * El tipo de ruta especifica la localidad de la ruta:
+ * - PTYPE_YATPOS: local a yatpos (~/yatpos/{ruta})
+ * - PTYPE_YAMA: local a yamafs (yamafs:/{ruta})
+ * - PTYPE_USER: local al usuario ({cwd}/{ruta})
+ * Si la ruta es absoluta (empieza con /), el tipo de ruta es ignorado.
+ * @param type Tipo de ruta.
+ * @return Ruta creada (debe ser liberada).
+ */
+#define path_create(type, ...) _path_create(type, #__VA_ARGS__, ##__VA_ARGS__)
+char *_path_create(t_ptype type, const char *scount, ...);
 
 /**
  * Verifica si una ruta apunta a un archivo existente.
@@ -92,7 +108,7 @@ char *path_temp(void);
  * Crea un archivo si no existía.
  * @param path Ruta al archivo a crear.
  */
-void path_create(const char *path);
+void path_mkfile(const char *path);
 
 /**
  * Copia un archivo de una ruta (source) a otra (target).

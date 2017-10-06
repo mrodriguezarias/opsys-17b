@@ -7,34 +7,46 @@
 #include <string.h>
 #include <system.h>
 
+#include "nodelist.h"
+#include "dirtree.h"
+
+#define show_usage() {show_usage_for(current_cmd); return;}
+
 // ========== Estructuras ==========
 
 typedef struct {
 	char *name;
-	void (*func)(char *);
+	void (*func)(void);
 	char *info;
 	char *usage;
 } t_command;
 
+static int current_cmd = -1;
+static char *current_args = NULL;
+
 // ========== Declaraciones ==========
 
-static void cmd_cat(char *);
-static void cmd_cpblock(char *);
-static void cmd_cpfrom(char *);
-static void cmd_cpto(char *);
-static void cmd_format(char *);
-static void cmd_help(char *);
-static void cmd_info(char *);
-static void cmd_ls(char *);
-static void cmd_md5(char *);
-static void cmd_mkdir(char *);
-static void cmd_mv(char *);
-static void cmd_quit(char *);
-static void cmd_rename(char *);
-static void cmd_rm(char *);
+static void cmd_cat(void);
+static void cmd_cpblock(void);
+static void cmd_cpfrom(void);
+static void cmd_cpto(void);
+static void cmd_debug(void);
+static void cmd_format(void);
+static void cmd_help(void);
+static void cmd_info(void);
+static void cmd_ls(void);
+static void cmd_md5(void);
+static void cmd_mkdir(void);
+static void cmd_mv(void);
+static void cmd_quit(void);
+static void cmd_rename(void);
+static void cmd_rm(void);
 
 static void init_console();
 static void term_console();
+static void show_usage_for(int cmd);
+static char *extract_arg(int no);
+static int num_args(void);
 static void execute_line(const char *);
 static t_command *find_command(const char *);
 static void command_not_found(const char *);
@@ -48,6 +60,7 @@ static t_command commands[] = {
 		{"cpblock", cmd_cpblock, "Copia un bloque de un archivo en un nodo", "archivo bloque nodo"},
 		{"cpfrom", cmd_cpfrom, "Copia un archivo local a yamafs", "archivo_local directorio_yamafs"},
 		{"cpto", cmd_cpto, "Copia un archivo yamafs al sistema local", "archivo_yamafs directorio_local"},
+		{"debug", cmd_debug, "Comando para depuración", "nodes | dirs"},
 		{"format", cmd_format, "Da formato al sistema de archivos", ""},
 		{"help", cmd_help, "Lista los comandos disponibles", "[comando]"},
 		{"info", cmd_info, "Muestra información de un archivo", "archivo"},
@@ -98,74 +111,133 @@ static void term_console() {
 	free(history_file);
 }
 
+static void show_usage_for(int cmd) {
+	printf("Uso: %s %s\n", commands[cmd].name, commands[cmd].usage);
+}
+
+static char *extract_arg(int no) {
+	if(mstring_isempty(current_args)) return NULL;
+	int i = 0;
+	char *p = current_args;
+	int start = 0;
+	int end = 0;
+	bool q = false;
+	bool s = false;
+	do {
+		while(!q && isspace(*p)) { s = true; p++; }
+		if(*p == '"' || *p == '\'') q = !q;
+		if(s || *p == '\0') {
+			s = false;
+			i++;
+			end = p - current_args;
+			if(no == i) {
+				char *copy = mstring_trim(mstring_copy(current_args, start, end));
+				char *a = copy, *b = mstring_end(copy);
+				if(*a == '"' || *a == '\'') *a = ' ';
+				if(*b == '"' || *b == '\'') *b = ' ';
+				return mstring_trim(copy);
+			}
+			start = end;
+		}
+	} while(*p++ != '\0');
+	return NULL;
+}
+
+static int num_args() {
+	char *arg = NULL;
+	int count = 0;
+	int i = 1;
+	while(arg = extract_arg(i++), arg != NULL) {
+		if(!mstring_isempty(arg)) {
+			count++;
+		}
+		free(arg);
+	}
+	return count;
+}
+
 // ========== Funciones de comandos ==========
 
-static void cmd_cat(char *args) {
+static void cmd_cat() {
 	puts("TODO");
 }
 
-static void cmd_cpblock(char *args) {
+static void cmd_cpblock() {
 	puts("TODO");
 }
 
-static void cmd_cpfrom(char *args) {
+static void cmd_cpfrom() {
+	if(num_args() != 2) show_usage();
+	char *source_path = extract_arg(1);
+	char *yama_dir = extract_arg(2);
+
+	yfile_cpfrom(source_path, yama_dir);
+	free(source_path);
+	free(yama_dir);
+}
+
+static void cmd_cpto() {
 	puts("TODO");
 }
 
-static void cmd_cpto(char *args) {
+static void cmd_debug() {
+	if(mstring_equal(current_args, "nodes")) {
+		nodelist_print();
+	} else if(mstring_equal(current_args, "dirs")) {
+		dirtree_print();
+	}
+}
+
+static void cmd_format() {
 	puts("TODO");
 }
 
-static void cmd_format(char *args) {
-	puts("TODO");
-}
-
-static void cmd_help(char *args) {
+static void cmd_help() {
 	int printed = 0;
 
 	for(int i = 0; commands[i].name; i++) {
-		if(!*args || (strcmp(args, commands[i].name) == 0)) {
+		if(!*current_args || (strcmp(current_args, commands[i].name) == 0)) {
 			printf("%s\t\t%s.\n", commands[i].name, commands[i].info);
 			printed++;
-			if(*args) {
-				printf("Uso: %s %s\n", commands[i].name, commands[i].usage);
+			if(*current_args) {
+				show_usage_for(i);
 				break;
 			}
 		}
 	}
 
-	if(!printed) command_not_found(args);
+	if(!printed) command_not_found(current_args);
 }
 
-static void cmd_info(char *args) {
+static void cmd_info() {
 	puts("TODO");
 }
 
-static void cmd_ls(char *args) {
+static void cmd_ls() {
 	puts("TODO");
 }
 
-static void cmd_md5(char *args) {
+static void cmd_md5() {
 	puts("TODO");
 }
 
-static void cmd_mkdir(char *args) {
+static void cmd_mkdir() {
 	puts("TODO");
 }
 
-static void cmd_mv(char *args) {
+static void cmd_mv() {
 	puts("TODO");
 }
 
-static void cmd_quit(char *args) {
+static void cmd_quit() {
 	should_quit = true;
 }
 
-static void cmd_rename(char *args) {
+static void cmd_rename() {
 	puts("TODO");
 }
 
-static void cmd_rm(char *args) {
+static void cmd_rm() {
 	puts("TODO");
 }
 
@@ -189,7 +261,9 @@ static void execute_line(const char *line) {
 		return;
 	}
 
-	(*(command->func))(args);
+	current_cmd = command - commands;
+	current_args = args;
+	(*(command->func))();
 }
 
 static t_command *find_command(const char *name) {
@@ -214,7 +288,6 @@ static void command_not_found(const char *name) {
 }
 
 static char **rl_completion(const char *text, int start, int end) {
-	rl_attempted_completion_over = 1;
 	return rl_completion_matches(text, &rl_generator);
 }
 

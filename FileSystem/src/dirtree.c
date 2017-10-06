@@ -32,6 +32,7 @@ typedef struct {
 
 static void get_children(mlist_t *children, int index, int depth);
 static t_directory *add_directory(const char *name, int parent);
+static char *dir_path_in_files(t_directory *dir);
 static char *create_normal_path(const char *path);
 static t_directory *find_directory(const char *name, int parent);
 static void remove_children(t_directory *dir);
@@ -53,8 +54,8 @@ void dirtree_init() {
 		dir->index = i;
 		dir->parent = -2;
 	}
-	t_directory root = {.index = 0, .name = "/", .parent = -1};
-	dirs[0] = root;
+
+	add_directory("/", -1);
 	save_to_file();
 }
 
@@ -240,6 +241,14 @@ void dirtree_print() {
 	mlist_destroy(children, free);
 }
 
+void dirtree_term() {
+	save_to_file();
+	file_unmap(file, map);
+	file_close(file);
+	map = NULL;
+	file = NULL;
+}
+
 // ========== Funciones privadas ==========
 
 static void get_children(mlist_t *children, int index, int depth) {
@@ -266,14 +275,18 @@ static t_directory *add_directory(const char *name, int parent) {
 		}
 	}
 
-//	if(pdir == NULL) {
-//		pdir = dirs + capacity;
-//		capacity++;
-//	}
-
 	strcpy(pdir->name, name);
 	pdir->parent = parent;
+
+	char *dir_path = dir_path_in_files(pdir);
+	path_mkdir(dir_path);
+	free(dir_path);
+
 	return pdir;
+}
+
+static char *dir_path_in_files(t_directory *dir) {
+	return mstring_create("metadata/archivos/%i", dir->index);
 }
 
 static char *create_normal_path(const char *path) {
@@ -308,9 +321,12 @@ static void remove_children(t_directory *dir) {
 }
 
 static void remove_directory(t_directory *dir) {
-	if(dir != NULL && dir->index != 0) {
-		dir->parent = -2;
-	}
+	if(dir == NULL || dir->index == 0) return;
+	dir->parent = -2;
+
+	char *dir_path = dir_path_in_files(dir);
+	path_remove(dir_path);
+	free(dir_path);
 }
 
 static void map_file() {

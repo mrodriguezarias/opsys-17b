@@ -77,4 +77,9 @@ void dirtree_clear(void);
  */
 void dirtree_print(void);
 
+/**
+ * Cierra el árbol de directorios, guardando los cambios en el archivo.
+ */
+void dirtree_term(void);
+
 #endif /* DIRTREE_H_ */

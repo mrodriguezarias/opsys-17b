@@ -14,10 +14,16 @@ void listen_to_master() {
 				continue;
 			if (socketFor == socketEscucha) {
 				t_socket cli_sock = socket_accept(socketEscucha);
+<<<<<<< HEAD
 				t_packet packet = protocol_receive(cli_sock);
 
 				if (packet.operation == OP_HANDSHAKE
 						&& packet.sender == PROC_MASTER) {
+=======
+				t_packet packet = protocol_receive_packet(cli_sock);
+				printf("Socket sock: %d\n", socketFor);
+				if (packet.operation == OP_HANDSHAKE && packet.sender == PROC_MASTER) {
+>>>>>>> stash
 					socket_set_add(cli_sock, &socket_set);
 					log_print("Conectado proceso Master por socket %i",
 							cli_sock);
@@ -29,9 +35,15 @@ void listen_to_master() {
 							"No posee los permisos adecuados");
 					socket_close(cli_sock);
 				}
+<<<<<<< HEAD
 			} else {
 				t_packet packet = protocol_receive(socketFor);
 				manejador_fork2(packet, socketFor);
+=======
+			}else{
+				t_packet packet = protocol_receive_packet(socketFor);
+				manejador_fork(packet, socketFor);
+>>>>>>> stash
 			}
 
 		}
