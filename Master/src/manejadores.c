@@ -32,14 +32,9 @@ void manejador_transformacion(tEtapaTransformacionBis * transformacion) {
 	connect_to_worker(transformacion->et.ip, transformacion->et.puerto);
 //	printf("Socket worker: %d \n", master.worker_socket);
 	char * buffer = socket_receive_string(master.worker_socket);
-<<<<<<< HEAD
 	log_print("%s",buffer);
-	t_packet worker = protocol_receive(socket_worker);
-	free(worker.content.data);worker.operation = 0;worker.sender=PROC_MASTER;
-=======
 	t_packet worker = protocol_receive_packet(socket_worker);
 	serial_destroy(worker.content);worker.operation = 0;worker.sender=PROC_MASTER;
->>>>>>> stash
 //	printf("Respuesta handshake de Worker: %s \n", buffer);
 	t_serial *serial = serial_pack("sii",
 			transformacion->et.archivo_etapa,

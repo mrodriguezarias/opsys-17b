@@ -103,7 +103,7 @@ void mandar_script(int socket, char * ruta) {
 		log_report("No se pudo enviar el tamanio del script");
 	}
 	log_print("Tamanio del archivo mandado:%d",size);
-	t_packet packet = protocol_receive(master.worker_socket);
+	t_packet packet = protocol_receive_packet(master.worker_socket);
 	if(packet.operation == MANDAR_SCRIPT){
 		log_print("Señal recivida");
 
