@@ -3,7 +3,6 @@
 #include <config.h>
 #include <log.h>
 #include <protocol.h>
-#include <socket.h>
 #include <stdlib.h>
 
 #include "Master.h"
@@ -31,7 +30,7 @@ void request_job_for_file(const char *file) {
 	serial_destroy(content);
 }
 
-void connect_to_worker(const char *ip, const char *port) { // La ip y el puerto son obtenidos mediante YAMA
+t_socket connect_to_worker(const char *ip, const char *port) { // La ip y el puerto son obtenidos mediante YAMA
 	t_socket socket = socket_connect(ip, port);
 	if(socket == -1) {
 		log_report("Worker no está corriendo en %s:%s", ip, port);
@@ -40,5 +39,5 @@ void connect_to_worker(const char *ip, const char *port) { // La ip y el puerto 
 
 	protocol_send_handshake(socket);
 	log_inform("Conectado a Worker en %s:%s por el socket %i", ip, port, socket);
-	master.worker_socket = socket;
+	return socket;
 }

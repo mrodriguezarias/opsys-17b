@@ -2,6 +2,9 @@
 #define SERIAL_H_
 
 #include <stddef.h>
+#include "mlist.h"
+
+#define SERIAL_MAX 1024
 
 typedef struct serial {
 	void *data;

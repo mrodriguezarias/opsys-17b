@@ -44,9 +44,10 @@ void listen_to_master() {
 				switch(packet.operation) {
 				case OP_INIT_JOB: init_job(packet.content);
 					log_print("OP_INIT_JOB");
-					tEtapaTransformacion et = new_etapa_transformacion("Nodo1","127.0.0.1","5050",35,100,"tmp/Master1-temp38");
-					mandar_etapa_transformacion(et,sock);
-					break;
+					tEtapaTransformacion* et = new_etapa_transformacion("Nodo1","127.0.0.1","5050",35,100,"/tmp/Master1-temp38");
+					mlist_t* lista = mlist_create();
+					mlist_append(lista,et);
+					mandar_etapa_transformacion(lista,sock);					break;
 				default:
 					log_report("Operación desconocida: %s", packet.operation);
 				}
@@ -58,8 +59,6 @@ void listen_to_master() {
 //					printf("Recibido: %s\n", string);
 //					log_inform("Recibido: %s \n",string);
 //					//planificicar(script);
-//					tEtapaTransformacion et = new_etapa_transformacion("Nodo1","127.0.0.1","5050",35,100,"/tmp/Master1-temp38");
-//					mandar_etapa_transformacion(et,sock);
 //				} else {
 //					log_inform("Desconectado proceso Master de socket %i", sock);
 //					socket_close(sock);

@@ -16,19 +16,24 @@
 t_master master;
 
 int main(int argc, char *argv[]) {
-	if(argc < 2) {
-		puts("Uso: master archivo_a_procesar");
+	if(argc < 5) {
+		puts("Faltan argumentos");
 		return EXIT_SUCCESS;
 	}
 
+	job.script_transf = string_duplicate(argv[1]);
+	job.script_reduc = string_duplicate(argv[2]);
+	job.arch = string_duplicate(argv[3]);
+	job.arch_result = string_duplicate(argv[4]);
+
 	process_init();
 	connect_to_yama();
-	request_job_for_file(argv[1]);
-//	return 0;
+	request_job_for_file(job.arch);
+
 	t_packet packet;
 	do {
 		packet = protocol_receive_packet(master.yama_socket);
-		manejador_yama(packet,argv[1],argv[2],argv[3]);
+		manejador_yama(packet);
 	} while(true);
 	terminate();
 	return EXIT_SUCCESS;

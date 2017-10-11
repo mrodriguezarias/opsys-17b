@@ -67,7 +67,6 @@ void iniciar_master(tMaster * masterAux);
 
 //void connect_to_yama(tMaster * masterAux);
 void connect_to_yama();
-void connect_to_worker(const char * ip,const char*port);
 void terminate(void);
 
 
