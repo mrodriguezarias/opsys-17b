@@ -14,8 +14,11 @@
 #include <system.h>
 #include <time.h>
 #include <stdarg.h>
+#define __USE_BSD
+#include <dirent.h>
 #include <file.h>
 #include <unistd.h>
+#include <data.h>
 #ifndef __USE_XOPEN_EXTENDED
 #define __USE_XOPEN_EXTENDED
 #endif
@@ -27,6 +30,7 @@
 static void show_error_and_exit(const char *path, const char *action);
 static int remove_routine(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 static size_t size_of_file(const char *path);
+static void traverse_dir(const char *dpath, void (*fn)(struct dirent *entry));
 
 // ========== Funciones públicas ==========
 
@@ -116,6 +120,18 @@ bool path_isbin(const char *path) {
 	return path_isfile(path) && !path_istext(path);
 }
 
+bool path_isempty(const char *path) {
+	if(!path_isdir(path)) {
+		return path_size(path) == 0;
+	}
+	int count = 0;
+	void fn(struct dirent *entry) {
+		count++;
+	}
+	traverse_dir(path, fn);
+	return count == 0;
+}
+
 void path_mkdir(const char *path) {
 	char *upath = system_upath(path);
 	if(access(upath, F_OK) != -1) {
@@ -170,6 +186,7 @@ char *path_sizep(const char *path) {
 char *path_dir(const char *path) {
 	char *upath = system_upath(path);
 	char *slash = strrchr(upath, '/');
+	if(strchr(upath, '/') == slash) slash++;
 	if(slash) *slash = '\0';
 	return upath;
 }
@@ -266,6 +283,16 @@ void path_remove(const char *path) {
 		unlink(upath);
 	}
 	free(upath);
+}
+
+void path_files(const char *dpath, void (*routine)(const char *path)) {
+	void fn(struct dirent *entry) {
+		if(entry->d_type != DT_REG) return;
+		char *path = path_create(PTYPE_YATPOS, dpath, entry->d_name);
+		routine(path);
+		free(path);
+	}
+	traverse_dir(dpath, fn);
 }
 
 char *path_md5(const char *path) {
@@ -374,10 +401,31 @@ void path_merge(mlist_t *sources, const char *target) {
 	file_close(output);
 }
 
+void path_apply(void *block, const char *script, const char *output) {
+	char *scrpath = path_create(PTYPE_USER, script);
+	if(!path_exists(scrpath)) show_error_and_exit(scrpath, "leer");
+
+	char *outpath = path_create(PTYPE_YATPOS, output);
+
+	char *blockstr = alloca(BLOCK_SIZE + 1);
+	char *p;
+	for(p = blockstr; p - blockstr < BLOCK_SIZE; p++) {
+		*p = *((char*)block + (p - blockstr));
+		if(*p == '\0') break;
+	}
+	*p = '\0';
+	char *command = mstring_create("echo \"%s\" | %s > %s", blockstr, scrpath, outpath);
+	int r = system(command);
+	free(outpath);
+	free(command);
+	if(r != 0) show_error_and_exit(scrpath, "ejecutar script en");
+	free(scrpath);
+}
+
 // ========== Funciones privadas ==========
 
 static void show_error_and_exit(const char *path, const char *action) {
-	system_exit("Error al %s ruta %s: %s", action, path, strerror(errno));
+	system_exit("Error al %s ruta %s%s%s", action, path, errno == 0 ? "." : ": ", errno == 0 ? "" : strerror(errno));
 }
 
 static int remove_routine(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf) {
@@ -390,4 +438,17 @@ static size_t size_of_file(const char *path) {
 	struct stat s;
 	stat(path, &s);
 	return s.st_size;
+}
+
+static void traverse_dir(const char *dpath, void (*fn)(struct dirent *entry)) {
+	char *upath = system_upath(dpath);
+	DIR *dir = opendir(upath);
+	if(dir == NULL) show_error_and_exit(upath, "leer directorio");
+
+	struct dirent *entry;
+	while(entry = readdir(dir), entry != NULL) {
+		if(mstring_equal(entry->d_name, ".") || mstring_equal(entry->d_name, "..")) continue;
+		fn(entry);
+	}
+	closedir(dir);
 }

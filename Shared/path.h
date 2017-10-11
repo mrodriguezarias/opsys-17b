@@ -62,6 +62,13 @@ bool path_istext(const char *path);
 bool path_isbin(const char *path);
 
 /**
+ * Determina si un archivo está vacío.
+ * @param path Ruta al archivo o directorio.
+ * @return Valor lógico indicando si está vacío.
+ */
+bool path_isempty(const char *path);
+
+/**
  * Crea un directorio en el sistema.
  * También crea los directorios intermedios, si no existían.
  * @param path Ruta del directorio a crear.
@@ -133,6 +140,13 @@ void path_move(const char *source, const char *target);
 void path_remove(const char *path);
 
 /**
+ * Itera sobre los archivos de un directorio.
+ * @param dpath Ruta al directorio.
+ * @param routine Rutina de iteración.
+ */
+void path_files(const char *dpath, void (*routine)(const char *path));
+
+/**
  * Calcula el hash MD5 de un archivo.
  * @param path Ruta al archivo.
  * @return MD5 del archivo (debe ser liberado).
@@ -161,5 +175,14 @@ void path_sort(const char *path);
  * @param target Ruta al archivo a crear con el resultado del apareo.
  */
 void path_merge(mlist_t *sources, const char *target);
+
+/**
+ * Aplica un script de transformación sobre un bloque de un archivo.
+ * Guarda el resultado en un archivo temporal.
+ * @param block Bloque de datos a transformar.
+ * @param script Ruta al script de tranformación (relativa al usuario).
+ * @param output Ruta al archivo temporal resultante (relativa a ~/yatpos).
+ */
+void path_apply(void *block, const char *script, const char *output);
 
 #endif /* PATH_H_ */

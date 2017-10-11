@@ -23,9 +23,9 @@
 #include "yfile.h"
 #include <path.h>
 #include <bitmap.h>
-
 #include <protocol.h>
 #include <config.h>
+#include "filetable.h"
 
 int indexDirectorio = 0;
 
@@ -36,14 +36,14 @@ static void term(void);
 // ========== Funciones públicas ==========
 
 int main(int argc, char *argv[]) {
-	init();
-
 	if(argc == 2 && mstring_equal(argv[1], "--clean")) {
 		clear_previous_state();
 	}
 
-	server();
-	console();
+	init();
+
+//	server();
+//	console();
 
 	term();
 	return EXIT_SUCCESS;
@@ -54,14 +54,14 @@ int main(int argc, char *argv[]) {
 static void init() {
 	process_init();
 	dirtree_init();
+	filetable_init();
 	nodelist_init();
-
-	fs.formatted = false;
+	fs.formatted = nodelist_size() > 0;
 }
 
 static void clear_previous_state() {
-	dirtree_clear();
-	nodelist_clear();
+	path_remove("metadata");
+	fs.formatted = false;
 }
 
 static void term() {

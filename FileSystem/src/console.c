@@ -9,6 +9,7 @@
 
 #include "nodelist.h"
 #include "dirtree.h"
+#include "FileSystem.h"
 
 #define show_usage() {show_usage_for(current_cmd); return;}
 
@@ -189,7 +190,7 @@ static void cmd_debug() {
 }
 
 static void cmd_format() {
-	puts("TODO");
+	fs.formatted = true;
 }
 
 static void cmd_help() {

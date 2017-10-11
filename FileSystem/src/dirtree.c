@@ -32,7 +32,6 @@ typedef struct {
 
 static void get_children(mlist_t *children, int index, int depth);
 static t_directory *add_directory(const char *name, int parent);
-static char *dir_path_in_files(t_directory *dir);
 static char *create_normal_path(const char *path);
 static t_directory *find_directory(const char *name, int parent);
 static void remove_children(t_directory *dir);
@@ -123,15 +122,10 @@ bool dirtree_contains(const char *path) {
 	return dirtree_find(path) != NULL;
 }
 
-bool dirtree_haschildren(const char *path) {
-	t_directory *dir = dirtree_find(path);
-	if(dir == NULL) return false;
+void dirtree_traverse(void (*routine)(t_directory *dir)) {
 	for(t_directory *cur = dirs; cur < dirs + MAX_SIZE; cur++) {
-		if(dir_exists(cur) && cur->parent == dir->index) {
-			return true;
-		}
+		if(dir_exists(cur)) routine(cur);
 	}
-	return false;
 }
 
 void dirtree_rename(const char *path, const char *new_name) {
@@ -241,6 +235,10 @@ void dirtree_print() {
 	mlist_destroy(children, free);
 }
 
+char *dirtree_path(t_directory *dir) {
+	return mstring_create("%s/metadata/archivos/%i", system_userdir(), dir->index);
+}
+
 void dirtree_term() {
 	save_to_file();
 	file_unmap(file, map);
@@ -278,15 +276,11 @@ static t_directory *add_directory(const char *name, int parent) {
 	strcpy(pdir->name, name);
 	pdir->parent = parent;
 
-	char *dir_path = dir_path_in_files(pdir);
+	char *dir_path = dirtree_path(pdir);
 	path_mkdir(dir_path);
 	free(dir_path);
 
 	return pdir;
-}
-
-static char *dir_path_in_files(t_directory *dir) {
-	return mstring_create("metadata/archivos/%i", dir->index);
 }
 
 static char *create_normal_path(const char *path) {
@@ -324,7 +318,7 @@ static void remove_directory(t_directory *dir) {
 	if(dir == NULL || dir->index == 0) return;
 	dir->parent = -2;
 
-	char *dir_path = dir_path_in_files(dir);
+	char *dir_path = dirtree_path(dir);
 	path_remove(dir_path);
 	free(dir_path);
 }

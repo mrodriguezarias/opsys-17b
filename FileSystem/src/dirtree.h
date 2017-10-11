@@ -47,11 +47,10 @@ t_directory *dirtree_find(const char *path);
 bool dirtree_contains(const char *path);
 
 /**
- * Verifica si un directorio tiene hijos.
- * @param Ruta al directorio.
- * @return Valor lógico con el resultado.
+ * Itera sobre todos los directorios aplicando una función a cada uno.
+ * @param routine Función a aplicar.
  */
-bool dirtree_haschildren(const char *path);
+void dirtree_traverse(void (*routine)(t_directory *dir));
 
 /**
  * Renombra un directorio.
@@ -76,6 +75,13 @@ void dirtree_clear(void);
  * Imprime el árbol de directorios.
  */
 void dirtree_print(void);
+
+/**
+ * Crea una cadena con la ruta de los archivos de un directorio.
+ * @param dir Directorio.
+ * @return Ruta del directorio, a liberar con free().
+ */
+char *dirtree_path(t_directory *dir);
 
 /**
  * Cierra el árbol de directorios, guardando los cambios en el archivo.

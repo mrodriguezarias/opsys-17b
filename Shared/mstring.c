@@ -1,9 +1,11 @@
-#include <string.h>
 #include <ctype.h>
 #include <mstring.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 
 #define MAX_SIZE mstring_maxsize()
 
@@ -64,7 +66,7 @@ void mstring_format(char **string, const char *format, ...) {
 }
 
 char *mstring_copy(const char *string, int start, int end) {
-	if(end <= 0) end = strlen(string) + end;
+	if(end < 0) end = strlen(string) + end;
 	return mstring_create("%.*s", end - start, string + start);
 }
 
