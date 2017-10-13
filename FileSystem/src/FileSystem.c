@@ -26,6 +26,7 @@
 #include <protocol.h>
 #include <config.h>
 #include "filetable.h"
+#include <serial.h>
 
 int indexDirectorio = 0;
 
@@ -36,14 +37,14 @@ static void term(void);
 // ========== Funciones públicas ==========
 
 int main(int argc, char *argv[]) {
-	if(argc == 2 && mstring_equal(argv[1], "--clean")) {
+//	if(argc == 2 && mstring_equal(argv[1], "--clean")) {
 		clear_previous_state();
-	}
+//	}
 
 	init();
 
-//	server();
-//	console();
+	server();
+	console();
 
 	term();
 	return EXIT_SUCCESS;

@@ -31,8 +31,16 @@ void handshakeConDataNode(int, struct sockaddr_in, fd_set,fd_set, int);
 void handshakeConYama(int, struct sockaddr_in, fd_set,fd_set, int);
 
 static void datanode_handler(t_node *node) {
-	while(thread_sleep(), thread_active()) {
-//		TODO: Enviar y recibir bloques del nodo.
+	while(thread_active()) {
+		int blockno = (int) thread_receive();
+		t_serial *block = thread_receive();
+		if(block != NULL) {
+			t_serial *serial = serial_pack("ix", blockno, block);
+			t_packet packet = protocol_packet(OP_SET_BLOCK, serial);
+			protocol_send_packet(packet, node->socket);
+			serial_destroy(block);
+			serial_destroy(serial);
+		}
 	}
 
 	node->available = false;

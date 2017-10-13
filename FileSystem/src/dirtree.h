@@ -2,6 +2,7 @@
 #define DIRTREE_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 
 typedef struct {
 	int index;
@@ -77,11 +78,24 @@ void dirtree_clear(void);
 void dirtree_print(void);
 
 /**
- * Crea una cadena con la ruta de los archivos de un directorio.
- * @param dir Directorio.
- * @return Ruta del directorio, a liberar con free().
+ * Devuelve la cantidad de hijos de un directorio.
+ * @param path Ruta al directorio padre.
+ * @return Cantidad de directorios.
  */
-char *dirtree_path(t_directory *dir);
+size_t dirtree_count(const char *path);
+
+/**
+ * Imprime los directorios hijos de un directorio.
+ * @param path Ruta al directorio padre.
+ */
+void dirtree_ls(const char *path);
+
+/**
+ * Crea una cadena con la ruta de los archivos de un directorio.
+ * @param path Ruta al directorio yama.
+ * @return Ruta real del directorio, a liberar con free().
+ */
+char *dirtree_path(const char *path);
 
 /**
  * Cierra el árbol de directorios, guardando los cambios en el archivo.

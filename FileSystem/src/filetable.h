@@ -28,6 +28,13 @@ void filetable_add(t_yfile *file);
 t_yfile *filetable_find(const char *path);
 
 /**
+ * Determina si existe un archivo yama en el sistema.
+ * @param path Ruta al archivo.
+ * @return Valor lógico indicando si el archivo existe.
+ */
+bool filetable_contains(const char *path);
+
+/**
  * Renombra un archivo.
  * @param path Ruta al archivo a renombrar.
  * @param new_name Nuevo nombre.
@@ -49,5 +56,18 @@ void filetable_clear();
  * Imprime la tabla de archivos.
  */
 void filetable_print(void);
+
+/**
+ * Devuelve la cantidad de archivos en una directorio.
+ * @param Ruta al directorio yamafs.
+ * @return Cantidad de archivos en el directorio.
+ */
+size_t filetable_count(const char *path);
+
+/**
+ * Imprime los archivos que pertenezcan a un determinado directorio.
+ * @param path Ruta al directorio yamafs.
+ */
+void filetable_ls(const char *path);
 
 #endif /* FILETABLE_H_ */

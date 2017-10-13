@@ -5,6 +5,7 @@
 #include <string.h>
 #include <mlist.h>
 #include <errno.h>
+#include <signal.h>
 
 struct thread {
 	pthread_t id;
@@ -12,17 +13,20 @@ struct thread {
 	bool active;
 	void *(*fn)(void*);
 	void *arg;
-	sem_t *sem;
+	sem_t *sem_sleep;
+	sem_t *sem_send;
+	sem_t *sem_recv;
 	void *data;
 };
 
 static mlist_t *threads = NULL;
+static int last_signal = 0;
 
 static void ptcheck(int ret);
-static void default_action(int signal);
+static void default_signal_handler(int signal);
 static void traverse_children(pthread_t parent, void *routine);
 static void *kill_and_join(thread_t *thread);
-static void *base_routine(void *arg);
+static void *base_thread_routine(void *arg);
 static void destroy_thread(thread_t *thread);
 
 // ========== Funciones públicas ==========
@@ -38,11 +42,13 @@ thread_t *thread_create(void *routine, void *arg) {
 	thread->active = true;
 	thread->fn = routine;
 	thread->arg = arg;
-	thread->sem = thread_sem_create(0);
+	thread->sem_sleep = thread_sem_create(0);
+	thread->sem_send = thread_sem_create(1);
+	thread->sem_recv = thread_sem_create(0);
 	mlist_insert(threads, 0, thread);
 
 	pthread_t id;
-	ptcheck(pthread_create(&id, NULL, base_routine, thread));
+	ptcheck(pthread_create(&id, NULL, base_thread_routine, thread));
 	thread->id = id;
 	return thread;
 }
@@ -53,20 +59,27 @@ void thread_exit(void *retvalue) {
 
 void thread_sleep() {
 	thread_t *thread = thread_self();
-	thread_sem_wait(thread->sem);
+	thread_sem_wait(thread->sem_sleep);
 }
 
 void thread_wake(thread_t *thread) {
-	thread_sem_signal(thread->sem);
+	thread_sem_signal(thread->sem_sleep);
 }
 
 void thread_send(thread_t *thread, void *data) {
+	if(!thread->active) return;
+	thread_sem_wait(thread->sem_send);
 	thread->data = data;
+	thread_sem_signal(thread->sem_recv);
 }
 
 void *thread_receive() {
 	thread_t *thread = thread_self();
-	return thread->data;
+	if(!thread->active) return NULL;
+	thread_sem_wait(thread->sem_recv);
+	void *data = thread->data;
+	thread_sem_signal(thread->sem_send);
+	return data;
 }
 
 void *thread_wait(thread_t *thread) {
@@ -106,15 +119,28 @@ thread_t *thread_self() {
 	return mlist_find(threads, cond);
 }
 
-void thread_signal_capture(int signal, void (*routine)(int)) {
-	struct sigaction sa;
-	sa.sa_flags = SA_SIGINFO;
-	sa.sa_handler = routine != NULL ? routine : default_action;
-	ptcheck(sigaction(signal, &sa, NULL));
+thread_t *thread_parent(thread_t *thread) {
+	bool cond(thread_t *elem) { return elem->id == thread->parent; }
+	return mlist_find(threads, cond);
 }
 
 void thread_signal_send(thread_t *thread, int signal) {
 	pthread_kill(thread->id, signal);
+}
+
+void thread_signal_capture(int signal, void *routine) {
+	struct sigaction sa;
+	sa.sa_flags = SA_SIGINFO;
+	if(routine != NULL) {
+		sa.sa_handler = routine;
+		ptcheck(sigaction(signal, &sa, NULL));
+	}
+	sa.sa_handler = default_signal_handler;
+	ptcheck(sigaction(signal, &sa, NULL));
+}
+
+int thread_signal_called() {
+	return last_signal;
 }
 
 mutex_t *thread_mutex_create() {
@@ -168,8 +194,8 @@ static void ptcheck(int ret) {
 	}
 }
 
-static void default_action(int signal) {
-	signal++;
+static void default_signal_handler(int signal) {
+	last_signal = signal;
 }
 
 static void traverse_children(pthread_t parent, void *routine) {
@@ -192,7 +218,7 @@ static void cleanup_routine(void *arg) {
 	mlist_remove(threads, cond, destroy_thread);
 }
 
-static void *base_routine(void *arg) {
+static void *base_thread_routine(void *arg) {
 	thread_t *thread = arg;
 	pthread_cleanup_push(cleanup_routine, arg);
 	void *ret = thread->fn(thread->arg);
@@ -201,7 +227,9 @@ static void *base_routine(void *arg) {
 }
 
 static void destroy_thread(thread_t *thread) {
-	thread_sem_destroy(thread->sem);
+	thread_sem_destroy(thread->sem_sleep);
+	thread_sem_destroy(thread->sem_send);
+	thread_sem_destroy(thread->sem_recv);
 	free(thread);
 }
 

@@ -11,6 +11,7 @@
 
 #include "dirtree.h"
 #include "nodelist.h"
+#include "filetable.h"
 
 // ========== Funciones públicas ==========
 
@@ -20,31 +21,29 @@ t_yfile *yfile_create(const char *path, t_ftype type) {
 	free(pdir);
 
 	t_yfile *file = malloc(sizeof(t_yfile));
+
 	file->path = yfile_path(path);
+	file->dir = path_dir(file->path);
+	file->name = path_name(file->path);
 	file->size = 0;
 	file->type = type;
 	file->blocks = mlist_create();
 	return file;
 }
 
-char *yfile_path(const char *yama_path) {
-	if(*yama_path == '/') {
-		return mstring_duplicate(yama_path);
-	}
-
-	char *path = path_create(PTYPE_YAMA, yama_path);
-	char *pdir = path_dir(path);
-	t_directory *dir = dirtree_find(pdir);
+char *yfile_path(const char *path) {
+	char *ypath = path_create(PTYPE_YAMA, path);
+	char *pdir = path_dir(ypath);
+	free(ypath);
+	char *rpath = dirtree_path(pdir);
 	free(pdir);
-	if(dir == NULL) return NULL;
-
-	char *rpath = dirtree_path(dir);
+	if(rpath == NULL) return NULL;
 	mstring_format(&rpath, "%s/%s", rpath, path_name(path));
-	free(path);
 	return rpath;
 }
 
 void yfile_addblock(t_yfile *file, t_block *block) {
+	block->index = mlist_length(file->blocks);
 	mlist_append(file->blocks, block);
 	file->size += block->size;
 }
@@ -55,16 +54,16 @@ void print_block(t_block *block) {
 	printf("Second copy: block #%d of node %s\n", block->copies[1].blockno, block->copies[1].node);
 }
 
-void add_and_send_block(mlist_t *blocks, char *buffer, size_t size) {
+void add_and_send_block(t_yfile *yfile, char *buffer, size_t size) {
 	printf("Sending block:\n%s\n", buffer);
 	t_block *block = calloc(1, sizeof(t_block));
 	block->size = size;
-	nodelist_addblock(block);
+	nodelist_addblock(block, buffer);
 	print_block(block);
-	mlist_append(blocks, block);
+	yfile_addblock(yfile, block);
 }
 
-void add_blocks_from_text_file(mlist_t *blocks, const char *path) {
+void add_blocks_from_text_file(t_yfile *yfile, const char *path) {
 	t_file *file = file_open(path);
 
 	char buffer[15];
@@ -73,19 +72,19 @@ void add_blocks_from_text_file(mlist_t *blocks, const char *path) {
 	void line_handler(const char *line) {
 		printf("copying line: %s\n", line);
 		if(size + mstring_length(line) + 1 > 15) {
-			add_and_send_block(blocks, buffer, BLOCK_SIZE);
+			add_and_send_block(yfile, buffer, size);
 			size = 0;
 		}
 		size += sprintf(buffer + size, "%s\n", line);
 	}
 	file_traverse(file, line_handler);
-	add_and_send_block(blocks, buffer, size);
+	add_and_send_block(yfile, buffer, size);
 	file_close(file);
 }
 
-t_yfile *yfile_cpfrom(const char *path, const char *dir) {
+void yfile_cpfrom(const char *path, const char *dir) {
 	char *srcpath = path_create(PTYPE_USER, path);
-	if(!path_isfile(srcpath)) return NULL;
+	if(!path_isfile(srcpath)) return;
 
 	char *yama_path = path_create(PTYPE_YAMA, dir, path_name(srcpath));
 	t_ftype type = path_istext(srcpath) ? FTYPE_TXT : FTYPE_BIN;
@@ -93,13 +92,13 @@ t_yfile *yfile_cpfrom(const char *path, const char *dir) {
 	t_yfile *file = yfile_create(yama_path, type);
 	printf("source: %s\n", srcpath);
 	printf("yama: %s\n", yama_path);
-	printf("real: %s\n", file->path);
+	printf("real: %s/%s\n", file->dir, file->name);
 
 	if(type == FTYPE_TXT) {
-//		add_blocks_from_text_file(file->blocks, srcpath);
+		add_blocks_from_text_file(file, srcpath);
 	}
 
-	return NULL;
+	filetable_add(file);
 }
 
 void yfile_print(t_yfile *file) {
@@ -108,7 +107,7 @@ void yfile_print(t_yfile *file) {
 		printf("(Archivo inexistente)\n");
 		return;
 	}
-	printf("Ruta: %s\n", file->path);
+	printf("Ruta: %s/%s\n", file->dir, file->name);
 	printf("Tipo: %s\n", file->type == FTYPE_TXT ? "TEXTO" : "BINARIO");
 	printf("Tamaño: %d\n", file->size);
 	printf("Bloques: %d\n", mlist_length(file->blocks));
@@ -123,6 +122,7 @@ void yfile_print(t_yfile *file) {
 }
 
 void yfile_destroy(t_yfile *file) {
+	free(file->dir);
 	free(file->path);
 	mlist_destroy(file->blocks, free);
 	free(file);

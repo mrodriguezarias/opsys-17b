@@ -48,9 +48,10 @@ char *_path_create(t_ptype type, const char *scount, ...) {
 		switch(type) {
 		case PTYPE_YATPOS: mstring_format(&path, "%s/%s", system_userdir(), path); break;
 		case PTYPE_USER: mstring_format(&path, "%s/%s", system_cwd(), path); break;
-		case PTYPE_YAMA: mstring_format(&path, "yamafs:/%s", path); break;
+		case PTYPE_YAMA: mstring_format(&path, "/%s", path); break;
 		}
 	}
+	if(type == PTYPE_YAMA) mstring_format(&path, "yamafs:%s", path);
 
 	while(--count) {
 		char *end = mstring_end(path);
@@ -130,6 +131,17 @@ bool path_isempty(const char *path) {
 	}
 	traverse_dir(path, fn);
 	return count == 0;
+}
+
+bool path_equal(const char *path1, const char *path2) {
+	char *p1 = mstring_duplicate(path1);
+	char *p2 = mstring_duplicate(path2);
+	if(mstring_hassuffix(p1, "/")) *mstring_end(p1) = '\0';
+	if(mstring_hassuffix(p2, "/")) *mstring_end(p2) = '\0';
+	bool r = mstring_equali(p1, p2);
+	free(p1);
+	free(p2);
+	return r;
 }
 
 void path_mkdir(const char *path) {

@@ -69,6 +69,14 @@ bool path_isbin(const char *path);
 bool path_isempty(const char *path);
 
 /**
+ * Compara dos rutas para ver si son iguales.
+ * @param path1 Ruta 1.
+ * @param path2 Ruta 2.
+ * @return Valor lógico indicando si son iguales.
+ */
+bool path_equal(const char *path1, const char *path2);
+
+/**
  * Crea un directorio en el sistema.
  * También crea los directorios intermedios, si no existían.
  * @param path Ruta del directorio a crear.

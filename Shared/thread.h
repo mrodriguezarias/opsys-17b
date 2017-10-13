@@ -1,9 +1,9 @@
 #ifndef thread_h
 #define thread_h
 
+#include <signal.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include <signal.h>
 #include <stdbool.h>
 
 typedef struct thread thread_t;
@@ -96,6 +96,13 @@ bool thread_active(void);
 thread_t *thread_self(void);
 
 /**
+ * Devuelve el identificador del padre de un hilo.
+ * @param thread Identificador de un hilo.
+ * @return Padre del hilo.
+ */
+thread_t *thread_parent(thread_t *thread);
+
+/**
  * Envía una señal a un determinado hilo.
  * @param thread Hilo a enviar la señal.
  * @param signal Señal a enviar.
@@ -107,7 +114,13 @@ void thread_signal_send(thread_t *thread, int signal);
  * @param signal Descriptor de la señal.
  * @param routine Rutina que se ejecutará.
  */
-void thread_signal_capture(int signal, void (*routine)(int));
+void thread_signal_capture(int signal, void *routine);
+
+/**
+ * Devuelve la última señal manejada.
+ * @return Última señal.
+ */
+int thread_signal_called(void);
 
 /**
  * Crea un semáforo de exclusión mutua (mutex).

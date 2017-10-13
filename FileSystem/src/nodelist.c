@@ -6,6 +6,8 @@
 #include <file.h>
 #include <system.h>
 #include <mstring.h>
+#include <serial.h>
+#include <string.h>
 
 static char *path = NULL;
 static mlist_t *nodes = NULL;
@@ -69,10 +71,10 @@ t_node *nodelist_find(const char *name) {
 static t_node *best_node_available(t_block *block) {
 	int free_blocks = 0;
 	t_node *node = NULL;
-	t_node *prev = block->copies[0].node;
+	char *prev = block->copies[0].node;
 	void routine(t_node *elem) {
 		if(!elem->available || elem->free_blocks <= free_blocks ||
-				(prev != NULL && mstring_equal(elem->name, prev->name))) return;
+				(prev != NULL && mstring_equal(elem->name, prev))) return;
 		free_blocks = elem->free_blocks;
 		node = elem;
 	}
@@ -80,16 +82,22 @@ static t_node *best_node_available(t_block *block) {
 	return node;
 }
 
-void nodelist_addblock(t_block *block) {
+void nodelist_addblock(t_block *block, char *buffer) {
 	for(int i = 0; i < 2; i++) {
 		t_node *node = best_node_available(block);
 		if(node == NULL) continue;
 		int blockno = bitmap_firstzero(node->bitmap);
 		block->copies[i].blockno = blockno;
-		block->copies[i].node = node;
+		block->copies[i].node = node->name;
 		bitmap_set(node->bitmap, blockno);
 		node->free_blocks--;
 		add_node_to_file(node);
+
+		void *data = malloc(block->size);
+		memcpy(data, buffer, block->size);
+		t_serial *content = serial_create(data, block->size);
+		thread_send(node->handler, (void*)blockno);
+		thread_send(node->handler, content);
 	}
 }
 

@@ -9,6 +9,7 @@
 
 static mlist_t *files = NULL;
 
+static mlist_t *files_in_path(const char *path);
 static void file_traverser(const char *path);
 static void dir_traverser(t_directory *dir);
 static void load_blocks(t_yfile *file, t_config *config);
@@ -47,6 +48,10 @@ t_yfile *filetable_find(const char *path) {
 	return file;
 }
 
+bool filetable_contains(const char *path) {
+	return filetable_find(path) != NULL;
+}
+
 void filetable_rename(const char *path, const char *new_name) {
 	t_yfile *file = filetable_find(path);
 	if(file == NULL) return;
@@ -55,6 +60,7 @@ void filetable_rename(const char *path, const char *new_name) {
 	path_move(file->path, npath);
 	free(file->path);
 	file->path = npath;
+	file->name = path_name(file->path);
 }
 
 void filetable_remove(const char *path) {
@@ -84,7 +90,39 @@ void filetable_print() {
 	mlist_traverse(files, routine);
 }
 
+size_t filetable_count(const char *path) {
+	mlist_t *ctfiles = files_in_path(path);
+	size_t count = mlist_length(ctfiles);
+	mlist_destroy(ctfiles, NULL);
+	return count;
+}
+
+void filetable_ls(const char *path) {
+	mlist_t *lsfiles = files_in_path(path);
+
+	bool sorter(t_yfile *file1, t_yfile *file2) {
+		return mstring_asc(file1->name, file2->name);
+	}
+	mlist_sort(lsfiles, sorter);
+
+	void printer(t_yfile *file) {
+		printf("%s\n", file->name);
+	}
+	mlist_traverse(lsfiles, printer);
+
+	mlist_destroy(lsfiles, NULL);
+}
+
 // ========== Funciones privadas ==========
+
+static mlist_t *files_in_path(const char *path) {
+	char *rpath = dirtree_path(path);
+	if(rpath == NULL) return mlist_create();
+	bool filter(t_yfile *file) { return path_equal(file->dir, rpath); }
+	mlist_t *list = mlist_filter(files, filter);
+	free(rpath);
+	return list;
+}
 
 static void file_traverser(const char *path) {
 	t_config *config = config_create((char*)path);
@@ -97,7 +135,7 @@ static void file_traverser(const char *path) {
 }
 
 static void dir_traverser(t_directory *dir) {
-	char *dpath = dirtree_path(dir);
+	char *dpath = dirtree_path(dir->name);
 	path_files(dpath, file_traverser);
 	free(dpath);
 }

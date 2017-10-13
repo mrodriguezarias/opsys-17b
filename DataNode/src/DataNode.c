@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <thread.h>
 
 //Estructuras
 typedef struct{
@@ -43,8 +44,10 @@ static t_socket fs_socket;
 static const char *node_name;
 
 static void load_name_from_args(int argc, char **argv);
-static void connect_to_filesystem();
-static void send_node_info();
+static void connect_to_filesystem(void);
+static void send_node_info(void);
+static void handle_request(t_packet packet);
+static void terminate(void);
 
 void listen_for_operations();
 t_getBloque getBloque_unpack(t_serial*);
@@ -58,24 +61,25 @@ t_serial *nodo_pack(Nodo infoNodo);
 
 int main(int argc, char *argv[]) {
 	process_init();
+	thread_signal_capture(SIGINT, terminate);
+
 	data_open(config_get("RUTA_DATABIN"), mstring_toint(config_get("DATABIN_SIZE")));
 	connect_to_filesystem();
 
 	load_name_from_args(argc, argv);
 	send_node_info();
 
-	return 0;
+	while(true) {
+		t_packet packet = protocol_receive_packet(fs_socket);
+		if(packet.operation == OP_UNDEFINED) {
+			fprintf(stderr, "\33[2K\rConexión con el FileSystem terminada\n");
+			break;
+		}
 
-	inicializarNodo();
-	//listen_for_operations();
-	int a;
-	if(recv(fs_socket, &a, sizeof(int), 0) <= 0){
-	 close(fs_socket);
-	 printf("Cerre el socket \n");
+		handle_request(packet);
 	}
 
-	socket_close(fs_socket);
-	data_close();
+	terminate();
 	return EXIT_SUCCESS;
 }
 
@@ -92,7 +96,7 @@ static void load_name_from_args(int argc, char **argv) {
 static void connect_to_filesystem() {
 	t_socket socket = socket_connect(config_get("IP_FILESYSTEM"), config_get("PUERTO_DATANODE"));
 	protocol_send_handshake(socket);
-	log_inform("Conectado a proceso FileSystem por socket %i", socket);
+	log_inform("Conectado al FileSystem por socket %i", socket);
 	fs_socket = socket;
 }
 
@@ -101,8 +105,33 @@ static void send_node_info() {
 	t_packet packet = protocol_packet(OP_NODE_INFO, node_info);
 	protocol_send_packet(packet, fs_socket);
 	serial_destroy(node_info);
-	int code = protocol_receive_response(fs_socket);
-	printf("Response code: %d\n", code);
+
+	int response = protocol_receive_response(fs_socket);
+	if(response != 0) {
+		fprintf(stderr, "El FileSystem rechazó la conexión\n");
+		terminate();
+	}
+}
+
+static void handle_request(t_packet packet) {
+	if(packet.operation == OP_SET_BLOCK) {
+		int blockno;
+		t_serial *block;
+		serial_unpack(packet.content, "ix", &blockno, &block);
+		printf("Solicitud de escritura de bloque #%d\n", blockno);
+		printf("Tamaño: %d\n", block->size);
+		printf("Contenido: %s\n", mstring_copy(block->data, 0, block->size));
+		serial_destroy(block);
+	} else if (packet.operation == OP_GET_BLOCK) {
+		// TODO: Get block
+	}
+}
+
+static void terminate() {
+	socket_close(fs_socket);
+	data_close();
+	log_inform("Desconectado. Proceso terminado.");
+	exit(EXIT_SUCCESS);
 }
 
 void listen_for_operations(){

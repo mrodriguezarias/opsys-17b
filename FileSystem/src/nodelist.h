@@ -51,9 +51,11 @@ t_node *nodelist_find(const char *name);
 
 /**
  * Agrega un bloque a nodos de la lista.
+ * Le envía el contenido del bloque al DataNode correspondiente.
  * @param block Bloque a agregar.
+ * @param buffer Contenido del bloque.
  */
-void nodelist_addblock(t_block *block);
+void nodelist_addblock(t_block *block, char *buffer);
 
 /**
  * Elimina un nodo de la lista de nodos.

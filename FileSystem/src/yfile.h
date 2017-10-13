@@ -5,6 +5,8 @@
 
 typedef struct yfile {
 	char *path;
+	char *dir;
+	const char *name;
 	size_t size;
 	t_ftype type;
 	mlist_t *blocks;
@@ -31,10 +33,10 @@ t_yfile *yfile_create(const char *path, t_ftype type);
 
 /**
  * Crea la ruta real correspondiente a una ruta YAMA.
- * @param yama_path Ruta YAMA.
+ * @param path Ruta YAMA.
  * @return Ruta real.
  */
-char *yfile_path(const char *yama_path);
+char *yfile_path(const char *path);
 
 /**
  * Agrega un bloque de datos a un archivo yamafs.
@@ -48,9 +50,8 @@ void yfile_addblock(t_yfile *file, t_block *block);
  * contenido de un archivo local.
  * @param path Ruta al archivo local que se quiere copiar.
  * @param dir Ruta de yamafs donde se guardará el archivo.
- * @return Archivo yamafs.
  */
-t_yfile *yfile_cpfrom(const char *path, const char *dir);
+void yfile_cpfrom(const char *path, const char *dir);
 
 /**
  * Imprime información administrativa de un archivo yamafs.

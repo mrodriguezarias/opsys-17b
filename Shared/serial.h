@@ -20,7 +20,8 @@ typedef struct serial {
  * l : long long
  * f : float
  * d : double
- * s : string
+ * s : string (char*)
+ * x : binary (t_serial*)
  * ---
  * Letra minúscula : signed
  * Letra mayúscula : unsigned

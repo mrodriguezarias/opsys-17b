@@ -75,6 +75,8 @@ t_serial *serial_pack(const char *format, ...) {
 	char *s;                    // strings
 	unsigned int len;
 
+	t_serial *x;
+
 	unsigned int size = 0;
 
 	va_start(ap, format);
@@ -157,6 +159,14 @@ t_serial *serial_pack(const char *format, ...) {
 			size += len;
 			buf += len;
 			break;
+
+		case 'x': // binary
+			x = va_arg(ap, t_serial*);
+			size += 4 + x->size;
+			packi32((unsigned char *)buf, x->size);
+			buf += 4;
+			memcpy(buf, x->data, x->size);
+			buf += x->size;
 		}
 	}
 
@@ -196,6 +206,8 @@ void serial_unpack(t_serial *serial, const char *format, ...) {
 
 	char **s;
 	unsigned int len;
+
+	t_serial **x;
 
 	va_start(ap, format);
 
@@ -269,6 +281,17 @@ void serial_unpack(t_serial *serial, const char *format, ...) {
 			len = strlen(str) + 1;
 			*s = str;
 			buf += len;
+			break;
+
+		case 'x': // binary
+			x = va_arg(ap, t_serial**);
+			t_serial *isr = malloc(sizeof(t_serial));
+			isr->size = unpacki32((unsigned char *)buf);
+			isr->data = malloc(isr->size);
+			buf += 4;
+			memcpy(isr->data, buf, isr->size);
+			*x = isr;
+			buf += isr->size;
 			break;
 
 		default:

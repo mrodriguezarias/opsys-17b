@@ -10,6 +10,7 @@
 #include "nodelist.h"
 #include "dirtree.h"
 #include "FileSystem.h"
+#include "filetable.h"
 
 #define show_usage() {show_usage_for(current_cmd); return;}
 
@@ -91,6 +92,7 @@ void console() {
 		if(*line) {
 			add_history(line);
 			execute_line(line);
+			write_history(history_file);
 		}
 
 		free(line);
@@ -108,7 +110,6 @@ static void init_console() {
 }
 
 static void term_console() {
-	write_history(history_file);
 	free(history_file);
 }
 
@@ -186,6 +187,8 @@ static void cmd_debug() {
 		nodelist_print();
 	} else if(mstring_equal(current_args, "dirs")) {
 		dirtree_print();
+	} else if(mstring_equal(current_args, "files")) {
+		filetable_print();
 	}
 }
 
@@ -215,7 +218,22 @@ static void cmd_info() {
 }
 
 static void cmd_ls() {
-	puts("TODO");
+	if(num_args() != 1) show_usage();
+	char *path = extract_arg(1);
+	if(!dirtree_contains(path)) {
+		puts("Directorio inexistente.");
+		free(path);
+		return;
+	}
+
+	size_t nd = dirtree_count(path);
+	size_t nf = filetable_count(path);
+	printf("%zi directorio%s, %zi archivo%s%s\n", nd, nd == 1 ? "" : "s",
+			nf, nf == 1 ? "" : "s", nf + nd == 0 ? "." : ":");
+
+	dirtree_ls(path);
+	filetable_ls(path);
+	free(path);
 }
 
 static void cmd_md5() {
@@ -235,7 +253,17 @@ static void cmd_quit() {
 }
 
 static void cmd_rename() {
-	puts("TODO");
+	if(num_args() != 2) show_usage();
+	char *path = extract_arg(1);
+	char *new_name = extract_arg(2);
+
+	if(dirtree_contains(path)) {
+		dirtree_rename(path, new_name);
+	} else if(filetable_contains(path)) {
+		filetable_rename(path, new_name);
+	} else {
+		fprintf(stderr, "Error: ruta inexistente.\n");
+	}
 }
 
 static void cmd_rm() {
