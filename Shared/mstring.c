@@ -14,7 +14,7 @@ static char *create_format_template(const char *format, va_list args);
 // ========== Funciones públicas ==========
 
 char *mstring_duplicate(const char *string) {
-	return strdup(string);
+	return string == NULL ? NULL : strdup(string);
 }
 
 size_t mstring_length(const char *string) {

@@ -70,4 +70,12 @@ size_t filetable_count(const char *path);
  */
 void filetable_ls(const char *path);
 
+/**
+ * Crea un archivo del sistema de archivos yamafs copiando el
+ * contenido de un archivo local.
+ * @param path Ruta al archivo local que se quiere copiar.
+ * @param dir Ruta de yamafs donde se guardará el archivo.
+ */
+void filetable_cpfrom(const char *path, const char *dir);
+
 #endif /* FILETABLE_H_ */

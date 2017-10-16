@@ -173,7 +173,7 @@ static void cmd_cpfrom() {
 	char *source_path = extract_arg(1);
 	char *yama_dir = extract_arg(2);
 
-	yfile_cpfrom(source_path, yama_dir);
+	filetable_cpfrom(source_path, yama_dir);
 	free(source_path);
 	free(yama_dir);
 }
