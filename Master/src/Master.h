@@ -2,13 +2,9 @@
 #define MASTER_H_
 
 #include <socket.h>
+#include <commons/string.h>
 
-typedef struct {
-	t_socket yama_socket;
-	t_socket worker_socket;
-} t_master;
-
-extern t_master master;
+t_socket yama_socket;
 
 void terminate(void);
 
