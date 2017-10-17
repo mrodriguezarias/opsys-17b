@@ -35,6 +35,13 @@ t_yfile *filetable_find(const char *path);
 bool filetable_contains(const char *path);
 
 /**
+ * Mueve un archivo.
+ * @param path Ruta al archivo a renombrar.
+ * @param new_path Nueva ruta.
+ */
+void filetable_move(const char *path, const char *new_path);
+
+/**
  * Renombra un archivo.
  * @param path Ruta al archivo a renombrar.
  * @param new_name Nuevo nombre.
@@ -58,7 +65,7 @@ void filetable_clear();
 void filetable_print(void);
 
 /**
- * Devuelve la cantidad de archivos en una directorio.
+ * Devuelve la cantidad de archivos en un directorio.
  * @param Ruta al directorio yamafs.
  * @return Cantidad de archivos en el directorio.
  */
@@ -68,7 +75,7 @@ size_t filetable_count(const char *path);
  * Imprime los archivos que pertenezcan a un determinado directorio.
  * @param path Ruta al directorio yamafs.
  */
-void filetable_ls(const char *path);
+void filetable_list(const char *path);
 
 /**
  * Crea un archivo del sistema de archivos yamafs copiando el

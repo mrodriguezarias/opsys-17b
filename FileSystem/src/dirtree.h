@@ -54,6 +54,13 @@ bool dirtree_contains(const char *path);
 void dirtree_traverse(void (*routine)(t_directory *dir));
 
 /**
+ * Mueve un directorio.
+ * @param path Ruta al directorio a mover.
+ * @param new_path Nueva ruta del directorio.
+ */
+void dirtree_move(const char *path, const char *new_path);
+
+/**
  * Renombra un directorio.
  * @param path Ruta al directorio a renombrar.
  * @param new_name Nuevo nombre.
@@ -88,7 +95,7 @@ size_t dirtree_count(const char *path);
  * Imprime los directorios hijos de un directorio.
  * @param path Ruta al directorio padre.
  */
-void dirtree_ls(const char *path);
+void dirtree_list(const char *path);
 
 /**
  * Crea una cadena con la ruta de los archivos de un directorio.

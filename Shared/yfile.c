@@ -48,7 +48,7 @@ void yfile_print(t_yfile *file) {
 
 t_serial *yfile_pack(t_yfile *file) {
 	t_serial *serial = serial_create(NULL, 0);
-	serial_add(serial, "siii", file->path, file->size, file->type, mlist_length(file->blocks));
+	serial_add(serial, "sii", file->path, file->size, file->type);
 
 	void routine(t_block *block) {
 		serial_add(serial, "iiisis", block->index, block->size,
@@ -56,16 +56,15 @@ t_serial *yfile_pack(t_yfile *file) {
 				block->copies[1].blockno, block->copies[1].node);
 	}
 	mlist_traverse(file->blocks, routine);
+
 	return serial;
 }
 
 t_yfile *yfile_unpack(t_serial *serial) {
 	t_yfile *file = yfile_create(NULL, 0);
+	serial_remove(serial, "sii", &file->path, &file->size, &file->type);
 
-	int numblocks;
-	serial_remove(serial, "siii", &file->path, &file->size, &file->type, &numblocks);
-
-	while(numblocks--) {
+	while(serial->size > 0) {
 		t_block *block = malloc(sizeof(t_block));
 		serial_remove(serial, "iiisis", &block->index, &block->size,
 				&block->copies[0].blockno, &block->copies[0].node,
@@ -73,6 +72,7 @@ t_yfile *yfile_unpack(t_serial *serial) {
 		mlist_append(file->blocks, block);
 	}
 
+	serial_destroy(serial);
 	return file;
 }
 

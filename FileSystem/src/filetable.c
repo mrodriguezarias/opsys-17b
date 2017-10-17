@@ -5,6 +5,7 @@
 #include <path.h>
 #include <commons/config.h>
 #include <stdio.h>
+#include <system.h>
 #include "nodelist.h"
 
 static mlist_t *files = NULL;
@@ -56,11 +57,40 @@ bool filetable_contains(const char *path) {
 	return filetable_find(path) != NULL;
 }
 
+void filetable_move(const char *path, const char *new_path) {
+	t_yfile *file = filetable_find(path);
+	if(file == NULL) return;
+	char *npath = path_create(PTYPE_YAMA, new_path);
+	if(!mstring_hassuffix(npath, path_name(file->path))) {
+		mstring_format(&npath, "%s/%s", npath, path_name(file->path));
+	}
+	
+	if(filetable_contains(npath)) {
+		free(npath);
+		return;
+	}
+
+	char *dpath = path_dir(npath);
+	dirtree_add(dpath);
+	free(dpath);
+
+	char *rpath = real_file_path(npath);
+	path_move(file->path, rpath);
+	free(file->path);
+	file->path = rpath;
+}
+
 void filetable_rename(const char *path, const char *new_name) {
 	t_yfile *file = filetable_find(path);
 	if(file == NULL) return;
 	char *npath = path_dir(file->path);
 	mstring_format(&npath, "%s/%s", npath, new_name);
+
+	if(filetable_contains(npath)) {
+		free(npath);
+		return;
+	}
+
 	path_move(file->path, npath);
 	free(file->path);
 	file->path = npath;
@@ -100,7 +130,7 @@ size_t filetable_count(const char *path) {
 	return count;
 }
 
-void filetable_ls(const char *path) {
+void filetable_list(const char *path) {
 	mlist_t *lsfiles = files_in_path(path);
 
 	bool sorter(t_yfile *file1, t_yfile *file2) {
@@ -239,6 +269,10 @@ static void update_file(t_yfile *file) {
 }
 
 char *real_file_path(const char *path) {
+	if(mstring_hasprefix(path, system_userdir())) {
+		return mstring_duplicate(path);
+	}
+
 	char *ypath = path_create(PTYPE_YAMA, path);
 	char *pdir = path_dir(ypath);
 	free(ypath);

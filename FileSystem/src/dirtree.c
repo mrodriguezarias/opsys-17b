@@ -70,8 +70,9 @@ int dirtree_size() {
 
 t_directory *dirtree_add(const char *path) {
 	if(dir_exists(dirs + MAX_SIZE -1)) return NULL;
-	t_directory *dir = NULL;
+	if(mstring_equal(path, root->name)) return root;
 
+	t_directory *dir = NULL;
 	char *npath = create_normal_path(path);
 	char *p = npath + 1;
 
@@ -133,6 +134,32 @@ void dirtree_traverse(void (*routine)(t_directory *dir)) {
 	}
 }
 
+void dirtree_move(const char *path, const char *new_path) {
+	t_directory *dir = dirtree_find(path);
+	if(dir == NULL || dir == root) return;
+
+	char *npath = create_normal_path(new_path);
+	*mstring_end(npath) = '\0';
+
+	if(!mstring_hassuffix(npath, dir->name)) {
+		mstring_format(&npath, "%s/%s", npath, dir->name);
+	}
+
+	if(dirtree_contains(npath)) {
+		free(npath);
+		return;
+	}
+
+	char *dpath = path_dir(npath);
+	free(npath);
+
+	t_directory *parent = dirtree_add(dpath);
+	free(dpath);
+
+	dir->parent = parent->index;
+	save_to_file();
+}
+
 void dirtree_rename(const char *path, const char *new_name) {
 	t_directory *dir = dirtree_find(path);
 	if(dir == NULL || dir == root) return;
@@ -142,7 +169,7 @@ void dirtree_rename(const char *path, const char *new_name) {
 	*strrchr(npath, '/') = '\0';
 
 	mstring_format(&npath, "%s/%s", npath, new_name);
-	bool exists = dirtree_find(npath) != NULL;
+	bool exists = dirtree_contains(npath);
 	free(npath);
 
 	if(exists) return;
@@ -249,7 +276,7 @@ size_t dirtree_count(const char *path) {
 	return count;
 }
 
-void dirtree_ls(const char *path) {
+void dirtree_list(const char *path) {
 	t_directory *parent = dirtree_find(path);
 	if(parent == NULL) return;
 	mlist_t *children = children_of_dir(parent);

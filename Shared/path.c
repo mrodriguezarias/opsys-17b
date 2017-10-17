@@ -197,6 +197,10 @@ char *path_sizep(const char *path) {
 
 char *path_dir(const char *path) {
 	char *upath = system_upath(path);
+
+	char *end = mstring_end(upath);
+	if(*end == '/') *end = '\0';
+
 	char *slash = strrchr(upath, '/');
 	if(strchr(upath, '/') == slash) slash++;
 	if(slash) *slash = '\0';
