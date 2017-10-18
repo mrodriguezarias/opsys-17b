@@ -26,26 +26,34 @@ typedef struct {
 } t_cabecera;
 
 static t_node *receive_node_info(t_socket socket);
+static void datanode_listener(void);
+static void datanode_handler(t_node *node);
 
-void handshakeConDataNode(int, struct sockaddr_in, fd_set,fd_set, int);
-void handshakeConYama(int, struct sockaddr_in, fd_set,fd_set, int);
+// ========== Funciones públicas ==========
 
-static void datanode_handler(t_node *node) {
-	while(thread_active()) {
-		int blockno = (int) thread_receive();
-		t_serial *block = thread_receive();
-		if(block != NULL) {
-			t_serial *serial = serial_pack("ix", blockno, block);
-			t_packet packet = protocol_packet(OP_SET_BLOCK, serial);
-			protocol_send_packet(packet, node->socket);
-			serial_destroy(block);
-			serial_destroy(serial);
-		}
+void server() {
+	thread_create(datanode_listener, NULL);
+}
+
+// ========== Funciones privadas ==========
+
+static t_node *receive_node_info(t_socket socket) {
+	t_packet packet = protocol_receive_packet(socket);
+	if(packet.operation != OP_NODE_INFO) return NULL;
+	char *name;
+	int blocks;
+	serial_unpack(packet.content, "si", &name, &blocks);
+	t_node *node = nodelist_find(name);
+	if(node == NULL && fs.formatted) {
+		log_inform("El nodo %s se quiso conectar pero el FS ya estaba formateado", name);
+	} else if(node != NULL && node->available) {
+		node = NULL;
+		log_inform("El nodo %s se quiso conectar pero ya estaba activo en el FS", name);
+	} else {
+		node = nodelist_add(name, blocks, thread_self());
 	}
-
-	node->available = false;
-	node->handler = NULL;
-	log_inform("DataNode del nodo %s desconectado", node->name);
+	free(name);
+	return node;
 }
 
 static void datanode_listener() {
@@ -55,7 +63,10 @@ static void datanode_listener() {
 		t_socket cli_sock = socket_accept(sv_sock);
 
 		t_packet packet = protocol_receive_packet(cli_sock);
-		if(packet.operation != OP_HANDSHAKE || packet.sender != PROC_DATANODE) return;
+		if(packet.operation != OP_HANDSHAKE || packet.sender != PROC_DATANODE) {
+			socket_close(cli_sock);
+			break;
+		}
 
 		t_node *node = receive_node_info(cli_sock);
 		if(node == NULL) {
@@ -75,294 +86,23 @@ static void datanode_listener() {
 	socket_close(sv_sock);
 }
 
-// ========== Funciones públicas ==========
+static void datanode_handler(t_node *node) {
+	while(thread_active()) {
+		int blockno = (int) thread_receive();
+		t_serial *block = thread_receive();
+		if(block != NULL) {
+			t_serial *serial = serial_pack("i", blockno);
+			t_packet packet = protocol_packet(OP_SET_BLOCK, serial);
+			protocol_send_packet(packet, node->socket);
+			serial_destroy(serial);
 
-void server() {
-	thread_create(datanode_listener, NULL);
-}
-
-// ========== Funciones privadas ==========
-
-static t_node *receive_node_info(t_socket socket) {
-	t_packet packet = protocol_receive_packet(socket);
-	if(packet.operation != OP_NODE_INFO) return NULL;
-	char *name;
-	int blocks;
-	serial_unpack(packet.content, "si", &name, &blocks);
-	serial_destroy(packet.content);
-	t_node *node = nodelist_find(name);
-	if(node == NULL && fs.formatted) {
-		log_inform("El nodo %s se quiso conectar pero el FS ya estaba formateado", name);
-	} else if(node != NULL && node->available) {
-		node = NULL;
-		log_inform("El nodo %s se quiso conectar pero ya estaba activo en el FS", name);
-	} else {
-		node = nodelist_add(name, blocks, thread_self());
-	}
-	free(name);
-	return node;
-}
-
-
-void prev_server() {
-	fd_set master;
-	fd_set read_fds;
-	int maximo_Sockets;
-	//datanode
-	int socketEscuchandoDataNode;
-	struct sockaddr_in direccion_DataNode;
-
-	//crea socket para el datanode
-	inicializarSOCKADDR_IN(&direccion_DataNode, "127.0.0.1", (char*) config_get("PUERTO_DATANODE"));
-	socketEscuchandoDataNode = crearSocket();
-
-	//Yama
-	struct sockaddr_in direccion_Yama;
-	int socketEscuchandoYama;
-
-	//crea socket para el yama
-	inicializarSOCKADDR_IN(&direccion_Yama, "127.0.0.1", (char*) config_get("PUERTO_YAMA"));
-	socketEscuchandoYama = crearSocket();
-
-	//socket servidor
-	reutilizarSocket(socketEscuchandoDataNode); // obviar el mensaje "address already in use"
-	asignarDirecciones(socketEscuchandoDataNode,
-			(struct sockaddr *) &direccion_DataNode); // asignamos el Struct de las direcciones al socket
-	reutilizarSocket(socketEscuchandoYama);
-	asignarDirecciones(socketEscuchandoYama, (struct sockaddr *) &direccion_Yama);
-
-	//Preparo para escuchar los 2 puertos en el master
-	FD_ZERO(&master);
-	FD_SET(socketEscuchandoDataNode, &master);
-	FD_SET(socketEscuchandoYama, &master);
-	maximo_Sockets = obtenerSocketMaximoInicial(socketEscuchandoYama,socketEscuchandoDataNode);
-
-	if (listen(socketEscuchandoDataNode, 10) == -1) {
-		perror("listen");
-		exit(1);
-	}
-	if (listen(socketEscuchandoYama, 10) == -1) {
-		perror("listen");
-		exit(1);
-	}
-	//Comienza el Select
-	for (;;) {
-		int nuevoSocket;
-		FD_ZERO(&read_fds);
-		struct sockaddr_in remoteaddr;
-		socklen_t addrlen;
-		read_fds = master; // cópialo
-		printf("Esperando conexiones entrantes \n");
-		if (select((maximo_Sockets) + 1, &read_fds, NULL, NULL, NULL) == -1) {
-			perror("select");
-			exit(1);
-		}
-
-		if (FD_ISSET(socketEscuchandoDataNode, &read_fds)) { // ¡¡tenemos datos de una datanode!!
-			printf("Escucho algo por datanode \n");
-			addrlen = sizeof(remoteaddr);
-			if ((nuevoSocket = accept(socketEscuchandoDataNode,
-					(struct sockaddr *) &remoteaddr, (socklen_t *) &addrlen))
-					== -1) {
-				perror("Error de aceptacion de un datanode \n");
-			} else {
-				FD_SET(nuevoSocket, &master); // añadir al conjunto maestro
-				FD_SET(nuevoSocket, &read_fds);
-				maximo_Sockets =
-						(maximo_Sockets < nuevoSocket) ?
-								nuevoSocket : maximo_Sockets;
-				printf("Ya acepte un datanode \n ");
-				handshakeConDataNode(nuevoSocket, remoteaddr, master, read_fds,maximo_Sockets);
-				inicializarNodo(nuevoSocket);
-				//ejecuto lo que tengo que hacerr para el datanodee....
-			}
-		} else if (FD_ISSET(socketEscuchandoYama, &read_fds)) { // ¡¡tenemos datos de un Yama!!
-			addrlen = sizeof(remoteaddr);
-
-			////////// Debe estar en estado estable el filesystem para poder aceptar conexion de un YAMA
-
-
-			if ((nuevoSocket = accept(socketEscuchandoYama,
-					(struct sockaddr *) &remoteaddr, &addrlen)) == -1) {
-				perror("Error de aceptacion de Yama \n");
-			} else {
-				FD_SET(nuevoSocket, &master); // añadir al conjunto maestro
-				FD_SET(nuevoSocket, &read_fds);
-				maximo_Sockets =
-						(maximo_Sockets < nuevoSocket) ?
-								nuevoSocket : maximo_Sockets;
-				handshakeConYama(nuevoSocket, remoteaddr, master, read_fds, maximo_Sockets);
-				//ejecuto rutina con yama
-
-			}
-		}
-
-		else {
-			/*Si no entro en los if anteriores es por que no es conexion nueva por
-			 ninguno de los dos sockets, por lo tanto es algun socket descriptor
-			 ya almacenado que tiene actividad.
-			 luego gestionar mensaje*/
-			int socketFor;
-			int bytes;
-			t_cabecera header;
-			for (socketFor = 0; socketFor < (maximo_Sockets + 1); socketFor++) {
-				if (FD_ISSET(socketFor, &read_fds)) {
-					if ((bytes = recv(socketFor, &header, sizeof(header), 0)) //recibe un mensaje el cual en caso de error es menor a cero y se limpian el FD y se cierra el socket
-							<= 0) {
-						FD_CLR(socketFor, &read_fds);
-						FD_CLR(socketFor, &master);
-						close(socketFor);
-					} else {
-						///switch con mensajes
-					}
-				}
-			}
-
+			packet = protocol_packet(OP_SET_BLOCK, block);
+			protocol_send_packet(packet, node->socket);
+			serial_destroy(block);
 		}
 	}
+
+	node->available = false;
+	node->handler = NULL;
+	log_inform("DataNode del nodo %s desconectado", node->name);
 }
-
-void handshakeConDataNode(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set master,
-		fd_set read_fds, int maximo_Sockets) {
-	t_packet packet = protocol_receive_packet(nuevoSocket);
-		if(packet.operation == OP_HANDSHAKE && packet.sender == PROC_DATANODE) {
-			printf("FileSystem: nueva conexion desde %s en socket %d\n",
-					inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
-			if (send(nuevoSocket, "Acceso concedido!!", 19, 0) == -1) {
-				perror("Error en el send");
-			}
-		} else {
-			printf(
-					"El proceso que requirio acceso, no posee los permisos adecuados\n");
-			if (send(nuevoSocket, "No esta autorizado", 19,
-					0) == -1) {
-				perror("Error en el send");
-			}
-			close(nuevoSocket);
-		}
-
-}
-
-void handshakeConYama(int nuevoSocket, struct sockaddr_in remoteaddr, fd_set master,
-		fd_set read_fds, int maximo_Sockets) {
-
-	t_packet packet = protocol_receive_packet(nuevoSocket);
-	if(packet.operation == OP_HANDSHAKE && packet.sender == PROC_YAMA) {
-		printf("FileSystem: nueva conexion desde %s en socket %d\n",
-				inet_ntoa(remoteaddr.sin_addr), nuevoSocket);
-		if (send(nuevoSocket, "Acceso concedido!!", 19, 0) == -1) {
-			perror("Error en el send");
-		}
-	} else {
-		printf(
-				"El proceso que requirio acceso, no posee los permisos adecuados\n");
-		if (send(nuevoSocket, "No esta autorizado", 19,
-				0) == -1) {
-			perror("Error en el send");
-		}
-		close(nuevoSocket);
-	}
-}
-
-void inicializarNodo(int socketNodo){
-	int operacion = REGISTRARNODO;
-	send(socketNodo,&operacion,sizeof(operacion),0);
-	//recibo lo que necesito.
-	Nodo* infoDelNodo;
-	t_packet packet = protocol_receive_packet(socketNodo);
-	if(packet.sender == PROC_DATANODE){
-		 infoDelNodo = infoNodo_unpack(packet.content);
-	}
-	serial_destroy(packet.content);
-	registrarNodo(infoDelNodo,socketNodo);
-}
-
-Nodo* infoNodo_unpack(t_serial *serial){
-	Nodo* infoDelNodo = malloc(sizeof(Nodo));
-	serial_unpack(serial, "si", &infoDelNodo->nombreNodo, &infoDelNodo->total);
-	return infoDelNodo;
-}
-
-void registrarNodo(Nodo* unNodo,int socketNodo){
-	if(estadoAnteriorexistente){
-		busquedaNodo_GLOBAL =  unNodo->nombreNodo;
-		listaNodosConectados = list_create();
-		if(list_any_satisfy(tablaNodos.nodos,*encontreNodo)){
-		list_add(listaNodosConectados,unNodo->nombreNodo);
-		}
-		else{
-			close(socketNodo);
-		}
-	}
-	else{
-		t_config* configBitmapNodo;
-		tablaNodos.tamanio += unNodo->total;
-		tablaNodos.libre += unNodo->total;
-		unNodo->libre = unNodo->total;
-		list_add(tablaNodos.nodos,unNodo);
-		char* datosAguardar = malloc(sizeof(char)*((list_size(tablaNodos.nodos)*9)+4));
-		sprintf(datosAguardar,"%d",tablaNodos.tamanio);
-		config_set_value(archivoNodos,"TAMANIO",datosAguardar);
-		sprintf(datosAguardar,"%d",tablaNodos.libre);
-		config_set_value(archivoNodos,"LIBRE",datosAguardar);
-		strcpy(datosAguardar, pasarlistaDenodosAChar(tablaNodos.nodos));
-		config_set_value(archivoNodos,"NODOS",datosAguardar);
-
-		char* key =  malloc(12*sizeof(char*));
-
-		sprintf(key,"%sTotal",unNodo->nombreNodo);
-		sprintf(datosAguardar,"%d",unNodo->total);
-		config_set_value(archivoNodos,key,datosAguardar);
-		sprintf(datosAguardar,"%d",unNodo->total);
-		sprintf(key,"%sLibre",unNodo->nombreNodo);
-		config_set_value(archivoNodos,key,datosAguardar);
-		config_save(archivoNodos);
-		free(key);
-		//debo crear el bitmap de ese nodo
-		char* nombreEstructura = malloc(sizeof(char)*16);
-		sprintf(nombreEstructura,"bitmaps/%s",unNodo->nombreNodo);
-		char* rutaArchivo = config_file(nombreEstructura,"dat");
-		fopen(rutaArchivo,"w+");
-		configBitmapNodo = config_create(rutaArchivo);
-		generarBitmap(unNodo->total,configBitmapNodo);
-		free(nombreEstructura);
-
-
-	}
-}
-
-char* pasarlistaDenodosAChar(t_list* listaDeNodos){
- int i = 0;
- Nodo* nodoObtenido = list_get(listaDeNodos, i);
- char* datosAguardar = malloc(sizeof(char)*((list_size(tablaNodos.nodos)*9)+4));
- char* datosAguardarAuxiliar = malloc(sizeof(char)*6);
- sprintf(datosAguardar, "[%s", nodoObtenido->nombreNodo);
- for(i=1; i < list_size(listaDeNodos); i++){
-	 nodoObtenido = list_get(listaDeNodos, i);
-  sprintf(datosAguardarAuxiliar,",%s",nodoObtenido->nombreNodo);
-	 strcat(datosAguardar,datosAguardarAuxiliar);
- }
- strcat(datosAguardar,"]");
- free(datosAguardarAuxiliar);
- return datosAguardar;
-}
-
-bool encontreNodo(void* unNodo){
-	return !strcmp(((Nodo*) unNodo)->nombreNodo,busquedaNodo_GLOBAL) ? true : false;
-}
-
-void generarBitmap(int totalBloquesNodo,t_config* archivoBitmap){
-	char* bitmap = malloc(sizeof(char)*totalBloquesNodo+2+(totalBloquesNodo-1));
-	strcpy(bitmap,"");
-	strcat(bitmap,"[0");
-	int i;
-	for(i=1;i<totalBloquesNodo;i++){
-		strcat(bitmap,",0");
-	}
-	strcat(bitmap,"]");
-	config_set_value(archivoBitmap,"BITMAP",bitmap);
-	config_save(archivoBitmap);
-
-	free(bitmap);
-}
-

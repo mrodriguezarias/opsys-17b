@@ -20,12 +20,11 @@ struct thread {
 };
 
 static mlist_t *threads = NULL;
-static int last_signal = 0;
 
 static void ptcheck(int ret);
 static void default_signal_handler(int signal);
 static void traverse_children(pthread_t parent, void *routine);
-static void *kill_and_join(thread_t *thread);
+static void *kill_and_join(pthread_t tid);
 static void *base_thread_routine(void *arg);
 static void destroy_thread(thread_t *thread);
 
@@ -98,7 +97,7 @@ void *thread_kill(thread_t *thread) {
 	traverse_children(thread->id, thread_kill);
 
 	thread->active = false;
-	return kill_and_join(thread);
+	return kill_and_join(thread->id);
 }
 
 void thread_killall() {
@@ -131,16 +130,8 @@ void thread_signal_send(thread_t *thread, int signal) {
 void thread_signal_capture(int signal, void *routine) {
 	struct sigaction sa;
 	sa.sa_flags = SA_SIGINFO;
-	if(routine != NULL) {
-		sa.sa_handler = routine;
-		ptcheck(sigaction(signal, &sa, NULL));
-	}
-	sa.sa_handler = default_signal_handler;
+	sa.sa_handler = routine != NULL ? routine : default_signal_handler;
 	ptcheck(sigaction(signal, &sa, NULL));
-}
-
-int thread_signal_called() {
-	return last_signal;
 }
 
 mutex_t *thread_mutex_create() {
@@ -195,7 +186,7 @@ static void ptcheck(int ret) {
 }
 
 static void default_signal_handler(int signal) {
-	last_signal = signal;
+	signal++;
 }
 
 static void traverse_children(pthread_t parent, void *routine) {
@@ -207,9 +198,11 @@ static void traverse_children(pthread_t parent, void *routine) {
 	mlist_destroy(children, NULL);
 }
 
-static void *kill_and_join(thread_t *thread) {
-	pthread_kill(thread->id, SIGTERM);
-	return thread_wait(thread);
+static void *kill_and_join(pthread_t tid) {
+	void *ret = NULL;
+	pthread_kill(tid, SIGTERM);
+	pthread_join(tid, &ret);
+	return ret;
 }
 
 static void cleanup_routine(void *arg) {

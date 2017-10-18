@@ -117,12 +117,6 @@ void thread_signal_send(thread_t *thread, int signal);
 void thread_signal_capture(int signal, void *routine);
 
 /**
- * Devuelve la última señal manejada.
- * @return Última señal.
- */
-int thread_signal_called(void);
-
-/**
  * Crea un semáforo de exclusión mutua (mutex).
  * @return Semáforo mutex.
  */

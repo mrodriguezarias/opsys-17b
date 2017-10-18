@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <system.h>
+#include <protocol.h>
 
 #include "nodelist.h"
 #include "dirtree.h"
@@ -93,8 +94,8 @@ void console() {
 
 		if(*line) {
 			add_history(line);
-			execute_line(line);
 			write_history(history_file);
+			execute_line(line);
 		}
 
 		free(line);
@@ -163,7 +164,14 @@ static int num_args() {
 // ========== Funciones de comandos ==========
 
 static void cmd_cat() {
-	puts("TODO");
+	if(num_args() != 1) show_usage();
+	char *path = extract_arg(1);
+	if(filetable_contains(path)) {
+		filetable_cat(path);
+	} else {
+		fprintf(stderr, "Error: archivo inexistente.\n");
+	}
+	free(path);
 }
 
 static void cmd_clear() {
@@ -185,7 +193,13 @@ static void cmd_cpfrom() {
 }
 
 static void cmd_cpto() {
-	puts("TODO");
+	if(num_args() != 2) show_usage();
+	char *source_path = extract_arg(1);
+	char *local_dir = extract_arg(2);
+
+	filetable_cpto(source_path, local_dir);
+	free(source_path);
+	free(local_dir);
 }
 
 static void cmd_debug() {
@@ -195,6 +209,17 @@ static void cmd_debug() {
 		dirtree_print();
 	} else if(mstring_equal(current_args, "files")) {
 		filetable_print();
+	} else if(mstring_equal(current_args, "recv")) {
+		puts("Prueba de petición de un bloque a un DataNode. Datos recibidos:");
+		t_node *node = nodelist_find("NODO1");
+		t_serial *serial = serial_pack("i", 0);
+		t_packet request = protocol_packet(OP_GET_BLOCK, serial);
+		protocol_send_packet(request, node->socket);
+		serial_destroy(serial);
+
+		t_packet response = protocol_receive_packet(node->socket);
+		printf("Received: %s\n", (char*)response.content->data);
+		serial_destroy(response.content);
 	}
 }
 
@@ -220,7 +245,14 @@ static void cmd_help() {
 }
 
 static void cmd_info() {
-	puts("TODO");
+	if(num_args() != 1) show_usage();
+	char *path = extract_arg(1);
+	if(filetable_contains(path)) {
+		filetable_info(path);
+	} else {
+		fprintf(stderr, "Error: archivo inexistente.\n");
+	}
+	free(path);
 }
 
 static void cmd_ls() {

@@ -37,7 +37,7 @@ t_packet protocol_receive_packet(t_socket socket) {
 	t_serial *header = serial_create(malloc(HEADER_SIZE), HEADER_SIZE);
 	if(socket_receive_bytes(socket, header->data, header->size)) {
 		serial_unpack(header, "iii", &packet.sender, &packet.operation, &packet.content->size);
-	}else{
+	} else {
 		serial_destroy(header);
 	}
 
@@ -69,9 +69,9 @@ void protocol_send_response(t_socket socket, int code) {
 int protocol_receive_response(t_socket socket) {
 	t_packet packet = protocol_receive_packet(socket);
 	int code = -1;
-	if(packet.operation == OP_RESPONSE) {
+	if(packet.operation == OP_RESPONSE)
 		serial_unpack(packet.content, "i", &code);
-	}
-	serial_destroy(packet.content);
+	else
+		serial_destroy(packet.content);
 	return code;
 }

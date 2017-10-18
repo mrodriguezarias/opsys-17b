@@ -99,10 +99,17 @@ void dirtree_list(const char *path);
 
 /**
  * Crea una cadena con la ruta de los archivos de un directorio.
- * @param path Ruta al directorio yama.
+ * @param ypath Ruta al directorio yama.
  * @return Ruta real del directorio, a liberar con free().
  */
-char *dirtree_path(const char *path);
+char *dirtree_rpath(const char *ypath);
+
+/**
+ * Crea una cadena con la ruta yamafs de un directorio.
+ * @param rpath Ruta real al directorio.
+ * @return Ruta yama del directorio, a liberar con free().
+ */
+char *dirtree_ypath(const char *rpath);
 
 /**
  * Cierra el árbol de directorios, guardando los cambios en el archivo.

@@ -8,6 +8,7 @@
 #include <mstring.h>
 #include <serial.h>
 #include <string.h>
+#include <data.h>
 
 static char *path = NULL;
 static mlist_t *nodes = NULL;
@@ -82,7 +83,7 @@ static t_node *best_node_available(t_block *block) {
 	return node;
 }
 
-void nodelist_addblock(t_block *block, char *buffer) {
+void nodelist_addblock(t_block *block, void *data) {
 	for(int i = 0; i < 2; i++) {
 		t_node *node = best_node_available(block);
 		if(node == NULL) continue;
@@ -93,9 +94,7 @@ void nodelist_addblock(t_block *block, char *buffer) {
 		node->free_blocks--;
 		add_node_to_file(node);
 
-		void *data = malloc(block->size);
-		memcpy(data, buffer, block->size);
-		t_serial *content = serial_create(data, block->size);
+		t_serial *content = serial_create(data, BLOCK_SIZE);
 		thread_send(node->handler, (void*)blockno);
 		thread_send(node->handler, content);
 	}

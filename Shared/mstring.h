@@ -61,6 +61,14 @@ void mstring_format(char **string, const char *format, ...);
 char *mstring_copy(const char *string, int start, int end);
 
 /**
+ * Recorta una cadena hasta un determinado largo.
+ * @param string Puntero a la cadena a recortar.
+ * @param length Largo de la cadena.
+ * @return Puntero a la cadena.
+ */
+char *mstring_crop(char **string, int length);
+
+/**
  * Verifica si una cadena está vacía.
  * @param string Cadena a verificar.
  * @return Valor lógico indicando si la cadena está vacía.
@@ -185,5 +193,12 @@ bool mstring_hassuffix(const char *string, const char *suffix);
  * @return Puntero al final de la cadena.
  */
 char *mstring_end(const char *string);
+
+/**
+ * Agrega los prefijos a un tamaño digital.
+ * @param size Tamaño en bytes.
+ * @return Cadena resultante, a liberar con free().
+ */
+char *mstring_bsize(size_t size);
 
 #endif /* MSTRING_H_ */

@@ -70,6 +70,13 @@ char *mstring_copy(const char *string, int start, int end) {
 	return mstring_create("%.*s", end - start, string + start);
 }
 
+char *mstring_crop(char **string, int length) {
+	if(strlen(*string) <= length) return *string;
+	*(*string + length) = '\0';
+	mstring_format(string, "%s", *string);
+	return *string;
+}
+
 bool mstring_isempty(const char *string) {
 	if(string == NULL) return true;
 	char *copy = strdup(string);
@@ -168,6 +175,19 @@ bool mstring_hassuffix(const char *string, const char *suffix) {
 char *mstring_end(const char *string) {
 	int len = strlen(string);
 	return (char*)(len > 0 ? string + len - 1 : string);
+}
+
+char *mstring_bsize(size_t size) {
+	static const char *pref[] = {"", "K", "M", "G", "T"};
+	const unsigned short mult = 1024;
+	const char *x = size < mult ? "" : "i";
+	float s = size;
+	int i = 0;
+	while(s >= mult) {
+		i++;
+		s /= mult;
+	}
+	return mstring_create("%.1f %s%sB", s, pref[i], x);
 }
 
 // ========== Funciones privadas ==========

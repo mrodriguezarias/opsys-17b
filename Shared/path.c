@@ -182,17 +182,7 @@ size_t path_size(const char *path) {
 }
 
 char *path_sizep(const char *path) {
-	static const char *pref[] = {"", "K", "M", "G", "T"};
-	const size_t size = path_size(path);
-	const unsigned short mult = 1024;
-	const char *x = size < mult ? "" : "i";
-	float s = size;
-	int i = 0;
-	while(s >= mult) {
-		i++;
-		s /= mult;
-	}
-	return mstring_create("%.1f %s%sB", s, pref[i], x);
+	return mstring_bsize(path_size(path));
 }
 
 char *path_dir(const char *path) {

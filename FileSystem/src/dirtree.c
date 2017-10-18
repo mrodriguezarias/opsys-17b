@@ -30,12 +30,14 @@ typedef struct {
 	mlist_t *children;
 } t_print_level;
 
+static const char *files_dir(void);
 static char *path_to_files(t_directory *dir);
 static mlist_t *children_of_dir(t_directory *parent);
 static void get_children(mlist_t *children, int index, int depth);
 static t_directory *add_directory(const char *name, int parent);
 static char *create_normal_path(const char *path);
-static t_directory *find_directory(const char *name, int parent);
+static t_directory *find_dir_by_index(int index);
+static t_directory *find_dir_by_name(const char *name, int parent);
 static void remove_children(t_directory *dir);
 static void remove_directory(t_directory *dir);
 static void map_file(void);
@@ -83,7 +85,7 @@ t_directory *dirtree_add(const char *path) {
 	for(; *p; p++) {
 		if(*p != '/') continue;
 		*p = '\0';
-		t_directory *parent = find_directory(par_name, par_parent);
+		t_directory *parent = find_dir_by_name(par_name, par_parent);
 		dir = add_directory(name, parent->index);
 		par_name = name;
 		par_parent = parent->index;
@@ -110,7 +112,7 @@ t_directory *dirtree_find(const char *path) {
 	for(; *p; p++) {
 		if(*p != '/') continue;
 		*p = '\0';
-		t_directory *dir = find_directory(name, par);
+		t_directory *dir = find_dir_by_name(name, par);
 		if(!dir_exists(dir)) {
 			exists = false;
 			break;
@@ -291,10 +293,26 @@ void dirtree_list(const char *path) {
 	mlist_destroy(children, NULL);
 }
 
-char *dirtree_path(const char *path) {
-	t_directory *dir = dirtree_find(path);
+char *dirtree_rpath(const char *ypath) {
+	t_directory *dir = dirtree_find(ypath);
 	if(dir == NULL) return NULL;
 	return path_to_files(dir);
+}
+
+char *dirtree_ypath(const char *rpath) {
+	if(!mstring_hasprefix(rpath, files_dir())) return NULL;
+	int index = mstring_toint(rpath);
+	char *ypath = mstring_empty(NULL);
+	t_directory *dir;
+
+	while(dir = find_dir_by_index(index), dir != NULL && dir->index > 0) {
+		mstring_format(&ypath, "%s/%s", dir->name, ypath);
+		index = dir->parent;
+	}
+
+	*mstring_end(ypath) = '\0';
+	mstring_format(&ypath, "yamafs:/%s", ypath);
+	return ypath;
 }
 
 void dirtree_term() {
@@ -307,8 +325,16 @@ void dirtree_term() {
 
 // ========== Funciones privadas ==========
 
+static const char *files_dir() {
+	static char fdir[PATH_MAX] = {0};
+	if(!*fdir) {
+		snprintf(fdir, PATH_MAX, "%s/metadata/archivos", system_userdir());
+	}
+	return fdir;
+}
+
 static char *path_to_files(t_directory *dir) {
-	return mstring_create("%s/metadata/archivos/%i", system_userdir(), dir->index);
+	return mstring_create("%s/%i", files_dir(), dir->index);
 }
 
 static mlist_t *children_of_dir(t_directory *parent) {
@@ -335,7 +361,7 @@ static void get_children(mlist_t *children, int index, int depth) {
 }
 
 static t_directory *add_directory(const char *name, int parent) {
-	t_directory *pdir = find_directory(name, parent);
+	t_directory *pdir = find_dir_by_name(name, parent);
 	if(pdir != NULL) return pdir;
 
 	for(int i = 0; i < MAX_SIZE; i++) {
@@ -367,7 +393,16 @@ static char *create_normal_path(const char *path) {
 	return mstring_create("%s%s%s", s_bar ? "" : "/", p, e_bar ? "" : "/");
 }
 
-static t_directory *find_directory(const char *name, int parent) {
+static t_directory *find_dir_by_index(int index) {
+	for(t_directory *dir = dirs; dir < dirs + MAX_SIZE; dir++) {
+		if(dir_exists(dir) && dir->index == index) {
+			return dir;
+		}
+	}
+	return NULL;
+}
+
+static t_directory *find_dir_by_name(const char *name, int parent) {
 	for(t_directory *dir = dirs; dir < dirs + MAX_SIZE; dir++) {
 		if(dir_exists(dir) && mstring_equal(dir->name, name) && dir->parent == parent) {
 			return dir;
