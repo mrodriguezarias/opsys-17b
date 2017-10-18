@@ -19,7 +19,7 @@
 
 
 
-void planificar(char * script);
+void planificar();
 void mostrar_configuracion();
 
 

@@ -15,6 +15,7 @@ typedef enum {
 	OP_RESPONSE,
 	OP_INIT_JOB,
 	OP_NODE_INFO,
+	//OP_ARCHIVOS_INFO, //yama -> filesystem
 	OP_SET_BLOCK,
 	OP_GET_BLOCK,
 

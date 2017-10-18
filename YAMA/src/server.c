@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <struct.h>
+#include "funcionesYAMA.h"
 
 void init_job(t_serial *content);
 
@@ -44,10 +45,28 @@ void listen_to_master() {
 				switch(packet.operation) {
 				case OP_INIT_JOB: init_job(packet.content);
 					log_print("OP_INIT_JOB");
+					//recibo lista de nodos conectados
+
+					//pido informacion del archivo al filesystem
+					//void protocol_send_response(socket_FileSystem,OP_ARCHIVOS_INFO);
+					//recibo info
+					t_packet packet;
+					packet = protocol_receive_packet(socket_FileSystem);
+					//mlist_t* listInformacionArch = list_informacionArchivo_unpack(packet.content);
+					//planifico
+					int tamaniolistaNodos = mlist_length(listaNodosConectados);
+					t_workerPlanificacion planificador[tamaniolistaNodos];
+					planificar(planificador, tamaniolistaNodos);
+					//inicio etapa de tranformacion
 					tEtapaTransformacion* et = new_etapa_transformacion("Nodo1","127.0.0.1","5050",35,100,"/tmp/Master1-temp38");
 					mlist_t* lista = mlist_create();
 					mlist_append(lista,et);
-					mandar_etapa_transformacion(lista,sock);					break;
+					//agregarAtablaEstado(nodo,sock,bloque,"Transformacion",archivo_etapa,"En proceso");
+					numeroJob +=1;
+					mandar_etapa_transformacion(lista,sock);
+
+
+					break;
 				default:
 					log_report("Operación desconocida: %s", packet.operation);
 				}
@@ -85,4 +104,18 @@ void init_job(t_serial *content) {
 	serial_unpack(content, "s", &file);
 	log_print("Comenzando tarea para archivo %s", file);
 	free(file);
+}
+
+
+void agregarAtablaEstado(char* nodo,int Master,int bloque,char* etapa,char* archivo_temporal,char* estado){
+	t_Estado*  nuevoEstado;
+	nuevoEstado->job = numeroJob;
+	nuevoEstado->master = Master;
+	nuevoEstado->nodo = nodo;
+	nuevoEstado->block = bloque;
+	nuevoEstado->etapa = etapa;
+	nuevoEstado->archivoTemporal = archivo_temporal;
+	nuevoEstado->estado = estado;
+	mlist_append(listaEstados,nuevoEstado);
+
 }
