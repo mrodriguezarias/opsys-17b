@@ -19,13 +19,16 @@ typedef enum {
 	OP_GET_BLOCK,
 
 	OP_INICIAR_TRANSFORMACION,		// yama -> master
+	OP_INICIAR_REPLANIFICACION,		// yama -> master
   	OP_INICIAR_REDUCCION_LOCAL,		// yama -> master
 	OP_INICIAR_REDUCCION_GLOBAL,	// yama -> master
 	OP_INICIAR_ALMACENAMIENTO,		// yama -> master
+	OP_ERROR_JOB,					// yama -> master
 
 	OP_TRANSFORMACION_LISTA,		// master -> yama
 	OP_REDUCCION_LOCAL_LISTA,		// master -> yama
 	OP_REDUCCION_GLOBAL_LISTA,		// master -> yama
+	OP_ALMACENAMIENTO_LISTA,		// master -> yama
 
 	OP_GETBLOQUE,					// filesystem -> datanode
 	OP_SETBLOQUE,					// filesystem -> datanode

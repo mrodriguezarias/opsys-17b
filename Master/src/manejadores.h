@@ -23,12 +23,13 @@
 #include "funcionesMaster.h"
 #include "Master.h"
 
-enum {TRANSFORMACION, REPLANIFICACION, REDUCCION_LOCAL, REDUCCION_GLOBAL, ALMACENAMIENTO};
+enum {TRANSFORMACION, REDUCCION_LOCAL, REDUCCION_GLOBAL, ALMACENAMIENTO};
 
 typedef struct{
 	thread_t* hilo;
 	int etapa;
 	bool active;
+	int result;
 } t_hilos;
 
 struct{
