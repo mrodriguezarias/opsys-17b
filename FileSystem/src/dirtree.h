@@ -54,6 +54,13 @@ bool dirtree_contains(const char *path);
 void dirtree_traverse(void (*routine)(t_directory *dir));
 
 /**
+ * Mueve un directorio.
+ * @param path Ruta al directorio a mover.
+ * @param new_path Nueva ruta del directorio.
+ */
+void dirtree_move(const char *path, const char *new_path);
+
+/**
  * Renombra un directorio.
  * @param path Ruta al directorio a renombrar.
  * @param new_name Nuevo nombre.
@@ -88,14 +95,21 @@ size_t dirtree_count(const char *path);
  * Imprime los directorios hijos de un directorio.
  * @param path Ruta al directorio padre.
  */
-void dirtree_ls(const char *path);
+void dirtree_list(const char *path);
 
 /**
  * Crea una cadena con la ruta de los archivos de un directorio.
- * @param path Ruta al directorio yama.
+ * @param ypath Ruta al directorio yama.
  * @return Ruta real del directorio, a liberar con free().
  */
-char *dirtree_path(const char *path);
+char *dirtree_rpath(const char *ypath);
+
+/**
+ * Crea una cadena con la ruta yamafs de un directorio.
+ * @param rpath Ruta real al directorio.
+ * @return Ruta yama del directorio, a liberar con free().
+ */
+char *dirtree_ypath(const char *rpath);
 
 /**
  * Cierra el árbol de directorios, guardando los cambios en el archivo.

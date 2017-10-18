@@ -17,63 +17,43 @@ tEtapaTransformacion* new_etapa_transformacion(const char*nodo,const char*ip,con
 	return et;
 }
 
-t_serial *etapa_transformacion_pack(tEtapaTransformacion* transformacion){
-	return serial_pack("sssiis",
-			transformacion->nodo,
-			transformacion->ip,
-			transformacion->puerto,
-			transformacion->bloque,
-			transformacion->bytes_ocupados,
-			transformacion->archivo_etapa);
-}
+t_serial *list_transformacion_pack(mlist_t* list) {
+	t_serial *serial = serial_create(NULL, 0);
+	serial_add(serial, "i", mlist_length(list));
 
-t_serial* list_transformacion_pack(mlist_t* list){
-	t_serial* serial = serial_pack("i", mlist_length(list));
-	mlist_t* listSerial = mlist_map(list,etapa_transformacion_pack);
-	char buff[SERIAL_MAX];
-	t_serial* ser = serial_create(buff, SERIAL_MAX);
-	memcpy(ser->data, serial->data, serial->size);
-	ser->size = serial->size;
-
-	for(int i = 0; i < mlist_length(list); i++){
-		t_serial* aux = mlist_get(listSerial, i);
-		memcpy(ser->data+ser->size, aux->data, aux->size);
-		ser->size += aux->size;
+	void routine(tEtapaTransformacion* transformacion) {
+		serial_add(serial, "sssiis",
+				transformacion->nodo,
+				transformacion->ip,
+				transformacion->puerto,
+				transformacion->bloque,
+				transformacion->bytes_ocupados,
+				transformacion->archivo_etapa);
 	}
-
-	return ser;
+	mlist_traverse(list, routine);
+	return serial;
 }
 
-tEtapaTransformacion* etapa_transformacion_unpack(t_serial *serial){
-	tEtapaTransformacion* et = malloc(sizeof(tEtapaTransformacion));
-	serial_unpack(serial,"sssiis",&et->nodo,
-			&et->ip,
-			&et->puerto,
-			&et->bloque,
-			&et->bytes_ocupados,
-			&et->archivo_etapa);
-	return et;
-}
+mlist_t *list_transformacion_unpack(t_serial *serial) {
+	mlist_t *list = mlist_create();
 
-mlist_t* list_transformacion_unpack(t_serial* serial){
-	int tam = 0, size = 0;
-	mlist_t* list = mlist_create();
-	serial_unpack(serial,"i",&tam);
-	size += 4;
+	int numblocks;
+	serial_remove(serial, "i", &numblocks);
 
-	for(int i = 0; i < tam; i++){
-		t_serial* aux = serial_create(serial->data+size, serial->size);
-		tEtapaTransformacion* element = etapa_transformacion_unpack(aux);
-		mlist_append(list, element);
-		size += 8;
-		size += string_length(element->nodo)+1;
-		size += string_length(element->ip)+1;
-		size += string_length(element->puerto)+1;
-		size += string_length(element->archivo_etapa)+1;
+	while(numblocks--) {
+		tEtapaTransformacion *et = malloc(sizeof(tEtapaTransformacion));
+		serial_remove(serial,"sssiis",&et->nodo,
+				&et->ip,
+				&et->puerto,
+				&et->bloque,
+				&et->bytes_ocupados,
+				&et->archivo_etapa);
+		mlist_append(list, et);
 	}
 
 	return list;
 }
+
 
 void mandar_etapa_transformacion(mlist_t* list,t_socket sock){
 	t_serial *serial = list_transformacion_pack(list);
@@ -172,32 +152,23 @@ tEtapaReduccionGlobal* new_etapa_rg(const char*nodo,const char*ip,const char*pue
 	return rg;
 }
 
-t_serial *etapa_rg_pack(tEtapaReduccionGlobal* rg){
-	return serial_pack("ssssss",
-			rg->nodo,
-			rg->ip,
-			rg->puerto,
-			rg->archivo_temporal_de_rl,
-			rg->archivo_etapa,
-			rg->encargado);
-}
+t_serial *list_reduccionGlobal_pack(mlist_t* list) {
+	t_serial *serial = serial_create(NULL, 0);
+	serial_add(serial, "i", mlist_length(list));
 
-t_serial* list_reduccionGlobal_pack(mlist_t* list){
-	t_serial* serial = serial_pack("i", mlist_length(list));
-	mlist_t* listSerial = mlist_map(list,etapa_rg_pack);
-	char buff[SERIAL_MAX];
-	t_serial* ser = serial_create(buff, SERIAL_MAX);
-	memcpy(ser->data, serial->data, serial->size);
-	ser->size = serial->size;
-
-	for(int i = 0; i < mlist_length(list); i++){
-		t_serial* aux = mlist_get(listSerial, i);
-		memcpy(ser->data+ser->size, aux->data, aux->size);
-		ser->size += aux->size;
+	void routine(tEtapaReduccionGlobal* rg) {
+		serial_add(serial, "ssssss",
+				rg->nodo,
+				rg->ip,
+				rg->puerto,
+				rg->archivo_temporal_de_rl,
+				rg->archivo_etapa,
+				rg->encargado);
 	}
-
-	return ser;
+	mlist_traverse(list, routine);
+	return serial;
 }
+
 
 
 tEtapaReduccionGlobal* etapa_rg_unpack(t_serial *serial){
@@ -212,22 +183,22 @@ tEtapaReduccionGlobal* etapa_rg_unpack(t_serial *serial){
 	return rg;
 }
 
-mlist_t* list_reduccionGlobal_unpack(t_serial* serial){
-	int tam = 0, size = 0;
-	mlist_t* list = mlist_create();
-	serial_unpack(serial,"i",&tam);
-	size += 4;
+mlist_t *list_reduccionGlobal_unpack(t_serial *serial) {
+	mlist_t *list = mlist_create();
 
-	for(int i = 0; i < tam; i++){
-		t_serial* aux = serial_create(serial->data+size, serial->size);
-		tEtapaReduccionGlobal* element = etapa_rg_unpack(aux);
-		mlist_append(list, element);
-		size += string_length(element->nodo)+1;
-		size += string_length(element->ip)+1;
-		size += string_length(element->puerto)+1;
-		size += string_length(element->archivo_temporal_de_rl)+1;
-		size += string_length(element->archivo_etapa)+1;
-		size += string_length(element->encargado)+1;
+	int numblocks;
+	serial_remove(serial, "i", &numblocks);
+
+	while(numblocks--) {
+		tEtapaReduccionGlobal *rg = malloc(sizeof(tEtapaReduccionGlobal));
+		serial_remove(serial, "ssssss",
+				&rg->nodo,
+				&rg->ip,
+				&rg->puerto,
+				&rg->archivo_temporal_de_rl,
+				&rg->archivo_etapa,
+				&rg->encargado);
+		mlist_append(list, rg);
 	}
 
 	return list;

@@ -19,6 +19,9 @@
 #define unpack754_32(i) (unpack754((i), 32, 8))
 #define unpack754_64(i) (unpack754((i), 64, 11))
 
+static void add_variadic(t_serial *serial, const char *format, va_list ap);
+static void remove_variadic(t_serial *serial, const char *format, va_list ap);
+
 static unsigned long long int pack754(long double f, unsigned bits, unsigned expbits);
 static long double unpack754(unsigned long long int i, unsigned bits, unsigned expbits);
 static void packi16(unsigned char *buf, unsigned int i);
@@ -40,105 +43,126 @@ t_serial *serial_create(void *data, size_t size) {
 	return serial;
 }
 
+t_serial *serial_clone(t_serial *serial) {
+	t_serial *clone = serial_create(NULL, serial->size);
+	if(serial->size > 0) {
+		clone->data = malloc(serial->size);
+		memcpy(clone->data, serial->data, serial->size);
+	}
+	return clone;
+}
+
+void serial_add(t_serial *serial, const char *format, ...) {
+	va_list ap;
+	va_start(ap, format);
+	add_variadic(serial, format, ap);
+	va_end(ap);
+}
+
+void serial_remove(t_serial *serial, const char *format, ...) {
+	va_list ap;
+	va_start(ap, format);
+	remove_variadic(serial, format, ap);
+	va_end(ap);
+}
+
+t_serial *serial_pack(const char *format, ...) {
+	va_list ap;
+	va_start(ap, format);
+	t_serial *serial = serial_create(NULL, 0);
+	add_variadic(serial, format, ap);
+	va_end(ap);
+	return serial;
+}
+
+void serial_unpack(t_serial *serial, const char *format, ...) {
+	va_list ap;
+	va_start(ap, format);
+	remove_variadic(serial, format, ap);
+	va_end(ap);
+	serial_destroy(serial);
+}
+
 void serial_destroy(t_serial *serial) {
 	free(serial->data);
 	free(serial);
 }
 
-/*
-** pack() -- store data dictated by the format string in the buffer
-**
-**  (16-bit unsigned length is automatically prepended to strings)
-*/
+// ========== Funciones privadas ==========
 
-t_serial *serial_pack(const char *format, ...) {
+static void add_variadic(t_serial *serial, const char *format, va_list ap) {
 	char buffer[SERIAL_MAX];
 	char *buf = buffer;
-	va_list ap;
 
-	signed char c;              // 8-bit
+	signed char c;
 	unsigned char C;
 
-	short h;                      // 16-bit
+	short h;
 	unsigned short H;
 
-	int l;                 // 32-bit
-	unsigned int L;
+	int l;
+	unsigned L;
 
-	long long int q;            // 64-bit
-	unsigned long long int Q;
+	long long q;
+	unsigned long long Q;
 
-	float d;                    // floats
+	float d;
 	double g;
-	unsigned long long int fhold;
+	unsigned long long fhold;
 
-	char *s;                    // strings
-	unsigned int len;
-
+	char *s;
+	unsigned len;
 	t_serial *x;
-
-	unsigned int size = 0;
-
-	va_start(ap, format);
 
 	for(; *format != '\0'; format++) {
 		switch(*format) {
 		case 'c': // 8-bit
-			size += 1;
 			c = (signed char)va_arg(ap, int); // promoted
 			*buf++ = c;
 			break;
 
 		case 'C': // 8-bit unsigned
-			size += 1;
 			C = (unsigned char)va_arg(ap, unsigned int); // promoted
 			*buf++ = C;
 			break;
 
 		case 'h': // 16-bit
-			size += 2;
 			h = (short)va_arg(ap, int);
 			packi16((unsigned char *)buf, h);
 			buf += 2;
 			break;
 
 		case 'H': // 16-bit unsigned
-			size += 2;
 			H = (unsigned short)va_arg(ap, unsigned int);
 			packi16((unsigned char *)buf, H);
 			buf += 2;
 			break;
 
 		case 'i': // 32-bit
-			size += 4;
 			l = va_arg(ap, int);
 			packi32((unsigned char *)buf, l);
 			buf += 4;
 			break;
 
 		case 'I': // 32-bit unsigned
-			size += 4;
-			L = va_arg(ap, unsigned int);
+			L = va_arg(ap, unsigned);
 			packi32((unsigned char *)buf, L);
 			buf += 4;
 			break;
 
 		case 'l': // 64-bit
-			size += 8;
-			q = va_arg(ap, long long int);
+			q = va_arg(ap, long long);
 			packi64((unsigned char *)buf, q);
 			buf += 8;
 			break;
 
 		case 'L': // 64-bit unsigned
-			size += 8;
-			Q = va_arg(ap, unsigned long long int);
+			Q = va_arg(ap, unsigned long long);
 			packi64((unsigned char *)buf, Q);
 			buf += 8;
 			break;
 
 		case 'f': // float-32
-			size += 4;
 			d = (float)va_arg(ap, double);
 			fhold = pack754_32(d); // convert to IEEE 754
 			packi32((unsigned char *)buf, fhold);
@@ -146,7 +170,6 @@ t_serial *serial_pack(const char *format, ...) {
 			break;
 
 		case 'd': // float-64
-			size += 8;
 			g = va_arg(ap, double);
 			fhold = pack754_64(g); // convert to IEEE 754
 			packi64((unsigned char *)buf, fhold);
@@ -156,13 +179,11 @@ t_serial *serial_pack(const char *format, ...) {
 		case 's': // string
 			s = va_arg(ap, char*);
 			len = sprintf(buf, "%s", s) + 1;
-			size += len;
 			buf += len;
 			break;
 
 		case 'x': // binary
 			x = va_arg(ap, t_serial*);
-			size += 4 + x->size;
 			packi32((unsigned char *)buf, x->size);
 			buf += 4;
 			memcpy(buf, x->data, x->size);
@@ -170,46 +191,35 @@ t_serial *serial_pack(const char *format, ...) {
 		}
 	}
 
-	va_end(ap);
-
-	char *data = malloc(size);
-	memcpy(data, buffer, size);
-
-	return serial_create(data, size);
+	size_t added_size = buf - buffer;
+	serial->data = realloc(serial->data, serial->size + added_size);
+	memcpy(serial->data + serial->size, buffer, added_size);
+	serial->size += added_size;
 }
 
-/*
-** unpack() -- unpack data dictated by the format string into the buffer
-**
-**  (string is extracted based on its stored length, but 's' can be
-**  prepended with a max length)
-*/
-void serial_unpack(t_serial *serial, const char *format, ...) {
-	const char *buf = serial->data;
-	va_list ap;
+static void remove_variadic(t_serial *serial, const char *format, va_list ap) {
+	if(serial->size <= 0) return;
+	char *buf = serial->data;
 
-	signed char *c;              // 8-bit
+	signed char *c;
 	unsigned char *C;
 
-	short *h;                      // 16-bit
+	short *h;
 	unsigned short *H;
 
-	int *l;                 // 32-bit
-	unsigned int *L;
+	int *l;
+	unsigned *L;
 
-	long long int *q;            // 64-bit
-	unsigned long long int *Q;
+	long long *q;
+	unsigned long long *Q;
 
-	float *d;                    // floats
+	float *d;
 	double *g;
-	unsigned long long int fhold;
+	unsigned long long fhold;
 
 	char **s;
-	unsigned int len;
-
+	unsigned len;
 	t_serial **x;
-
-	va_start(ap, format);
 
 	for(; *format != '\0'; format++) {
 		switch(*format) {
@@ -293,16 +303,25 @@ void serial_unpack(t_serial *serial, const char *format, ...) {
 			*x = isr;
 			buf += isr->size;
 			break;
-
-		default:
-			break;
 		}
 	}
 
-	va_end(ap);
-}
+	size_t removed_size = buf - (char*)serial->data;
+	serial->size -= removed_size;
 
-// ========== Funciones privadas ==========
+	if(serial->size <= 0) {
+		free(serial->data);
+		serial->data = NULL;
+		return;
+	}
+
+	buf = serial->data;
+	for(int i = 0; i < serial->size; i++) {
+		*(buf + i) = *(buf + i + removed_size);
+	}
+
+	serial->data = realloc(serial->data, serial->size);
+}
 
 /*
 ** pack754() -- pack a floating point number into IEEE-754 format

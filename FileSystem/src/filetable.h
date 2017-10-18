@@ -35,6 +35,13 @@ t_yfile *filetable_find(const char *path);
 bool filetable_contains(const char *path);
 
 /**
+ * Mueve un archivo.
+ * @param path Ruta al archivo a renombrar.
+ * @param new_path Nueva ruta.
+ */
+void filetable_move(const char *path, const char *new_path);
+
+/**
  * Renombra un archivo.
  * @param path Ruta al archivo a renombrar.
  * @param new_name Nuevo nombre.
@@ -58,7 +65,13 @@ void filetable_clear();
 void filetable_print(void);
 
 /**
- * Devuelve la cantidad de archivos en una directorio.
+ * Imprime información de un archivo.
+ * @param Ruta al archivo yamafs.
+ */
+void filetable_info(const char *path);
+
+/**
+ * Devuelve la cantidad de archivos en un directorio.
  * @param Ruta al directorio yamafs.
  * @return Cantidad de archivos en el directorio.
  */
@@ -68,6 +81,28 @@ size_t filetable_count(const char *path);
  * Imprime los archivos que pertenezcan a un determinado directorio.
  * @param path Ruta al directorio yamafs.
  */
-void filetable_ls(const char *path);
+void filetable_list(const char *path);
+
+/**
+ * Crea un archivo en el sistema de archivos yamafs copiando el
+ * contenido de un archivo local.
+ * @param path Ruta al archivo local que se quiere copiar.
+ * @param dir Ruta de yamafs donde se guardará el archivo.
+ */
+void filetable_cpfrom(const char *path, const char *dir);
+
+/**
+ * Crea un archivo en el sistema de archivos local copiando el
+ * contenido de un archivo yamafs.
+ * @param path Ruta al archivo yamafs que se quiere copiar.
+ * @param dir Ruta del sistema local donde se guardará el archivo.
+ */
+void filetable_cpto(const char *path, const char *dir);
+
+/**
+ * Muestra el contenido de un archivo.
+ * @param path Ruta al archivo yamafs.
+ */
+void filetable_cat(const char *path);
 
 #endif /* FILETABLE_H_ */

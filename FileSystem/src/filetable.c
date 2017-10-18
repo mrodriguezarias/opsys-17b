@@ -4,8 +4,11 @@
 #include <stdlib.h>
 #include <path.h>
 #include <commons/config.h>
-
 #include <stdio.h>
+#include <system.h>
+#include <data.h>
+#include <string.h>
+#include "nodelist.h"
 
 static mlist_t *files = NULL;
 
@@ -16,6 +19,10 @@ static void load_blocks(t_yfile *file, t_config *config);
 static void save_blocks(t_yfile *file, t_config *config);
 static t_yfile *create_file_from_config(t_config *config);
 static void update_file(t_yfile *file);
+char *real_file_path(const char *path);
+static void add_blocks_from_text_file(t_yfile *yfile, const char *path);
+static void add_and_send_block(t_yfile *yfile, char *buffer, size_t size);
+static void print_block(t_block *block);
 
 // ========== Funciones públicas ==========
 
@@ -37,7 +44,7 @@ void filetable_add(t_yfile *file) {
 }
 
 t_yfile *filetable_find(const char *path) {
-	char *rpath = yfile_path(path);
+	char *rpath = real_file_path(path);
 	if(mstring_isempty(rpath)) return NULL;
 
 	bool cond(t_yfile *file) {
@@ -52,15 +59,43 @@ bool filetable_contains(const char *path) {
 	return filetable_find(path) != NULL;
 }
 
+void filetable_move(const char *path, const char *new_path) {
+	t_yfile *file = filetable_find(path);
+	if(file == NULL) return;
+	char *npath = path_create(PTYPE_YAMA, new_path);
+	if(!mstring_hassuffix(npath, path_name(file->path))) {
+		mstring_format(&npath, "%s/%s", npath, path_name(file->path));
+	}
+	
+	if(filetable_contains(npath)) {
+		free(npath);
+		return;
+	}
+
+	char *dpath = path_dir(npath);
+	dirtree_add(dpath);
+	free(dpath);
+
+	char *rpath = real_file_path(npath);
+	path_move(file->path, rpath);
+	free(file->path);
+	file->path = rpath;
+}
+
 void filetable_rename(const char *path, const char *new_name) {
 	t_yfile *file = filetable_find(path);
 	if(file == NULL) return;
 	char *npath = path_dir(file->path);
 	mstring_format(&npath, "%s/%s", npath, new_name);
+
+	if(filetable_contains(npath)) {
+		free(npath);
+		return;
+	}
+
 	path_move(file->path, npath);
 	free(file->path);
 	file->path = npath;
-	file->name = path_name(file->path);
 }
 
 void filetable_remove(const char *path) {
@@ -82,12 +117,56 @@ void filetable_clear() {
 }
 
 void filetable_print() {
-	puts("Tabla de archivos yamafs");
-	printf("Cantidad: %d\n", filetable_size());
-	void routine(t_yfile *file) {
-		yfile_print(file);
+	int size = filetable_size();
+	if(size == 0) {
+		printf("0 archivos.\n");
+		return;
 	}
-	mlist_traverse(files, routine);
+	if(size == 1) printf("Un archivo:\n");
+	else printf("%i archivos:\n", size);
+	mlist_traverse(files, yfile_print);
+}
+
+void filetable_info(const char *path) {
+	t_yfile *file = filetable_find(path);
+	if(file == NULL) return;
+
+	int nblk = mlist_length(file->blocks);
+	printf("Archivo %s ", file->type == FTYPE_TXT ? "de texto" : "binario");
+
+	if(nblk == 0) {
+		printf("vacío.\n");
+		return;
+	}
+
+	if(nblk == 1) printf("de un bloque ");
+	else printf("de %i bloques ", nblk);
+
+	char *size = mstring_bsize(file->size);
+	printf("(%s):\n", size);
+	free(size);
+
+	printf("Bloque     Tamaño     Copia 1     Copia 2  \n");
+	void block_printer(t_block *block) {
+		char *size = mstring_bsize(block->size);
+		printf("%6i  %9s  ", block->index, size);
+		free(size);
+
+		for(int i = 0; i < 2; i++) {
+			char *node = block->copies[i].node;
+			char *str = mstring_empty(NULL);
+			if(node != NULL) {
+				node = mstring_duplicate(node);
+				mstring_crop(&node, 6);
+				mstring_format(&str, "%s#%i", node, block->copies[i].blockno);
+				free(node);
+			}
+			printf("%10s  ", mstring_crop(&str, 10));
+			free(str);
+		}
+		printf("\n");
+	}
+	mlist_traverse(file->blocks, block_printer);
 }
 
 size_t filetable_count(const char *path) {
@@ -97,28 +176,70 @@ size_t filetable_count(const char *path) {
 	return count;
 }
 
-void filetable_ls(const char *path) {
+void filetable_list(const char *path) {
 	mlist_t *lsfiles = files_in_path(path);
 
 	bool sorter(t_yfile *file1, t_yfile *file2) {
-		return mstring_asc(file1->name, file2->name);
+		return mstring_asc(path_name(file1->path), path_name(file2->path));
 	}
 	mlist_sort(lsfiles, sorter);
 
 	void printer(t_yfile *file) {
-		printf("%s\n", file->name);
+		printf("%s\n", path_name(file->path));
 	}
 	mlist_traverse(lsfiles, printer);
 
 	mlist_destroy(lsfiles, NULL);
 }
 
+void filetable_cpfrom(const char *path, const char *dir) {
+	char *upath = path_create(PTYPE_USER, path);
+	if(!path_isfile(upath)) return;
+
+	t_ftype type = path_istext(upath) ? FTYPE_TXT : FTYPE_BIN;
+	char *ypath = path_create(PTYPE_YAMA, dir);
+
+	dirtree_add(ypath);
+	mstring_format(&ypath, "%s/%s", ypath, path_name(upath));
+
+	char *rpath = real_file_path(ypath);
+	t_yfile *file = yfile_create(rpath, type);
+
+	if(type == FTYPE_TXT) {
+		add_blocks_from_text_file(file, upath);
+	}
+
+	filetable_add(file);
+
+	free(upath);
+	free(ypath);
+	free(rpath);
+}
+
+void filetable_cpto(const char *path, const char *dir) {
+
+}
+
+void filetable_cat(const char *path) {
+	t_yfile *file = filetable_find(path);
+	if(file == NULL) return;
+
+	void routine(t_block *block) {
+	}
+	mlist_traverse(file->blocks, routine);
+}
+
 // ========== Funciones privadas ==========
 
 static mlist_t *files_in_path(const char *path) {
-	char *rpath = dirtree_path(path);
+	char *rpath = dirtree_rpath(path);
 	if(rpath == NULL) return mlist_create();
-	bool filter(t_yfile *file) { return path_equal(file->dir, rpath); }
+	bool filter(t_yfile *file) {
+		char *dir = path_dir(file->path);
+		bool equal = path_equal(dir, rpath);
+		free(dir);
+		return equal;
+	}
 	mlist_t *list = mlist_filter(files, filter);
 	free(rpath);
 	return list;
@@ -135,7 +256,7 @@ static void file_traverser(const char *path) {
 }
 
 static void dir_traverser(t_directory *dir) {
-	char *dpath = dirtree_path(dir->name);
+	char *dpath = dirtree_rpath(dir->name);
 	path_files(dpath, file_traverser);
 	free(dpath);
 }
@@ -200,4 +321,55 @@ static void update_file(t_yfile *file) {
 	save_blocks(file, config);
 	config_save(config);
 	config_destroy(config);
+}
+
+char *real_file_path(const char *path) {
+	if(mstring_hasprefix(path, system_userdir())) {
+		return mstring_duplicate(path);
+	}
+
+	char *ypath = path_create(PTYPE_YAMA, path);
+	char *pdir = path_dir(ypath);
+	free(ypath);
+	char *rpath = dirtree_rpath(pdir);
+	free(pdir);
+	if(rpath == NULL) return NULL;
+	mstring_format(&rpath, "%s/%s", rpath, path_name(path));
+	return rpath;
+}
+
+static void add_blocks_from_text_file(t_yfile *yfile, const char *path) {
+	t_file *file = file_open(path);
+
+	char buffer[BLOCK_SIZE];
+	int size = 0;
+
+	void line_handler(const char *line) {
+		printf("Copying line: %s\n", line);
+		if(size + mstring_length(line) + 1 > BLOCK_SIZE) {
+			add_and_send_block(yfile, buffer, size);
+			size = 0;
+		}
+		size += sprintf(buffer + size, "%s\n", line);
+	}
+	file_traverse(file, line_handler);
+	add_and_send_block(yfile, buffer, size);
+	file_close(file);
+}
+
+static void add_and_send_block(t_yfile *yfile, char *buffer, size_t size) {
+	printf("Sending block:\n%s\n", buffer);
+	t_block *block = calloc(1, sizeof(t_block));
+	block->size = size;
+	void *data = malloc(BLOCK_SIZE);
+	memcpy(data, buffer, BLOCK_SIZE);
+	nodelist_addblock(block, data);
+	print_block(block);
+	yfile_addblock(yfile, block);
+}
+
+static void print_block(t_block *block) {
+	printf("Block size: %d\n", block->size);
+	printf("First copy: block #%d of node %s\n", block->copies[0].blockno, block->copies[0].node);
+	printf("Second copy: block #%d of node %s\n", block->copies[1].blockno, block->copies[1].node);
 }

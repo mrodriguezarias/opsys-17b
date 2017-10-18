@@ -2,13 +2,19 @@
 #define MASTER_H_
 
 #include <socket.h>
+#include <commons/string.h>
+#include "funcionesMaster.h"
 
-typedef struct {
-	t_socket yama_socket;
-	t_socket worker_socket;
-} t_master;
+struct{
+	int total;
+	int transf;
+	int reducc;
+}tareasParalelo;
 
-extern t_master master;
+t_socket yama_socket;
+
+time_t job_init;
+time_t job_end;
 
 void terminate(void);
 

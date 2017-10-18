@@ -40,7 +40,7 @@ t_socket socket_init(const char *ip, const char *port) {
 
 	freeaddrinfo(addr);
 
-	if((sockfd == -1 || ret == -1) && errno == ENOTCONN) return -1;
+	if((sockfd == -1 || ret == -1) && (errno == ENOTCONN || errno == EBADF)) return -1;
 	check_descriptor(sockfd);
 	check_descriptor(ret);
 
@@ -133,8 +133,7 @@ static void check_descriptor(int descriptor) {
 	if(descriptor != -1) return;
 	char strerr[128] = {0};
 	switch(errno) {
-	case EBADF:
-		strcpy(strerr, "No hay con quien conectarse");
+	case EBADF: strcpy(strerr, "No hay con quien conectarse"); break;
 	}
 	fprintf(stderr, "Error de socket: %s\n", *strerr != '\0' ? strerr : strerror(errno));
 	exit(EXIT_FAILURE);

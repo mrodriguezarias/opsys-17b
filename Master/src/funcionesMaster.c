@@ -1,122 +1,105 @@
 #include "funcionesMaster.h"
 
-#include <string.h>
+void cargar_scripts(char* path_transf, char* path_reduc) {
 
-#include "Master.h"
+	 script.fd_transf = file_open(path_transf);
+	 script.script_transf = file_map(script.fd_transf);
 
-//t_log * logTrace;
-//void crearLogger() {
-//   char *pathLogger = string_new();
-//
-//   char cwd[1024];
-//
-//   string_append(&pathLogger, getcwd(cwd, sizeof(cwd)));
-//
-//   string_append(&pathLogger, "/Master_LOG.log");
-//
-//   char *logmaster = strdup("Master_LOG.log");
-//
-//   logTrace = log_create(pathLogger, logmaster, false, LOG_LEVEL_INFO);
-//
-//   free(pathLogger);
-//   free(logmaster);
-//}
-tMaster *getConfigMaster() {
-	printf("Ruta del archivo de configuracion: %s\n", RUTA_CONFIG);
-	tMaster *masterAux = malloc(sizeof(tMaster));
-
-	//t_config *masterConfig = config_create("/home/utnso/tp-2017-2c-YATPOS/master/src/config_master");
-
-	t_config *masterConfig = config_create(RUTA_CONFIG);
-
-	masterAux->YAMA_IP = malloc(MAX_IP_LEN);
-	masterAux->YAMA_PUERTO = malloc(MAX_PORT_LEN);
-	masterAux->WORKER_IP = malloc(MAX_IP_LEN);
-	masterAux->PUERTO_WORKER = malloc(MAX_PORT_LEN);
-
-	strcpy(masterAux->YAMA_IP,
-			config_get_string_value(masterConfig, "YAMA_IP"));
-	strcpy(masterAux->YAMA_PUERTO,
-			config_get_string_value(masterConfig, "YAMA_PUERTO"));
-	strcpy(masterAux->WORKER_IP,
-			config_get_string_value(masterConfig, "WORKER_IP"));
-	strcpy(masterAux->PUERTO_WORKER,
-			config_get_string_value(masterConfig, "PUERTO_WORKER"));
-
-	config_destroy(masterConfig);
-	return masterAux;
-}
-
-void mostrar_configuracion() {
-
-	printf("YAMA_IP: %s\n", config_get("YAMA_IP"));
-	printf("YAMA_PUERTO: %s\n", config_get("YAMA_PUERTO"));
-	printf("PUERTO_WORKER: %s\n", config_get("WORKER_PUERTO"));
+	 script.fd_reduc = file_open(path_reduc);
+	 script.script_reduc = file_map(script.fd_transf);
 
 }
 
-void liberarConfiguracionMaster(tMaster*masterAux) {
+void liberar_scripts() {
 
-	free(masterAux->YAMA_IP);
-	masterAux->YAMA_IP = NULL;
-	free(masterAux->YAMA_PUERTO);
-	masterAux->YAMA_PUERTO = NULL;
-	free(masterAux->YAMA_IP);
-	masterAux->YAMA_IP = NULL;
-	free(masterAux->PUERTO_WORKER);
-	masterAux->PUERTO_WORKER = NULL;
+	file_unmap(script.fd_transf, script.script_transf);
+	file_unmap(script.fd_reduc, script.script_reduc);
 
 }
 
-void iniciar_master(tMaster * masterAux) {
-	masterAux = getConfigMaster();
-	connect_to_yama(masterAux);
+inline time_t get_current_time(){
+	return time(NULL);
 }
 
-void liberarRecursos(tMaster * masterAux) {
-	liberarConfiguracionMaster(masterAux);
+const char *datetime(time_t time){
+	struct tm lt;
+	localtime_r(&time, &lt);
+	return string_from_format("%d-%02d-%02d %02d:%02d:%02d", lt.tm_year + 1900, lt.tm_mon + 1,
+			lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec);
 }
 
-#define MANDANDO_SCRIPT 1
-#define MANDAR_SCRIPT 2
-void mandar_script(int socket, char * ruta) {
-	log_print("mandar_script");
-	ssize_t len;
-	int fd;
-	int bytes_enviados = 0;
-	//char file_size[256];
-	struct stat file_stat;
-	int offset;
-	int data_restante;
+const char *timediff(time_t t1, time_t t2){
+	unsigned duration = abs((int) difftime(t1, t2));
+	unsigned seconds = duration % 60;
+	unsigned minutes = duration / 60;
+	unsigned hours = duration / 60;
+	return string_from_format("%02u:%02u:%02u", hours, minutes, seconds);
+}
 
-	fd = open(ruta, O_RDONLY);
-	if (fd == -1) {
-		log_report("No se pudo abrir el script de transformacion");
+const char *timeprom(time_t t1, time_t t2){
+	unsigned duration = (abs((int) difftime(t1, t2))) / 3;
+	unsigned seconds = duration % 60;
+	unsigned minutes = duration / 60;
+	unsigned hours = duration / 60;
+	return string_from_format("%02u:%02u:%02u", hours, minutes, seconds);
+}
+
+void verificarParalelismo(){
+	bool statusEtapaTransformacion(t_hilos* hilo){
+		return (hilo->etapa == TRANSFORMACION && hilo->active);
 	}
-	size_t size =path_size(ruta);
-	printf("Size del archivo:%d\n",size);
-	if (fstat(fd, &file_stat) < 0) {
-		log_report("No se pudieron obtener los datos del script:%s", ruta);
+	bool statusEtapaReduccionLocal(t_hilos* hilo){
+		return (hilo->etapa == REDUCCION_LOCAL && hilo->active);
 	}
-	len = send(master.worker_socket, &size, size, 0);
-	if (len < 0) {
-		log_report("No se pudo enviar el tamanio del script");
-	}
-	log_print("Tamanio del archivo mandado:%d",size);
-	t_packet packet = protocol_receive_packet(master.worker_socket);
-	if(packet.operation == MANDAR_SCRIPT){
-		log_print("Señal recivida");
-
-	offset = 0;
-		data_restante = file_stat.st_size;
-//	while (((bytes_enviados = sendfile(master.worker_socket, fd, &offset, BUFSIZ))> 0) && (data_restante > 0)) {
-//		                data_restante -= bytes_enviados;
-//	}
-		if (((bytes_enviados = sendfile(master.worker_socket, fd, &offset,
-				BUFSIZ)) < 0)) {
-			log_report("No se pudo mandar todo el archivo");
-		}
-		log_print("Bytes_enviados:%d", bytes_enviados);
+	int totalEtapas = mlist_count(hilos, statusEtapaTransformacion) + mlist_count(hilos, statusEtapaReduccionLocal);
+	if(mlist_count(hilos, statusEtapaTransformacion) > 0 &&
+			mlist_count(hilos, statusEtapaReduccionLocal) > 0 &&
+			totalEtapas > tareasParalelo.total){
+		tareasParalelo.total = totalEtapas;
+		tareasParalelo.transf = mlist_count(hilos, statusEtapaTransformacion);
+		tareasParalelo.reducc = mlist_count(hilos, statusEtapaReduccionLocal);
 	}
 }
+void calcular_metricas(){
 
+	printf("Tiempo total de ejecución del Job: %s\n", timediff(job_init, job_end));
+	printf("Tiempo promedio de ejecución de cada etapa principal: %s\n", timeprom(job_init, job_end));
+	printf("Cantidad de etapas ejecutadas en paralelo: %d\n"
+			"Transformaciones: %d\n"
+			"Reducciones Locales: %d\n",
+			tareasParalelo.total,
+			tareasParalelo.transf,
+			tareasParalelo.reducc);
+	bool getTransformacion(t_hilos* hilo){
+		return (hilo->etapa == TRANSFORMACION);
+	}
+	bool getReduccionLocal(t_hilos* hilo){
+		return (hilo->etapa == REDUCCION_LOCAL);
+	}
+	bool getReduccionTotal(t_hilos* hilo){
+		return (hilo->etapa == REDUCCION_GLOBAL || hilo->etapa == REDUCCION_LOCAL);
+	}
+	printf("Cantidad total de tareas realizadas:\n"
+			"Transformaciones: %d\n"
+			"Reducciones: %d\n"
+			"Reducciones Locales: %d\n",
+			mlist_count(hilos, getTransformacion),
+			mlist_count(hilos, getReduccionTotal),
+			mlist_count(hilos, getReduccionLocal));
+	bool getFallos(t_hilos* hilo){
+		return (hilo->result == -1);
+	}
+	printf("Cantidad de fallos del job: %d", mlist_count(hilos, getFallos));
+}
+
+void terminate() {
+	thread_term();
+	liberar_scripts();
+	socket_close(yama_socket);
+	calcular_metricas();
+	void hilo_destroy(t_hilos *self){
+		free(self->hilo);
+		free(self);
+	}
+	mlist_destroy(hilos, hilo_destroy);
+}

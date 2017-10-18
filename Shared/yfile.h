@@ -2,19 +2,18 @@
 #define YFILE_H_
 
 #include <file.h>
+#include <serial.h>
 
 typedef struct yfile {
 	char *path;
-	char *dir;
-	const char *name;
 	size_t size;
 	t_ftype type;
 	mlist_t *blocks;
 } t_yfile;
 
 typedef struct {
-	char *node;
 	int blockno;
+	char *node;
 } t_block_copy;
 
 typedef struct {
@@ -25,7 +24,7 @@ typedef struct {
 
 /**
  * Crea un archivo del sistema de archivos yamafs.
- * @param path Ruta del archivo yamafs.
+ * @param path Ruta real del archivo.
  * @param type Tipo de archivo (texto o binario).
  * @return Archivo yamafs.
  */
@@ -46,18 +45,24 @@ char *yfile_path(const char *path);
 void yfile_addblock(t_yfile *file, t_block *block);
 
 /**
- * Crea un archivo del sistema de archivos yamafs copiando el
- * contenido de un archivo local.
- * @param path Ruta al archivo local que se quiere copiar.
- * @param dir Ruta de yamafs donde se guardará el archivo.
- */
-void yfile_cpfrom(const char *path, const char *dir);
-
-/**
  * Imprime información administrativa de un archivo yamafs.
  * @param file Archivo yamafs.
  */
 void yfile_print(t_yfile *file);
+
+/**
+ * Serializa un archivo.
+ * @param file Archivo yamafs.
+ * @return Contenedor serial.
+ */
+t_serial *yfile_pack(t_yfile *file);
+
+/**
+ * Deserializa un archivo.
+ * @param serial Contenedor serial.
+ * @return Archivo yamafs.
+ */
+t_yfile *yfile_unpack(t_serial *serial);
 
 /**
  * Destruye un archivo yamafs.

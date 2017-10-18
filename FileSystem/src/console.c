@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <system.h>
+#include <protocol.h>
 
 #include "nodelist.h"
 #include "dirtree.h"
@@ -29,6 +30,7 @@ static char *current_args = NULL;
 // ========== Declaraciones ==========
 
 static void cmd_cat(void);
+static void cmd_clear(void);
 static void cmd_cpblock(void);
 static void cmd_cpfrom(void);
 static void cmd_cpto(void);
@@ -59,6 +61,7 @@ static char *rl_generator(const char*, int);
 
 static t_command commands[] = {
 		{"cat", cmd_cat, "Muestra el contenido de un archivo", "archivo"},
+		{"clear", cmd_clear, "Borra la pantalla", ""},
 		{"cpblock", cmd_cpblock, "Copia un bloque de un archivo en un nodo", "archivo bloque nodo"},
 		{"cpfrom", cmd_cpfrom, "Copia un archivo local a yamafs", "archivo_local directorio_yamafs"},
 		{"cpto", cmd_cpto, "Copia un archivo yamafs al sistema local", "archivo_yamafs directorio_local"},
@@ -91,8 +94,8 @@ void console() {
 
 		if(*line) {
 			add_history(line);
-			execute_line(line);
 			write_history(history_file);
+			execute_line(line);
 		}
 
 		free(line);
@@ -161,7 +164,18 @@ static int num_args() {
 // ========== Funciones de comandos ==========
 
 static void cmd_cat() {
-	puts("TODO");
+	if(num_args() != 1) show_usage();
+	char *path = extract_arg(1);
+	if(filetable_contains(path)) {
+		filetable_cat(path);
+	} else {
+		fprintf(stderr, "Error: archivo inexistente.\n");
+	}
+	free(path);
+}
+
+static void cmd_clear() {
+	printf("\033c");
 }
 
 static void cmd_cpblock() {
@@ -173,13 +187,19 @@ static void cmd_cpfrom() {
 	char *source_path = extract_arg(1);
 	char *yama_dir = extract_arg(2);
 
-	yfile_cpfrom(source_path, yama_dir);
+	filetable_cpfrom(source_path, yama_dir);
 	free(source_path);
 	free(yama_dir);
 }
 
 static void cmd_cpto() {
-	puts("TODO");
+	if(num_args() != 2) show_usage();
+	char *source_path = extract_arg(1);
+	char *local_dir = extract_arg(2);
+
+	filetable_cpto(source_path, local_dir);
+	free(source_path);
+	free(local_dir);
 }
 
 static void cmd_debug() {
@@ -189,6 +209,17 @@ static void cmd_debug() {
 		dirtree_print();
 	} else if(mstring_equal(current_args, "files")) {
 		filetable_print();
+	} else if(mstring_equal(current_args, "recv")) {
+		puts("Prueba de petición de un bloque a un DataNode. Datos recibidos:");
+		t_node *node = nodelist_find("NODO1");
+		t_serial *serial = serial_pack("i", 0);
+		t_packet request = protocol_packet(OP_GET_BLOCK, serial);
+		protocol_send_packet(request, node->socket);
+		serial_destroy(serial);
+
+		t_packet response = protocol_receive_packet(node->socket);
+		printf("Received: %s\n", (char*)response.content->data);
+		serial_destroy(response.content);
 	}
 }
 
@@ -214,7 +245,14 @@ static void cmd_help() {
 }
 
 static void cmd_info() {
-	puts("TODO");
+	if(num_args() != 1) show_usage();
+	char *path = extract_arg(1);
+	if(filetable_contains(path)) {
+		filetable_info(path);
+	} else {
+		fprintf(stderr, "Error: archivo inexistente.\n");
+	}
+	free(path);
 }
 
 static void cmd_ls() {
@@ -231,8 +269,8 @@ static void cmd_ls() {
 	printf("%zi directorio%s, %zi archivo%s%s\n", nd, nd == 1 ? "" : "s",
 			nf, nf == 1 ? "" : "s", nf + nd == 0 ? "." : ":");
 
-	dirtree_ls(path);
-	filetable_ls(path);
+	dirtree_list(path);
+	filetable_list(path);
 	free(path);
 }
 
@@ -241,11 +279,31 @@ static void cmd_md5() {
 }
 
 static void cmd_mkdir() {
-	puts("TODO");
+	if(num_args() != 1) show_usage();
+	char *path = extract_arg(1);
+	if(dirtree_contains(path)) {
+		fprintf(stderr, "Error: ya existe el directorio.\n");
+	} else {
+		dirtree_add(path);
+	}
+	free(path);
 }
 
 static void cmd_mv() {
-	puts("TODO");
+	if(num_args() != 2) show_usage();
+	char *path = extract_arg(1);
+	char *new_path = extract_arg(2);
+
+	if(dirtree_contains(path)) {
+		dirtree_move(path, new_path);
+	} else if(filetable_contains(path)) {
+		filetable_move(path, new_path);
+	} else {
+		fprintf(stderr, "Error: ruta inexistente.\n");
+	}
+
+	free(path);
+	free(new_path);
 }
 
 static void cmd_quit() {
@@ -264,10 +322,51 @@ static void cmd_rename() {
 	} else {
 		fprintf(stderr, "Error: ruta inexistente.\n");
 	}
+
+	free(path);
+	free(new_name);
 }
 
 static void cmd_rm() {
-	puts("TODO");
+	int nargs = num_args();
+	if(nargs == 0) show_usage();
+	char *path = extract_arg(1);
+
+	char mode = 'f';
+	if(*path == '-' && mstring_length(path) == 2) {
+		mode = *(path + 1);
+	}
+
+	switch(mode) {
+	case 'f':
+		if(nargs != 1) show_usage();
+		if(filetable_contains(path)) {
+			filetable_remove(path);
+		} else {
+			fprintf(stderr, "Error: archivo inexistente.\n");
+		}
+		break;
+	case 'd':
+		if(nargs != 2) show_usage();
+		mstring_format(&path, "%s", extract_arg(2));
+		if(!dirtree_contains(path)) {
+			fprintf(stderr, "Error: directorio inexistente.\n");
+		} else if(dirtree_count(path) + filetable_count(path) > 0) {
+			fprintf(stderr, "Error: directorio no vacío.\n");
+		} else {
+			dirtree_remove(path);
+		}
+		break;
+	case 'b':
+		if(nargs != 4) show_usage();
+		mstring_format(&path, "%s", extract_arg(2));
+		puts("TODO");
+		break;
+	default:
+		show_usage();
+	}
+
+	free(path);
 }
 
 // ========== Funciones para libreadline ==========
