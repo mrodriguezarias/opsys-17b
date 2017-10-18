@@ -17,4 +17,14 @@ void cargar_scripts(char*, char*);
 
 void liberar_scripts();
 
+time_t get_current_time();
+
+const char *datetime(time_t);
+
+const char *timediff(time_t, time_t);
+
+void verificarParalelismo();
+
+void terminate();
+
 #endif //MASTER_H
