@@ -27,6 +27,7 @@ void request_job_for_file(const char *file) {
 	t_serial *content = serial_pack("s", file);
 	t_packet packet = protocol_packet(OP_INIT_JOB, content);
 	protocol_send_packet(packet, yama_socket);
+	serial_destroy(content);
 }
 
 t_socket connect_to_worker(const char *ip, const char *port) { // La ip y el puerto son obtenidos mediante YAMA

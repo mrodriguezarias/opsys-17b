@@ -37,6 +37,14 @@ typedef enum {
 
 } t_operation;
 
+//interrupciones del job
+enum{FS_NO_ESTABLE,
+	ARCHIVO_INEXISTENTE,
+	ERROR_REPLANIFICACION,
+	ERROR_REDUCCION_LOCAL,
+	ERROR_REDUCCION_GLOBAL
+}; //yama -> master
+
 typedef struct {
 	t_process sender;		// Proceso remitente
 	t_operation operation;	// Operación a realizar

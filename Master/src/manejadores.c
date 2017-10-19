@@ -13,19 +13,20 @@ void manejador_transformacion(tEtapaTransformacion* transformacion) {
 	enviar_operacion_worker(OP_INICIAR_TRANSFORMACION, socket, serial_worker);
 
 	int response = protocol_receive_response(socket);
-
+	printf("Transformación %d\n", response);
 	t_serial *serial_yama = serial_pack("sii",
 				transformacion->nodo,
 				transformacion->bloque,
 				response);
-
-	enviar_resultado_yama(OP_TRANSFORMACION_LISTA,serial_yama);
 
 	pthread_mutex_lock(&mutex_hilos);
 	actualizar_hilo(response);
 	pthread_mutex_unlock(&mutex_hilos);
 
 	socket_close(socket);
+	free(transformacion);
+	enviar_resultado_yama(OP_TRANSFORMACION_LISTA,serial_yama);
+
 	thread_exit(0);
 }
 
@@ -46,16 +47,18 @@ void manejador_rl(tEtapaReduccionLocal * etapa_rl) {
 	enviar_operacion_worker(OP_INICIAR_REDUCCION_LOCAL, socket, serial_worker);
 
 	int response = protocol_receive_response(socket);
+	printf("Reducción local %d\n", response);
 
 	t_serial *serial_yama = serial_pack("si", etapa_rl->nodo, response);
-
-	enviar_resultado_yama(OP_REDUCCION_LOCAL_LISTA,serial_yama);
 
 	pthread_mutex_lock(&mutex_hilos);
 	actualizar_hilo(response);
 	pthread_mutex_unlock(&mutex_hilos);
 
 	socket_close(socket);
+	free(etapa_rl);
+	enviar_resultado_yama(OP_REDUCCION_LOCAL_LISTA,serial_yama);
+
 	thread_exit(0);
 }
 
@@ -72,20 +75,18 @@ void manejador_rg(mlist_t* list) {
 	t_serial *serial_worker = serial_create(NULL, 0);
 	serial_add(serial_worker, "s", script.script_reduc);
 
-	bool getNotManager(tEtapaReduccionGlobal* etapa){
-		return (string_equals_ignore_case(etapa->encargado, NO));
-	}
-	mlist_t* listRG = mlist_filter(list,getNotManager);
-	serial_add(serial_worker, "i", mlist_length(listRG));
+	serial_add(serial_worker, "i", mlist_length(list));
 
 	void routine(tEtapaReduccionGlobal* rg_worker){
-		serial_add(serial_worker, "sss",
+		serial_add(serial_worker, "ssss",
+				rg_worker->nodo,
 				rg_worker->ip,
 				rg_worker->puerto,
 				rg_worker->archivo_temporal_de_rl);
 	}
 
-	mlist_traverse(listRG, routine);
+	mlist_traverse(list, routine);
+
 	serial_add(serial_worker, "s", worker_manager->archivo_etapa);
 
 	enviar_operacion_worker(OP_INICIAR_REDUCCION_GLOBAL, socket, serial_worker);
@@ -94,11 +95,16 @@ void manejador_rg(mlist_t* list) {
 
 	t_serial *serial_yama = serial_pack("si", worker_manager->nodo, response);
 
-	enviar_resultado_yama(OP_REDUCCION_GLOBAL_LISTA,serial_yama);
-
 	actualizar_hilo(response);
 
 	socket_close(socket);
+	void etapa_rg_destroy(tEtapaReduccionGlobal *rg){
+		free(rg);
+	}
+	mlist_destroy(list, etapa_rg_destroy);
+
+	enviar_resultado_yama(OP_REDUCCION_GLOBAL_LISTA,serial_yama);
+
 	thread_exit(0);
 }
 
@@ -115,12 +121,13 @@ void manejador_af(tAlmacenadoFinal* af) {
 
 	t_serial *serial_yama = serial_pack("si", af->nodo, response);
 
-	enviar_resultado_yama(OP_ALMACENAMIENTO_LISTA,serial_yama);
-
 	actualizar_hilo(response);
-	job_end = get_current_time();
 
+	job_end = get_current_time();
 	socket_close(socket);
+	free(af);
+	enviar_resultado_yama(OP_ALMACENAMIENTO_LISTA,serial_yama);
+	job_active = false;
 	thread_exit(0);
 }
 
@@ -189,6 +196,7 @@ void etapa_reduccion_local(const t_packet* paquete) {
 void etapa_reduccion_global(const t_packet* paquete) {
 	mlist_t* listReduccionGlobal = list_reduccionGlobal_unpack(
 			paquete->content);
+
 	t_hilos* hilo_rg = set_hilo(REDUCCION_GLOBAL);
 
 	if ((hilo_rg->hilo = thread_create(manejador_rg, listReduccionGlobal))
@@ -203,6 +211,7 @@ void etapa_reduccion_global(const t_packet* paquete) {
 void etapa_almacenamiento(const t_packet* paquete) {
 	tAlmacenadoFinal* almacenamiento = etapa_af_unpack(
 			paquete->content);
+
 	t_hilos* hilo_af = set_hilo(ALMACENAMIENTO);
 
 	if ((hilo_af->hilo = thread_create(manejador_af, almacenamiento))
@@ -212,9 +221,11 @@ void etapa_almacenamiento(const t_packet* paquete) {
 	}
 
 	mlist_append(hilos, hilo_af);
+	thread_wait(hilo_af->hilo);
 }
 
 void manejador_yama(t_packet paquete) {
+	int exit_code;
 
 	switch (paquete.operation) {
 	case OP_INICIAR_TRANSFORMACION:
@@ -238,7 +249,8 @@ void manejador_yama(t_packet paquete) {
 		etapa_replanificacion(&paquete);
 		break;
 	case OP_ERROR_JOB:
-		log_print("ERROR_JOB");
+		serial_unpack(paquete.content, "i", &exit_code);
+		log_print("ERROR_JOB - Código de error: %d", exit_code);
 		thread_killall();
 		job_active = false;
 		job_end = get_current_time();

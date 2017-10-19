@@ -119,7 +119,7 @@ void calcular_metricas(){
 	bool getFallos(t_hilos* hilo){
 		return (hilo->result == -1);
 	}
-	printf("Cantidad de fallos del job: %d", mlist_count(hilos, getFallos));
+	printf("Cantidad de fallos del job: %d\n", mlist_count(hilos, getFallos));
 }
 
 void init(char* argv[]){
@@ -149,7 +149,6 @@ void terminate() {
 	socket_close(yama_socket);
 	calcular_metricas();
 	void hilo_destroy(t_hilos *self){
-		free(self->hilo);
 		free(self);
 	}
 	mlist_destroy(hilos, hilo_destroy);
