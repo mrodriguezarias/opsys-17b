@@ -56,9 +56,7 @@ typedef struct {
 
 
 tEtapaTransformacion *new_etapa_transformacion(const char*nodo,const char*ip,const char*puerto,int bloque,int bytes_ocuapdos,const char * archivo_etapa);
-t_serial *etapa_transformacion_pack(tEtapaTransformacion* transformacion);
 t_serial* list_transformacion_pack(mlist_t* list);
-tEtapaTransformacion* etapa_transformacion_unpack(t_serial *serial);
 mlist_t* list_transformacion_unpack(t_serial* serial);
 void mandar_etapa_transformacion(mlist_t* list,t_socket sock);
 

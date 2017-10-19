@@ -1,5 +1,35 @@
 #include "funcionesMaster.h"
 
+void actualizar_hilo(int response){
+	bool getHilo(t_hilos* thread){
+		return (thread->hilo == thread_self());
+	}
+	t_hilos* hilo = mlist_find(hilos,getHilo);
+	hilo->active = false;
+	hilo->result = response;
+}
+
+void enviar_operacion_worker(int operacion, t_socket socket, t_serial* serial_worker) {
+	t_packet worker = protocol_packet(operacion,
+			serial_worker);
+	protocol_send_packet(worker, socket);
+	serial_destroy(serial_worker);
+}
+
+void enviar_resultado_yama(int operacion,t_serial* serial_yama) {
+	t_packet yama = protocol_packet(operacion, serial_yama);
+	protocol_send_packet(yama, yama_socket);
+	serial_destroy(serial_yama);
+}
+
+t_hilos* set_hilo(int etapa) {
+	t_hilos* hilo = malloc(sizeof(t_hilos));
+	hilo->etapa = etapa;
+	hilo->active = true;
+	hilo->result = -1;
+	return hilo;
+}
+
 void cargar_scripts(char* path_transf, char* path_reduc) {
 
 	 script.fd_transf = file_open(path_transf);
@@ -90,6 +120,27 @@ void calcular_metricas(){
 		return (hilo->result == -1);
 	}
 	printf("Cantidad de fallos del job: %d", mlist_count(hilos, getFallos));
+}
+
+void init(char* argv[]){
+	job_init = get_current_time();
+
+	job.path_transf = string_duplicate(argv[1]);
+	job.path_reduc = string_duplicate(argv[2]);
+	job.arch = string_duplicate(argv[3]);
+	job.arch_result = string_duplicate(argv[4]);
+	cargar_scripts(job.path_transf, job.path_reduc);
+	hilos = mlist_create();
+	pthread_mutex_init(&mutex_hilos, NULL);
+
+	tareasParalelo.total = 0;
+	tareasParalelo.transf = 0;
+	tareasParalelo.reducc = 0;
+
+	process_init();
+	connect_to_yama();
+	request_job_for_file(job.arch);
+	job_active = true;
 }
 
 void terminate() {

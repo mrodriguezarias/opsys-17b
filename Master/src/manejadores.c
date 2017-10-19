@@ -10,9 +10,7 @@ void manejador_transformacion(tEtapaTransformacion* transformacion) {
 			transformacion->bloque,
 			transformacion->bytes_ocupados);
 
-	t_packet worker = protocol_packet(OP_INICIAR_TRANSFORMACION, serial_worker);
-	protocol_send_packet(worker, socket);
-	serial_destroy(serial_worker);
+	enviar_operacion_worker(OP_INICIAR_TRANSFORMACION, socket, serial_worker);
 
 	int response = protocol_receive_response(socket);
 
@@ -21,17 +19,10 @@ void manejador_transformacion(tEtapaTransformacion* transformacion) {
 				transformacion->bloque,
 				response);
 
-	t_packet yama = protocol_packet(OP_TRANSFORMACION_LISTA, serial_yama);
-	protocol_send_packet(yama, yama_socket);
-	serial_destroy(serial_yama);
+	enviar_resultado_yama(OP_TRANSFORMACION_LISTA,serial_yama);
 
 	pthread_mutex_lock(&mutex_hilos);
-	bool getHilo(t_hilos* thread){
-		return (thread->hilo == thread_self());
-	}
-	t_hilos* hilo = mlist_find(hilos,getHilo);
-	hilo->active = false;
-	hilo->result = response;
+	actualizar_hilo(response);
 	pthread_mutex_unlock(&mutex_hilos);
 
 	socket_close(socket);
@@ -52,30 +43,22 @@ void manejador_rl(tEtapaReduccionLocal * etapa_rl) {
 	mlist_traverse(etapa_rl->archivos_temporales_de_transformacion, routine);
 	serial_add(serial_worker, "s", etapa_rl->archivo_etapa);
 
-	t_packet worker = protocol_packet(OP_INICIAR_REDUCCION_LOCAL, serial_worker);
-	protocol_send_packet(worker, socket);
-	serial_destroy(serial_worker);
+	enviar_operacion_worker(OP_INICIAR_REDUCCION_LOCAL, socket, serial_worker);
 
 	int response = protocol_receive_response(socket);
 
 	t_serial *serial_yama = serial_pack("si", etapa_rl->nodo, response);
 
-	t_packet yama = protocol_packet(OP_REDUCCION_LOCAL_LISTA, serial_yama);
-	protocol_send_packet(yama, yama_socket);
-	serial_destroy(serial_yama);
+	enviar_resultado_yama(OP_REDUCCION_LOCAL_LISTA,serial_yama);
 
 	pthread_mutex_lock(&mutex_hilos);
-	bool getHilo(t_hilos* thread){
-		return (thread->hilo == thread_self());
-	}
-	t_hilos* hilo = mlist_find(hilos,getHilo);
-	hilo->active = false;
-	hilo->result = response;
+	actualizar_hilo(response);
 	pthread_mutex_unlock(&mutex_hilos);
 
 	socket_close(socket);
 	thread_exit(0);
 }
+
 
 void manejador_rg(mlist_t* list) {
 	log_print("ETAPA_REDUCCION_GLOBAL");
@@ -105,28 +88,20 @@ void manejador_rg(mlist_t* list) {
 	mlist_traverse(listRG, routine);
 	serial_add(serial_worker, "s", worker_manager->archivo_etapa);
 
-	t_packet worker = protocol_packet(OP_INICIAR_REDUCCION_GLOBAL, serial_worker);
-	protocol_send_packet(worker, socket);
-	serial_destroy(serial_worker);
+	enviar_operacion_worker(OP_INICIAR_REDUCCION_GLOBAL, socket, serial_worker);
 
 	int response = protocol_receive_response(socket);
 
 	t_serial *serial_yama = serial_pack("si", worker_manager->nodo, response);
 
-	t_packet yama = protocol_packet(OP_REDUCCION_GLOBAL_LISTA, serial_yama);
-	protocol_send_packet(yama, yama_socket);
-	serial_destroy(serial_yama);
+	enviar_resultado_yama(OP_REDUCCION_GLOBAL_LISTA,serial_yama);
 
-	bool getHilo(t_hilos* thread){
-		return (thread->hilo == thread_self());
-	}
-	t_hilos* hilo = mlist_find(hilos,getHilo);
-	hilo->active = false;
-	hilo->result = response;
+	actualizar_hilo(response);
 
 	socket_close(socket);
 	thread_exit(0);
 }
+
 
 void manejador_af(tAlmacenadoFinal* af) {
 	log_print("ETAPA_ALMACENAMIENTO_FINAL");
@@ -134,24 +109,15 @@ void manejador_af(tAlmacenadoFinal* af) {
 	t_socket socket = connect_to_worker(af->ip, af->puerto);
 	t_serial *serial_worker = serial_pack("ss",af->archivo_etapa, job.arch_result);
 
-	t_packet worker = protocol_packet(OP_INICIAR_ALMACENAMIENTO, serial_worker);
-	protocol_send_packet(worker, socket);
-	serial_destroy(serial_worker);
+	enviar_operacion_worker(OP_INICIAR_ALMACENAMIENTO, socket, serial_worker);
 
 	int response = protocol_receive_response(socket);
 
 	t_serial *serial_yama = serial_pack("si", af->nodo, response);
 
-	t_packet yama = protocol_packet(OP_ALMACENAMIENTO_LISTA, serial_yama);
-	protocol_send_packet(yama, yama_socket);
-	serial_destroy(serial_yama);
+	enviar_resultado_yama(OP_ALMACENAMIENTO_LISTA,serial_yama);
 
-	bool getHilo(t_hilos* thread){
-		return (thread->hilo == thread_self());
-	}
-	t_hilos* hilo = mlist_find(hilos,getHilo);
-	hilo->active = false;
-	hilo->result = response;
+	actualizar_hilo(response);
 	job_end = get_current_time();
 
 	socket_close(socket);
@@ -160,13 +126,12 @@ void manejador_af(tAlmacenadoFinal* af) {
 
 void etapa_transformacion(const t_packet* paquete) {
 	mlist_t* listTranformacion = list_transformacion_unpack(paquete->content);
+
 	for (int i = 0; i < mlist_length(listTranformacion); i++) {
 		tEtapaTransformacion* etapa_transformacion = mlist_get(
 				listTranformacion, i);
-		t_hilos* hilo_transformacion = malloc(sizeof(t_hilos));
-		hilo_transformacion->etapa = TRANSFORMACION;
-		hilo_transformacion->active = true;
-		hilo_transformacion->result = -1;
+		t_hilos* hilo_transformacion = set_hilo(TRANSFORMACION);
+
 		if ((hilo_transformacion->hilo = thread_create(manejador_transformacion,
 				etapa_transformacion)) < 0) {
 			log_report("Error al crear hilo en INICIAR_TRANSFORMACION");
@@ -189,10 +154,9 @@ void etapa_replanificacion(const t_packet* paquete) {
 			etapa_transformacion->bloque,
 			etapa_transformacion->bytes_ocupados,
 			etapa_transformacion->archivo_etapa);
-	t_hilos* hilo_transformacion = malloc(sizeof(t_hilos));
-	hilo_transformacion->etapa = TRANSFORMACION;
-	hilo_transformacion->active = true;
-	hilo_transformacion->result = -1;
+
+	t_hilos* hilo_transformacion = set_hilo(TRANSFORMACION);
+
 	if ((hilo_transformacion->hilo = thread_create(manejador_transformacion,
 			etapa_transformacion)) < 0) {
 		log_report("Error al crear hilo en INICIAR_REPLANIFICACION");
@@ -208,11 +172,8 @@ void etapa_replanificacion(const t_packet* paquete) {
 
 void etapa_reduccion_local(const t_packet* paquete) {
 	tEtapaReduccionLocal* etapa_rl = etapa_rl_unpack(paquete->content);
-	t_hilos* hilo_rl = malloc(sizeof(t_hilos));
+	t_hilos* hilo_rl = set_hilo(REDUCCION_LOCAL);
 
-	hilo_rl->etapa = REDUCCION_LOCAL;
-	hilo_rl->active = true;
-	hilo_rl->result = -1;
 	if ((hilo_rl->hilo = thread_create(manejador_rl, etapa_rl))
 			< 0) {
 		log_report("Error al crear hilo en INICIAR_REDUCCION_LOCAL");
@@ -228,10 +189,8 @@ void etapa_reduccion_local(const t_packet* paquete) {
 void etapa_reduccion_global(const t_packet* paquete) {
 	mlist_t* listReduccionGlobal = list_reduccionGlobal_unpack(
 			paquete->content);
-	t_hilos* hilo_rg = malloc(sizeof(t_hilos));
-	hilo_rg->etapa = REDUCCION_GLOBAL;
-	hilo_rg->active = true;
-	hilo_rg->result = -1;
+	t_hilos* hilo_rg = set_hilo(REDUCCION_GLOBAL);
+
 	if ((hilo_rg->hilo = thread_create(manejador_rg, listReduccionGlobal))
 			< 0) {
 		log_report("Error al crear hilo en INICIAR_REDUCCION_GLOBAL");
@@ -244,15 +203,14 @@ void etapa_reduccion_global(const t_packet* paquete) {
 void etapa_almacenamiento(const t_packet* paquete) {
 	tAlmacenadoFinal* almacenamiento = etapa_af_unpack(
 			paquete->content);
-	t_hilos* hilo_af = malloc(sizeof(t_hilos));
-	hilo_af->etapa = ALMACENAMIENTO;
-	hilo_af->active = true;
-	hilo_af->result = -1;
+	t_hilos* hilo_af = set_hilo(ALMACENAMIENTO);
+
 	if ((hilo_af->hilo = thread_create(manejador_af, almacenamiento))
 			< 0) {
 		log_report("Error al crear hilo en INICIAR_ALMACENAMIENTO");
 		perror("Error al crear el hilo_almacenamiento");
 	}
+
 	mlist_append(hilos, hilo_af);
 }
 
