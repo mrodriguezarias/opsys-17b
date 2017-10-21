@@ -33,6 +33,7 @@ static void destroy_thread(thread_t *thread);
 void thread_init() {
 	thread_signal_capture(SIGTERM, NULL);
 	threads = mlist_create();
+	thread_create(NULL, NULL); // hilo conductor
 }
 
 thread_t *thread_create(void *routine, void *arg) {
@@ -46,9 +47,14 @@ thread_t *thread_create(void *routine, void *arg) {
 	thread->sem_recv = thread_sem_create(0);
 	mlist_insert(threads, 0, thread);
 
-	pthread_t id;
-	ptcheck(pthread_create(&id, NULL, base_thread_routine, thread));
-	thread->id = id;
+	if(routine != NULL) {
+		pthread_t id;
+		ptcheck(pthread_create(&id, NULL, base_thread_routine, thread));
+		thread->id = id;
+	} else {
+		thread->id = thread->parent;
+		thread->parent = -1;
+	}
 	return thread;
 }
 
@@ -56,12 +62,19 @@ void thread_exit(void *retvalue) {
 	pthread_exit(retvalue);
 }
 
-void thread_sleep() {
+void thread_sleep(unsigned time) {
+	struct timespec req;
+	req.tv_sec = 0;
+	req.tv_nsec = 1000000 * time;
+	nanosleep(&req, NULL);
+}
+
+void thread_suspend() {
 	thread_t *thread = thread_self();
 	thread_sem_wait(thread->sem_sleep);
 }
 
-void thread_wake(thread_t *thread) {
+void thread_resume(thread_t *thread) {
 	thread_sem_signal(thread->sem_sleep);
 }
 
@@ -116,6 +129,10 @@ thread_t *thread_self() {
 	pthread_t self = pthread_self();
 	bool cond(thread_t *elem) { return elem->id == self; }
 	return mlist_find(threads, cond);
+}
+
+thread_t *thread_main() {
+	return mlist_last(threads);
 }
 
 thread_t *thread_parent(thread_t *thread) {

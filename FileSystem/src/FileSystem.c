@@ -12,8 +12,6 @@
 #include "nodelist.h"
 #include "server.h"
 
-int indexDirectorio = 0;
-
 static void init(void);
 static void clear_previous_state(void);
 static void term(void);
@@ -26,10 +24,9 @@ int main(int argc, char *argv[]) {
 //	}
 
 	init();
-
-	server();
+	server_start();
 	console();
-
+	server_end();
 	term();
 	return EXIT_SUCCESS;
 }

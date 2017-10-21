@@ -2,6 +2,7 @@
 #define FILESYSTEM_H_
 
 #include <stdbool.h>
+#include <yfile.h>
 
 struct {
 	bool formatted;

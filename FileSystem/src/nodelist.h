@@ -11,10 +11,10 @@ typedef struct t_node {
 	char *name;
 	int total_blocks;
 	int free_blocks;
-	bool available;
 	thread_t *handler;
 	t_socket socket;
 	t_bitmap *bitmap;
+	bool busy;
 } t_node;
 
 /**

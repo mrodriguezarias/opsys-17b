@@ -7,6 +7,7 @@
 #include <string.h>
 #include <system.h>
 #include <protocol.h>
+#include <path.h>
 
 #include "nodelist.h"
 #include "dirtree.h"
@@ -184,12 +185,20 @@ static void cmd_cpblock() {
 
 static void cmd_cpfrom() {
 	if(num_args() != 2) show_usage();
-	char *source_path = extract_arg(1);
-	char *yama_dir = extract_arg(2);
+	char *path = extract_arg(1);
+	char *dir = extract_arg(2);
 
-	filetable_cpfrom(source_path, yama_dir);
-	free(source_path);
-	free(yama_dir);
+	char *upath = path_create(PTYPE_USER, path);
+	free(path);
+
+	if(path_isfile(upath)) {
+		filetable_cpfrom(upath, dir);
+	} else {
+		fprintf(stderr, "Error: archivo inexistente.\n");
+	}
+
+	free(upath);
+	free(dir);
 }
 
 static void cmd_cpto() {
@@ -212,8 +221,8 @@ static void cmd_debug() {
 	} else if(mstring_equal(current_args, "recv")) {
 		puts("Prueba de petición de un bloque a un DataNode. Datos recibidos:");
 		t_node *node = nodelist_find("NODO1");
-		t_serial *serial = serial_pack("i", 0);
-		t_packet request = protocol_packet(OP_GET_BLOCK, serial);
+		t_serial *serial = serial_pack("ii", 0, 0);
+		t_packet request = protocol_packet(OP_REQUEST_BLOCK, serial);
 		protocol_send_packet(request, node->socket);
 		serial_destroy(serial);
 
