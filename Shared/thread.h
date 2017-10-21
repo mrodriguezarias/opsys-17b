@@ -29,15 +29,21 @@ thread_t *thread_create(void *routine, void *arg);
 void thread_exit(void *retvalue);
 
 /**
- * El hilo actual se pone a dormir (se bloquea).
+ * Suspende la ejecución del hilo actual por un tiempo determinado.
+ * @param time Tiempo de suspensión en milisegundos.
  */
-void thread_sleep(void);
+void thread_sleep(unsigned time);
 
 /**
- * Despierta un determinado hilo bloqueado.
+ * Suspende la ejecución del hilo actual.
+ */
+void thread_suspend(void);
+
+/**
+ * Resume la ejecución hilo suspendido.
  * @param thread Hilo a despertar.
  */
-void thread_wake(thread_t *thread);
+void thread_resume(thread_t *thread);
 
 /**
  * Escribe datos en el espacio local de un determinado hilo.
@@ -94,6 +100,12 @@ bool thread_active(void);
  * @return Identificador del hilo.
  */
 thread_t *thread_self(void);
+
+/**
+ * Devuelve el identificador del hilo principal o conductor.
+ * @return Identificador del hilo conductor.
+ */
+thread_t *thread_main();
 
 /**
  * Devuelve el identificador del padre de un hilo.

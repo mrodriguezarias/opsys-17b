@@ -61,7 +61,7 @@ static void connect_to_filesystem() {
 	t_socket socket = socket_connect(config_get("IP_FILESYSTEM"), config_get("PUERTO_DATANODE"));
 	if(socket == -1) puts("Esperando conexión del FileSystem...");
 	while(socket == -1) {
-		sleep(1);
+		thread_sleep(500);
 		socket = socket_connect(config_get("IP_FILESYSTEM"), config_get("PUERTO_DATANODE"));
 	}
 
@@ -83,22 +83,27 @@ static void send_node_info() {
 }
 
 static void handle_request(t_packet request) {
-	int blockno;
-	if(request.operation == OP_SET_BLOCK) {
-		serial_unpack(request.content, "i", &blockno);
+	if(request.operation != OP_REQUEST_BLOCK) {
+		log_report("Operación inválida. Código de operación: %i", request.operation);
+		return;
+	}
+	int blockno, receiving;
+	serial_unpack(request.content, "ii", &blockno, &receiving);
+	if(receiving) {
 		log_print("Solicitud de escritura de bloque #%i", blockno);
 		t_packet packet = protocol_receive_packet(fs_socket);
+		if(packet.operation != OP_SEND_BLOCK) {
+			log_report("Se esperaba recibir un bloque pero se recibió otra cosa");
+			return;
+		}
 		data_set(blockno, packet.content->data);
 		serial_destroy(packet.content);
-	} else if(request.operation == OP_GET_BLOCK) {
-		serial_unpack(request.content, "i", &blockno);
+	} else {
 		log_print("Solicitud de lectura de bloque #%i", blockno);
 		t_serial *block = serial_create(data_get(blockno), BLOCK_SIZE);
-		t_packet response = protocol_packet(OP_GET_BLOCK, block);
+		t_packet response = protocol_packet(OP_SEND_BLOCK, block);
 		protocol_send_packet(response, fs_socket);
 		free(block);
-	} else {
-		log_report("Operación inválida. Código de operación: %i", request.operation);
 	}
 }
 
@@ -107,6 +112,7 @@ static void terminate() {
 	if(fs_socket != -1) socket_close(fs_socket);
 	data_close();
 	log_inform("Desconectado. Proceso terminado.");
+	process_term();
 	exit(EXIT_SUCCESS);
 }
 

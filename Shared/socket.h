@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/select.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 typedef int t_socket;
 
@@ -106,6 +107,13 @@ void socket_set_remove(t_socket fd, t_fdset *fds);
  * @param fds Conjunto de sockets.
  */
 int socket_set_contains(t_socket fd, t_fdset *fds);
+
+/**
+ * Verifica si un socket está activo.
+ * @param fd Socket a verificar.
+ * @return Valor lógico con el resultado.
+ */
+bool socket_alive(t_socket fd);
 
 /**
  * Realiza un select() sobre un determinado set de sockets.

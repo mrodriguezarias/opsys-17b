@@ -1,14 +1,24 @@
 #include "filetable.h"
-#include <mlist.h>
-#include "dirtree.h"
-#include <stdlib.h>
-#include <path.h>
+
 #include <commons/config.h>
-#include <stdio.h>
-#include <system.h>
 #include <data.h>
+#include <file.h>
+#include <mlist.h>
+#include <mstring.h>
+#include <path.h>
+#include <socket.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <system.h>
+#include <thread.h>
+#include <yfile.h>
+
+#include "dirtree.h"
 #include "nodelist.h"
+#include "server.h"
 
 static mlist_t *files = NULL;
 
@@ -19,10 +29,13 @@ static void load_blocks(t_yfile *file, t_config *config);
 static void save_blocks(t_yfile *file, t_config *config);
 static t_yfile *create_file_from_config(t_config *config);
 static void update_file(t_yfile *file);
-char *real_file_path(const char *path);
+static char *real_file_path(const char *path);
 static void add_blocks_from_text_file(t_yfile *yfile, const char *path);
 static void add_and_send_block(t_yfile *yfile, char *buffer, size_t size);
 static void print_block(t_block *block);
+static void receive_blocks(t_yfile *file);
+static void receive_block(t_block *block);
+static t_block_copy *first_available_copy(t_block *block);
 
 // ========== Funciones públicas ==========
 
@@ -193,25 +206,21 @@ void filetable_list(const char *path) {
 }
 
 void filetable_cpfrom(const char *path, const char *dir) {
-	char *upath = path_create(PTYPE_USER, path);
-	if(!path_isfile(upath)) return;
-
-	t_ftype type = path_istext(upath) ? FTYPE_TXT : FTYPE_BIN;
+	t_ftype type = path_istext(path) ? FTYPE_TXT : FTYPE_BIN;
 	char *ypath = path_create(PTYPE_YAMA, dir);
 
 	dirtree_add(ypath);
-	mstring_format(&ypath, "%s/%s", ypath, path_name(upath));
+	mstring_format(&ypath, "%s/%s", ypath, path_name(path));
 
 	char *rpath = real_file_path(ypath);
 	t_yfile *file = yfile_create(rpath, type);
 
 	if(type == FTYPE_TXT) {
-		add_blocks_from_text_file(file, upath);
+		add_blocks_from_text_file(file, path);
 	}
 
 	filetable_add(file);
 
-	free(upath);
 	free(ypath);
 	free(rpath);
 }
@@ -223,10 +232,7 @@ void filetable_cpto(const char *path, const char *dir) {
 void filetable_cat(const char *path) {
 	t_yfile *file = filetable_find(path);
 	if(file == NULL) return;
-
-	void routine(t_block *block) {
-	}
-	mlist_traverse(file->blocks, routine);
+	receive_blocks(file);
 }
 
 // ========== Funciones privadas ==========
@@ -323,7 +329,7 @@ static void update_file(t_yfile *file) {
 	config_destroy(config);
 }
 
-char *real_file_path(const char *path) {
+static char *real_file_path(const char *path) {
 	if(mstring_hasprefix(path, system_userdir())) {
 		return mstring_duplicate(path);
 	}
@@ -372,4 +378,31 @@ static void print_block(t_block *block) {
 	printf("Block size: %d\n", block->size);
 	printf("First copy: block #%d of node %s\n", block->copies[0].blockno, block->copies[0].node);
 	printf("Second copy: block #%d of node %s\n", block->copies[1].blockno, block->copies[1].node);
+}
+
+static void receive_blocks(t_yfile *file) {
+	server_set_current_file(file);
+	puts("Recibiendo bloques...");
+	mlist_traverse(file->blocks, receive_block);
+	thread_suspend();
+}
+
+static void receive_block(t_block *block) {
+	t_block_copy *copy = first_available_copy(block);
+	t_node *node = nodelist_find(copy->node);
+
+	thread_send(node->handler, (void*) copy->blockno);
+	thread_send(node->handler, NULL);
+}
+
+static t_block_copy *first_available_copy(t_block *block) {
+	t_block_copy *copy = NULL;
+	t_node *node0 = nodelist_find(block->copies[0].node);
+	t_node *node1 = nodelist_find(block->copies[1].node);
+	while(copy == NULL) {
+		if(node0 && socket_alive(node0->socket) && !node0->busy) copy = block->copies;
+		else if(node1 && socket_alive(node1->socket) && !node1->busy) copy = block->copies + 1;
+		else thread_sleep(500);
+	}
+	return copy;
 }

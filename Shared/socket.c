@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <protocol.h>
 
 #define BACKLOG 5
 #define MAXSIZE 1024
@@ -115,6 +116,11 @@ int socket_set_contains(t_socket fd, t_fdset *fds) {
 	return FD_ISSET(fd, &fds->set);
 }
 
+bool socket_alive(t_socket fd) {
+	protocol_send_packet(protocol_packet(OP_PING, NULL), fd);
+	return protocol_send_packet(protocol_packet(OP_PING, NULL), fd);
+}
+
 t_fdset socket_select(t_fdset fds) {
 	t_fdset sfds = fds;
 	int r = select(sfds.max + 1, &sfds.set, NULL, NULL, NULL);
@@ -170,7 +176,8 @@ static size_t sendall(t_socket sockfd, const void *buf, size_t len) {
 	size_t bytes_sent = 0;
 
 	while(bytes_sent < len) {
-		ssize_t n = send(sockfd, buf + bytes_sent, len - bytes_sent, 0);
+		ssize_t n = send(sockfd, buf + bytes_sent, len - bytes_sent, MSG_NOSIGNAL);
+		if(n == -1 && errno == EPIPE) break;
 		check_descriptor(n);
 		bytes_sent += n;
 	}

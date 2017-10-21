@@ -97,6 +97,7 @@ void file_sync(t_file *file, void *map) {
 }
 
 void file_unmap(t_file *file, void *map) {
+	file_sync(file, map);
 	munmap(map, file_size(file));
 }
 
