@@ -20,11 +20,13 @@
 #include <file.h>
 #include <log.h>
 #include <mstring.h>
+#include <path.h>
 #include <process.h>
 #include <protocol.h>
 #include <serial.h>
 #include <socket.h>
 #include <struct.h>
+#include <system.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -55,9 +57,30 @@ typedef struct {
 } tWorker;
 
 
+typedef struct {
+	char * script;
+	int lenLista;
+	mlist_t * archivosTemporales;
+	char * archivoTemporal;
+} tEtapaReduccionLocalWorker;
+
+typedef struct{
+			char * scriptReduccion;
+			int  lenLista;
+			mlist_t * datosWorker;
+			char * archivoEtapa;
+			tEtapaReduccionGlobal * rg;
+}tEtapaReduccionGlobalWorker;
+
+t_socket socketEscuchaMaster,socketEscuchaWorker, socketFileSystem,socketWorker;
+char * archivoTemporalDeReduccionLocal;
 
 void listen_to_master();
-
-void manejador_fork(t_packet packet,int socket);
-void manejador_fork2(t_packet packet, int socketFor);
+t_file* crearScript(char * bufferScript,int);
+tEtapaReduccionLocalWorker * etapa_rl_unpack_bis(t_serial * serial);
+tEtapaReduccionGlobalWorker * rg_unpack(t_serial*);
+void manejador_master(t_packet *packet,int socket);
+void manejador_worker(t_packet * packet,int socket);
+t_socket connect_to_worker(const char *ip, const char *port);
+void mandarDatosAWorkerHomologo(tEtapaReduccionGlobal * rg,int);
 #endif
