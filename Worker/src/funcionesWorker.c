@@ -157,9 +157,6 @@ void manejador_master(t_packet* packet, int socketFor) {
 		log_print("Status:%d", status);
 		protocol_send_response(socketFor, 1);
 		break;
-	case OP_INICIAR_REPLANIFICACION:
-		log_print("OP_INICIAR_REPLANIFICACION");
-		break;
 	case OP_INICIAR_REDUCCION_LOCAL:
 		log_print("OP_INICIAR_REDUCCION_LOCAL");
 		rl = etapa_rl_unpack_bis(packet->content);

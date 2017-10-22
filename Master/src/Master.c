@@ -17,11 +17,15 @@ int main(int argc, char *argv[]) {
 	}
 
 	init(argv);
-	t_packet packet;
+
+	hilo_node_drop = thread_create(node_drop, NULL);
+
 	do {
-		packet = protocol_receive_packet(yama_socket);
-		manejador_yama(packet);
-	} while(job_active);
+		t_packet paquete = protocol_receive_packet(yama_socket);
+		manejador_yama(paquete);
+	}while(job_active);
+
+
 	terminate();
 	return EXIT_SUCCESS;
 }

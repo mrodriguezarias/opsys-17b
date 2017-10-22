@@ -11,6 +11,7 @@ enum {TRANSFORMACION, REDUCCION_LOCAL, REDUCCION_GLOBAL, ALMACENAMIENTO};
 
 typedef struct{
 	thread_t* hilo;
+	char* nodo;
 	int etapa;
 	bool active;
 	int result;
@@ -33,6 +34,7 @@ struct{
 bool job_active;
 mlist_t* hilos;
 pthread_mutex_t mutex_hilos;
+thread_t* hilo_node_drop;
 
 struct{
 	int total;
@@ -42,7 +44,15 @@ struct{
 
 t_socket yama_socket;
 
-time_t job_init;
-time_t job_end;
+struct{
+	time_t job_init;
+	time_t job_end;
+	time_t transf_init;
+	time_t transf_end;
+	time_t rl_init;
+	time_t rl_end;
+	time_t rg_init;
+	time_t rg_end;
+}times;
 
 #endif /* MASTER_H_ */

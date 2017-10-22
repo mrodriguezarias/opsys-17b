@@ -14,13 +14,19 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+void kill_thread(t_hilos*);
+
+void node_drop();
+
 void actualizar_hilo(int);
 
-void enviar_operacion_worker(int, t_socket, t_serial*);
+bool enviar_operacion_worker(int, t_socket, t_serial*);
 
-void enviar_resultado_yama(int, t_serial*);
+void response_worker(t_socket, int*);
 
-t_hilos* set_hilo(int);
+bool enviar_resultado_yama(int, t_serial*);
+
+t_hilos* set_hilo(int, char*);
 
 void cargar_scripts(char*, char*);
 

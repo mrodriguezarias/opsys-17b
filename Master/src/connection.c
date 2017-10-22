@@ -34,7 +34,7 @@ t_socket connect_to_worker(const char *ip, const char *port) { // La ip y el pue
 	t_socket socket = socket_connect(ip, port);
 	if(socket == -1) {
 		log_report("Worker no está corriendo en %s:%s", ip, port);
-		exit(EXIT_FAILURE);
+		return -1;
 	}
 
 	protocol_send_handshake(socket);

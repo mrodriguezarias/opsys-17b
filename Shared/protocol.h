@@ -20,7 +20,6 @@ typedef enum {
 	OP_SEND_BLOCK,
 
 	OP_INICIAR_TRANSFORMACION,		// yama -> master
-	OP_INICIAR_REPLANIFICACION,		// yama -> master
   	OP_INICIAR_REDUCCION_LOCAL,		// yama -> master
 	OP_INICIAR_REDUCCION_GLOBAL,	// yama -> master
 	OP_INICIAR_ALMACENAMIENTO,		// yama -> master
