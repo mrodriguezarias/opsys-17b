@@ -53,9 +53,21 @@ void thread_resume(thread_t *thread);
 void thread_send(thread_t *thread, void *data);
 
 /**
+ * Devuelve el último remitente del hilo actual.
+ * @return Hilo remitente.
+ */
+thread_t *thread_sender(void);
+
+/**
  * Lee datos de su espacio local.
  */
 void *thread_receive(void);
+
+/**
+ * Envía datos al último hilo del cual se recibieron datos.
+ * @param data Datos a enviar.
+ */
+void thread_respond(void *data);
 
 /**
  * Función bloqueante que espera a que termine de ejecutar un hilo.

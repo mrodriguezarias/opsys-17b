@@ -16,7 +16,6 @@
 
 #include "FileSystem.h"
 #include "nodelist.h"
-#include "block.h"
 
 static struct {
 	mutex_t *mut;
@@ -36,6 +35,14 @@ static void update_current_file(void);
 void server_start() {
 	cfile.mut = thread_mutex_create();
 	thread_create(datanode_listener, NULL);
+}
+
+t_nodeop *server_nodeop(int opcode, int blockno, t_serial *block) {
+	t_nodeop *op = malloc(sizeof(t_nodeop));
+	op->opcode = opcode;
+	op->blockno = blockno;
+	op->block = block;
+	return op;
 }
 
 void server_set_current_file(t_yfile *file) {
@@ -59,13 +66,14 @@ static t_node *receive_node_info(t_socket socket) {
 	int blocks;
 	serial_unpack(packet.content, "si", &name, &blocks);
 	t_node *node = nodelist_find(name);
+
 	if(node == NULL && fs.formatted) {
 		log_inform("El nodo %s se quiso conectar pero el FS ya estaba formateado", name);
-	} else if(node != NULL && socket_alive(node->socket)) {
+	} else if(nodelist_active(node)) {
 		node = NULL;
 		log_inform("El nodo %s se quiso conectar pero ya estaba activo en el FS", name);
 	} else {
-		node = nodelist_add(name, blocks, thread_self());
+		node = nodelist_add(name, blocks);
 	}
 	free(name);
 	return node;
@@ -91,7 +99,12 @@ static void datanode_listener() {
 		}
 
 		protocol_send_response(cli_sock, RESPONSE_OK);
-		log_inform("DataNode del nodo %s conectado", node->name);
+
+		char *ip = socket_address(cli_sock);
+		char *port = socket_port(cli_sock);
+		log_inform("Nodo %s conectado desde %s:%s", node->name, ip, port);
+		free(ip);
+		free(port);
 
 		node->socket = cli_sock;
 		node->handler = thread_create(datanode_handler, node);
@@ -101,35 +114,39 @@ static void datanode_listener() {
 }
 
 static void datanode_handler(t_node *node) {
-	while(true) {
-		int blockno = (int) thread_receive();
-		t_serial *block = thread_receive();
-		if(!thread_active()) break;
-		node->busy = true;
+	t_nodeop *op;
+	while(op = thread_receive(), thread_active()) {
+		if(op->opcode == NODE_PING) {
+			free(op);
+			protocol_send_packet(protocol_packet(OP_PING, NULL), node->socket);
+			bool alive = protocol_send_packet(protocol_packet(OP_PING, NULL), node->socket);
+			thread_respond((void*)alive);
+			if(alive) continue;
+			else break;
+		}
 
-		t_serial *serial = serial_pack("ii", blockno, block != NULL);
+		t_serial *serial = serial_pack("ii", op->blockno, op->opcode == NODE_SEND);
 		t_packet packet = protocol_packet(OP_REQUEST_BLOCK, serial);
 		protocol_send_packet(packet, node->socket);
 		serial_destroy(serial);
 
-		if(block != NULL) {
-			log_inform("Enviando bloque %d a nodo %s", blockno, node->name);
-			packet = protocol_packet(OP_SEND_BLOCK, block);
+		if(op->opcode == NODE_SEND) {
+			log_inform("Enviando bloque %d a nodo %s", op->blockno, node->name);
+			packet = protocol_packet(OP_SEND_BLOCK, op->block);
 			protocol_send_packet(packet, node->socket);
-			serial_destroy(block);
-		} else {
-			log_inform("Recibiendo bloque %d de nodo %s", blockno, node->name);
+			serial_destroy(op->block);
+		} else if(op->opcode == NODE_RECV) {
+			log_inform("Recibiendo bloque %d de nodo %s", op->blockno, node->name);
 			packet = protocol_receive_packet(node->socket);
 			if(packet.operation != OP_SEND_BLOCK) {
 				log_report("Se esperaba recibir un bloque pero se recibió otra cosa");
 				continue;
 			}
-			memcpy(cfile.map + blockno * BLOCK_SIZE, packet.content->data, BLOCK_SIZE);
+			memcpy(cfile.map + op->blockno * BLOCK_SIZE, packet.content->data, BLOCK_SIZE);
 			serial_destroy(packet.content);
 			update_current_file();
 		}
-
-		node->busy = false;
+		free(op);
 	}
 
 	node->handler = NULL;

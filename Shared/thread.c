@@ -10,6 +10,7 @@
 struct thread {
 	pthread_t id;
 	pthread_t parent;
+	thread_t *sender;
 	bool active;
 	void *(*fn)(void*);
 	void *arg;
@@ -39,6 +40,7 @@ void thread_init() {
 thread_t *thread_create(void *routine, void *arg) {
 	thread_t *thread = malloc(sizeof(thread_t));
 	thread->parent = pthread_self();
+	thread->sender = NULL;
 	thread->active = true;
 	thread->fn = routine;
 	thread->arg = arg;
@@ -79,10 +81,16 @@ void thread_resume(thread_t *thread) {
 }
 
 void thread_send(thread_t *thread, void *data) {
-	if(!thread->active) return;
+	if(thread == NULL || !thread->active) return;
 	thread_sem_wait(thread->sem_send);
+	thread->sender = thread_self();
 	thread->data = data;
 	thread_sem_signal(thread->sem_recv);
+}
+
+thread_t *thread_sender() {
+	thread_t *self = thread_self();
+	return self->sender;
 }
 
 void *thread_receive() {
@@ -92,6 +100,10 @@ void *thread_receive() {
 	void *data = thread->data;
 	thread_sem_signal(thread->sem_send);
 	return data;
+}
+
+void thread_respond(void *data) {
+	thread_send(thread_sender(), data);
 }
 
 void *thread_wait(thread_t *thread) {

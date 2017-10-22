@@ -83,6 +83,7 @@ static void send_node_info() {
 }
 
 static void handle_request(t_packet request) {
+	if(request.operation == OP_PING) return;
 	if(request.operation != OP_REQUEST_BLOCK) {
 		log_report("Operación inválida. Código de operación: %i", request.operation);
 		return;

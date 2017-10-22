@@ -1,5 +1,6 @@
 #include "socket.h"
 
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -7,7 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <protocol.h>
+#include <mstring.h>
 
 #define BACKLOG 5
 #define MAXSIZE 1024
@@ -116,9 +117,23 @@ int socket_set_contains(t_socket fd, t_fdset *fds) {
 	return FD_ISSET(fd, &fds->set);
 }
 
-bool socket_alive(t_socket fd) {
-	protocol_send_packet(protocol_packet(OP_PING, NULL), fd);
-	return protocol_send_packet(protocol_packet(OP_PING, NULL), fd);
+char *socket_address(t_socket sock) {
+	struct sockaddr_in addr;
+	socklen_t len = sizeof addr;
+	getsockname(sock, (struct sockaddr*) &addr, &len);
+
+	char ip[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &addr.sin_addr, ip, sizeof ip);
+	return mstring_duplicate(ip);
+}
+
+char *socket_port(t_socket sock) {
+	struct sockaddr_in addr;
+	socklen_t len = sizeof addr;
+	getsockname(sock, (struct sockaddr*) &addr, &len);
+
+	int port = ntohs(addr.sin_port);
+	return mstring_create("%i", port);
 }
 
 t_fdset socket_select(t_fdset fds) {

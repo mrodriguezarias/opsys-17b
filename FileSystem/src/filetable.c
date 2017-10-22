@@ -390,9 +390,8 @@ static void receive_blocks(t_yfile *file) {
 static void receive_block(t_block *block) {
 	t_block_copy *copy = first_available_copy(block);
 	t_node *node = nodelist_find(copy->node);
-
-	thread_send(node->handler, (void*) copy->blockno);
-	thread_send(node->handler, NULL);
+	t_nodeop *op = server_nodeop(NODE_RECV, copy->blockno, NULL);
+	thread_send(node->handler, op);
 }
 
 static t_block_copy *first_available_copy(t_block *block) {
@@ -400,8 +399,8 @@ static t_block_copy *first_available_copy(t_block *block) {
 	t_node *node0 = nodelist_find(block->copies[0].node);
 	t_node *node1 = nodelist_find(block->copies[1].node);
 	while(copy == NULL) {
-		if(node0 && socket_alive(node0->socket) && !node0->busy) copy = block->copies;
-		else if(node1 && socket_alive(node1->socket) && !node1->busy) copy = block->copies + 1;
+		if(nodelist_active(node0)) copy = block->copies;
+		else if(nodelist_active(node1)) copy = block->copies + 1;
 		else thread_sleep(500);
 	}
 	return copy;

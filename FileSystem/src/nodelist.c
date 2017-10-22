@@ -9,6 +9,7 @@
 #include <serial.h>
 #include <string.h>
 #include <data.h>
+#include "server.h"
 
 static char *path = NULL;
 static mlist_t *nodes = NULL;
@@ -21,6 +22,7 @@ static void remove_node_from_file(t_node *node);
 static void load_bitmap(t_node *node);
 static t_node *create_node(const char *name, int blocks);
 static void destroy_node(t_node *node);
+static bool node_active(t_node *node);
 static t_node *best_node_available(t_block *block);
 
 // ========== Funciones públicas ==========
@@ -51,14 +53,17 @@ int nodelist_size() {
 	return mlist_length(nodes);
 }
 
-t_node *nodelist_add(const char *name, int blocks, thread_t *handler) {
+bool nodelist_active(t_node *node) {
+	return node_active(node);
+}
+
+t_node *nodelist_add(const char *name, int blocks) {
 	t_node *node = nodelist_find(name);
 	if(node == NULL) {
 		node = create_node(name, blocks);
 		mlist_append(nodes, node);
 		add_node_to_file(node);
 	}
-	node->handler = handler;
 	return node;
 }
 
@@ -80,9 +85,8 @@ void nodelist_addblock(t_block *block, void *data) {
 		bitmap_set(node->bitmap, blockno);
 		node->free_blocks--;
 		add_node_to_file(node);
-
-		thread_send(node->handler, (void*) blockno);
-		thread_send(node->handler, serial_create(data, BLOCK_SIZE));
+		t_nodeop *op = server_nodeop(NODE_SEND, blockno, serial_create(data, BLOCK_SIZE));
+		thread_send(node->handler, op);
 	}
 }
 
@@ -104,10 +108,10 @@ void nodelist_clear() {
 }
 
 void nodelist_print() {
-	puts("Nombre\tActivo\tOcupado\tLibre\tTotal");
+	puts("Nombre\tActivo\tLibre\tTotal");
 	void iterator(t_node *node) {
-		printf("%s\t%s\t%s\t%i\t%i\n", node->name, socket_alive(node->socket) ? "Sí" : "No",
-				node->busy ? "Sí" : "No", node->free_blocks, node->total_blocks);
+		printf("%s\t%s\t%i\t%i\n", node->name, node_active(node) ? "Sí" : "No",
+				node->free_blocks, node->total_blocks);
 	}
 	mlist_traverse(nodes, iterator);
 }
@@ -191,7 +195,6 @@ static t_node *create_node(const char *name, int blocks) {
 	node->name = mstring_duplicate(name);
 	node->total_blocks = blocks;
 	node->free_blocks = blocks;
-	node->busy = false;
 	load_bitmap(node);
 	return node;
 }
@@ -201,12 +204,19 @@ static void destroy_node(t_node *node) {
 	free(node);
 }
 
+static bool node_active(t_node *node) {
+	if(node == NULL || node->handler == NULL) return false;
+	thread_send(node->handler, server_nodeop(NODE_PING, -1, NULL));
+	bool active = (bool) thread_receive();
+	return active;
+}
+
 static t_node *best_node_available(t_block *block) {
 	int free_blocks = 0;
 	t_node *node = NULL;
 	char *prev = block->copies[0].node;
 	void routine(t_node *elem) {
-		if(!socket_alive(elem->socket) || elem->busy || elem->free_blocks <= free_blocks
+		if(!node_active(elem) || elem->free_blocks <= free_blocks
 				|| (prev != NULL && mstring_equal(elem->name, prev))) return;
 		free_blocks = elem->free_blocks;
 		node = elem;

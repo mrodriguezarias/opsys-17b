@@ -31,16 +31,14 @@ bool protocol_send_packet(t_packet packet, t_socket socket) {
 
 t_packet protocol_receive_packet(t_socket socket) {
 	t_packet packet;
-	do {
-		memset(&packet, 0, sizeof packet);
-		packet.content = serial_create(NULL, 0);
-		t_serial *header = serial_create(malloc(HEADER_SIZE), HEADER_SIZE);
-		if(socket_receive_bytes(socket, header->data, header->size)) {
-			serial_unpack(header, "iii", &packet.sender, &packet.operation, &packet.content->size);
-		} else {
-			serial_destroy(header);
-		}
-	} while(packet.operation == OP_PING);
+	memset(&packet, 0, sizeof packet);
+	packet.content = serial_create(NULL, 0);
+	t_serial *header = serial_create(malloc(HEADER_SIZE), HEADER_SIZE);
+	if(socket_receive_bytes(socket, header->data, header->size)) {
+		serial_unpack(header, "iii", &packet.sender, &packet.operation, &packet.content->size);
+	} else {
+		serial_destroy(header);
+	}
 
 	if(packet.operation != OP_UNDEFINED && packet.content->size > 0) {
 		packet.content->data = malloc(packet.content->size);

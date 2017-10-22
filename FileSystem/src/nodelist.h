@@ -14,7 +14,6 @@ typedef struct t_node {
 	thread_t *handler;
 	t_socket socket;
 	t_bitmap *bitmap;
-	bool busy;
 } t_node;
 
 /**
@@ -31,16 +30,22 @@ void nodelist_init(void);
  * Devuelve la cantidad de nodos en la lista de nodos.
  * @return Cantidad de nodos.
  */
-int nodelist_size();
+int nodelist_size(void);
+
+/**
+ * Determina si un nodo está activo.
+ * @param node Nodo.
+ * @return Valor lógico con el resultado.
+ */
+bool nodelist_active(t_node *node);
 
 /**
  * Crea un nuevo nodo y lo agrega a la lista de nodos.
  * @param name Nombre del nodo a crear.
  * @param blocks Cantidad de bloques del nodo.
- * @param handler Hilo manejador del nodo.
  * @return Puntero al nodo creado.
  */
-t_node *nodelist_add(const char *name, int blocks, thread_t *handler);
+t_node *nodelist_add(const char *name, int blocks);
 
 /**
  * Busca un nodo en la lista de nodos según su ID.
