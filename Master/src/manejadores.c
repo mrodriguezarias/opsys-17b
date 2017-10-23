@@ -2,8 +2,11 @@
 
 void finalizar_manejador_transf(int response, t_socket socket,
 		tEtapaTransformacion* transformacion) {
-	t_serial *serial_yama = serial_pack("sii", transformacion->nodo,
-			transformacion->bloque, response);
+	t_serial *serial_yama = serial_pack("siis",
+			transformacion->nodo,
+			transformacion->bloque,
+			response,
+			job.arch);
 	pthread_mutex_lock(&mutex_hilos);
 	actualizar_hilo(response);
 	pthread_mutex_unlock(&mutex_hilos);

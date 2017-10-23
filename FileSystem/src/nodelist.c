@@ -62,6 +62,22 @@ bool nodelist_active(t_node *node) {
 	return node_active(node);
 }
 
+t_serial* nodelist_active_pack() {
+	t_serial *serial = serial_create(NULL, 0);
+	serial_add(serial, "i", nodelist_size());
+
+	void routine(t_node *node) {
+		if (!nodelist_active(node)){
+			serial_add(serial, "sss",
+					node->name,
+					socket_address(node->socket),
+					socket_port(node->socket));
+		}
+	}
+	mlist_traverse(nodes, routine);
+	return serial;
+}
+
 t_node *nodelist_add(const char *name, int blocks) {
 	t_node *node = nodelist_find(name);
 	if(node == NULL) {

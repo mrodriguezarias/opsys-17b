@@ -40,6 +40,12 @@ int nodelist_size(void);
 bool nodelist_active(t_node *node);
 
 /**
+ * Serialización de nodos activos.
+ * @return serial con los nodos activos.
+ */
+t_serial* nodelist_active_pack();
+
+/**
  * Devuelve el nodo de una determinada posición.
  * @param pos Posición.
  * @return Nodo de la posición.
