@@ -53,6 +53,10 @@ int nodelist_size() {
 	return mlist_length(nodes);
 }
 
+t_node * nodelist_get(int pos) {
+	return mlist_get(nodes, pos);
+}
+
 bool nodelist_active(t_node *node) {
 	return node_active(node);
 }
@@ -115,6 +119,20 @@ void nodelist_print() {
 	}
 	mlist_traverse(nodes, iterator);
 }
+
+void nodelist_format(){
+	for(int i = 0; i < nodelist_size(); i++){
+		t_node* node = nodelist_get(i);
+		if (!nodelist_active(node)){
+			nodelist_remove(node->name);
+		}else{
+			bitmap_clear(node->bitmap);
+		}
+		node->free_blocks = node->total_blocks;
+	}
+	update_file();
+}
+
 
 void nodelist_term() {
 	update_file();

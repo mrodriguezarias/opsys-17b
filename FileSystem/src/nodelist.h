@@ -40,6 +40,13 @@ int nodelist_size(void);
 bool nodelist_active(t_node *node);
 
 /**
+ * Devuelve el nodo de una determinada posición.
+ * @param pos Posición.
+ * @return Nodo de la posición.
+ */
+t_node * nodelist_get(int pos);
+
+/**
  * Crea un nuevo nodo y lo agrega a la lista de nodos.
  * @param name Nombre del nodo a crear.
  * @param blocks Cantidad de bloques del nodo.
@@ -72,6 +79,11 @@ void nodelist_remove(const char *name);
  * Elimina todos los nodos de la lista de nodos.
  */
 void nodelist_clear();
+
+/**
+ * Formatea todos los nodos de la lista de nodos.
+ */
+void nodelist_format();
 
 /**
  * Imprime por pantalla la lista de nodos.

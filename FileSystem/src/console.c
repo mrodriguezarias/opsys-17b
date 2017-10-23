@@ -233,7 +233,26 @@ static void cmd_debug() {
 }
 
 static void cmd_format() {
-	fs.formatted = true;
+	printf("!: El filesystem se va a formatear."
+			" Continuar? \n"
+			"[S]í. [N]o. \n");
+
+	char* scan;
+	scan = readline("> ");
+	if (mstring_equal(scan, "S")) {
+		if (nodelist_size() > 0) {
+
+			dirtree_clear();
+			filetable_clear();
+			nodelist_format();
+
+			printf("\nFilesystem formateado.\n");
+			fs.formatted = true;
+		}else{
+			printf("\nNo hay nodos conectados. Aguardar la conexión de al menos un nodo.\n");
+		}
+	}
+	free(scan);
 }
 
 static void cmd_help() {
@@ -395,6 +414,11 @@ static void execute_line(const char *line) {
 	t_command *command = find_command(cmd);
 	if(!command) {
 		command_not_found(cmd);
+		return;
+	}
+	if(!mstring_equal(command->name, "format") && !fs.formatted) {
+		printf("\nEl Filesystem no se encuentra formateado.\n"
+				"Para poder operar proceda a formatear con el comando <<format>>\n");
 		return;
 	}
 
