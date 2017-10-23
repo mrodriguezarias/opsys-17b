@@ -12,7 +12,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <system.h>
-#include <time.h>
 #include <stdarg.h>
 #define __USE_BSD
 #include <dirent.h>
@@ -203,17 +202,12 @@ const char *path_name(const char *path) {
 }
 
 char *path_temp() {
-	static bool seed = false;
-	if(!seed) {
-		srand(time(NULL));
-		seed = true;
-	}
 	char *tmp = NULL, c;
 	int r;
 	do {
 		mstring_empty(&tmp);
 		while(strlen(tmp) < 32) {
-			r = rand();
+			r = system_rand();
 			c = r % 3 == 2 ? '0' + r % 10 : (r % 3 ? 'A' : 'a') + r % 26;
 			mstring_format(&tmp, "%s%c", tmp, c);
 		}

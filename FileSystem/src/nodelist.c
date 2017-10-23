@@ -23,7 +23,8 @@ static void load_bitmap(t_node *node);
 static t_node *create_node(const char *name, int blocks);
 static void destroy_node(t_node *node);
 static bool node_active(t_node *node);
-static t_node *best_node_available(t_block *block);
+static double node_empty_rate(t_node *node);
+static void balance_nodes(t_node *bnodes[]);
 
 // ========== Funciones públicas ==========
 
@@ -80,8 +81,11 @@ t_node *nodelist_find(const char *name) {
 }
 
 void nodelist_addblock(t_block *block, void *data) {
+	t_node *bnodes[2];
+	balance_nodes(bnodes);
+
 	for(int i = 0; i < 2; i++) {
-		t_node *node = best_node_available(block);
+		t_node *node = bnodes[i];
 		if(node == NULL) continue;
 		int blockno = bitmap_firstzero(node->bitmap);
 		block->copies[i].blockno = blockno;
@@ -112,10 +116,11 @@ void nodelist_clear() {
 }
 
 void nodelist_print() {
-	puts("Nombre\tActivo\tLibre\tTotal");
+	puts("Nombre\tActivo\tTotal\tLibre\t%Libre");
 	void iterator(t_node *node) {
-		printf("%s\t%s\t%i\t%i\n", node->name, node_active(node) ? "Sí" : "No",
-				node->free_blocks, node->total_blocks);
+		node->free_blocks = 5023;
+		printf("%s\t%s\t%i\t%i\t%.1f\n", node->name, node_active(node) ? "Sí" : "No",
+				node->total_blocks, node->free_blocks, node_empty_rate(node) * 100);
 	}
 	mlist_traverse(nodes, iterator);
 }
@@ -232,16 +237,41 @@ static bool node_active(t_node *node) {
 	return active;
 }
 
-static t_node *best_node_available(t_block *block) {
-	int free_blocks = 0;
-	t_node *node = NULL;
-	char *prev = block->copies[0].node;
-	void routine(t_node *elem) {
-		if(!node_active(elem) || elem->free_blocks <= free_blocks
-				|| (prev != NULL && mstring_equal(elem->name, prev))) return;
-		free_blocks = elem->free_blocks;
-		node = elem;
+static double node_empty_rate(t_node *node) {
+	return node->free_blocks * 1.0f / node->total_blocks;
+}
+
+static void balance_nodes(t_node *bnodes[]) {
+	double r1 = 0;
+	double r2 = 0;
+
+	void routine(t_node *node) {
+		if(!node_active(node)) return;
+		double rate = node_empty_rate(node);
+		if(rate > r1) {
+			r2 = r1;
+			r1 = rate;
+		}
 	}
 	mlist_traverse(nodes, routine);
-	return node;
+
+	bool filter1(t_node *node) { return node_empty_rate(node) == r1; }
+	bool filter2(t_node *node) { return node_empty_rate(node) == r2; }
+
+	mlist_t *f = mlist_filter(nodes, filter1);
+	t_node *n1 = mlist_random(f);
+
+	if(mlist_length(f) == 1) {
+		mlist_destroy(f, NULL);
+		f = mlist_filter(nodes, filter2);
+	}
+
+	t_node *n2 = NULL;
+	do {
+		n2 = mlist_random(f);
+	} while(n2 == n1);
+
+	mlist_destroy(f, NULL);
+	bnodes[0] = n1;
+	bnodes[1] = n2;
 }

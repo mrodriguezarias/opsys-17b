@@ -416,7 +416,12 @@ static void execute_line(const char *line) {
 		command_not_found(cmd);
 		return;
 	}
-	if(!mstring_equal(command->name, "format") && !fs.formatted) {
+	if(!fs.formatted
+			&& !mstring_equal(command->name, "format")
+			&& !mstring_equal(command->name, "debug")
+			&& !mstring_equal(command->name, "help")
+			&& !mstring_equal(command->name, "clear")
+			&& !mstring_equal(command->name, "quit")) {
 		printf("\nEl Filesystem no se encuentra formateado.\n"
 				"Para poder operar proceda a formatear con el comando <<format>>\n");
 		return;
