@@ -126,8 +126,8 @@ void nodelist_format(){
 			nodelist_remove(node->name);
 		}else{
 			bitmap_clear(node->bitmap);
+			node->free_blocks = node->total_blocks;
 		}
-		node->free_blocks = node->total_blocks;
 	}
 	mlist_traverse(nodes, format_node);
 
@@ -219,6 +219,8 @@ static t_node *create_node(const char *name, int blocks) {
 }
 
 static void destroy_node(t_node *node) {
+	if(node->handler != NULL) thread_kill(node->handler);
+	bitmap_destroy(node->bitmap);
 	free(node->name);
 	free(node);
 }
