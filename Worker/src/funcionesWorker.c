@@ -1,63 +1,5 @@
 #include "funcionesWorker.h"
 
-void listen_to_master() {
-	log_print("Escuchando puertos");
-	socketEscuchaMaster = socket_init(NULL, config_get("PUERTO_WORKER"));
-	socketEscuchaWorker = socket_init(NULL, config_get("PUERTO_WORKER"));
-	t_fdset socket_set_read = socket_set_create(), socket_set_master =
-			socket_set_create(); //No es un set especial para el proceso master, es la bolsa "MASTER"
-
-	socket_set_add(socketEscuchaMaster, &socket_set_master);
-	socket_set_add(socketEscuchaWorker, &socket_set_master);
-	while (true) {
-		socket_set_read = socket_set_master;
-		t_fdset selected = socket_select(socket_set_master);
-
-		for (t_socket socketFor = 3; socketFor <= socket_set_master.max;
-				socketFor++) {
-			if (!socket_set_contains(socketFor, &selected))
-				continue;
-			if (socketFor == socketEscuchaMaster) {
-				t_socket cli_sock = socket_accept(socketEscuchaMaster);
-				t_packet packet = protocol_receive_packet(cli_sock);
-
-				if (packet.operation == OP_HANDSHAKE
-						&& packet.sender == PROC_MASTER) {
-					socket_set_add(cli_sock, &socket_set_master);
-					log_print("Conectado proceso Master por socket %i",
-							cli_sock);
-					socket_send_string(cli_sock, "Bienvenido a Worker!");
-				} else {
-					log_print(
-							"El proceso que requirio acceso, no posee los permisos adecuados\n");
-					socket_send_string(cli_sock,
-							"No posee los permisos adecuados");
-					socket_close(cli_sock);
-				}
-			} else if (socketFor < 0) {
-
-			} else {
-				t_packet packet = protocol_receive_packet(socketFor);
-				printf("Valor del socket: %d\n", socketFor);
-				//			manejador_fork2(packet, socketFor);
-				manejador_master(&packet, socketFor);
-			}
-
-			if (socketFor == socketEscuchaWorker) {
-				t_packet packet = protocol_receive_packet(socketFor);
-				manejador_worker(&packet, socketFor);
-			}
-
-		}
-
-	}
-
-	FD_ZERO(&socket_set_read.set);
-	FD_ZERO(&socket_set_master.set);
-	close(socketEscuchaMaster);
-	close(socketEscuchaWorker);
-}
-
 t_file* crearScript(char * bufferScript, int etapa) {
 	int aux, auxChmod;
 	char mode[] = "0777";
@@ -66,8 +8,10 @@ t_file* crearScript(char * bufferScript, int etapa) {
 	printf("size archivo:%d\n", aux);
 	if (etapa == OP_INICIAR_TRANSFORMACION)
 		script = file_create("transformador.sh");
-	else
+	else if(etapa == OP_INICIAR_REDUCCION_LOCAL)
 		script = file_create("reductor.sh");
+	else
+		script = file_create("reductorGlobal.sh");
 	file_open(file_path(script));
 	fwrite(bufferScript, sizeof(char), aux, file_pointer(script));
 	auxChmod = strtol(mode, 0, 8);
@@ -78,6 +22,15 @@ t_file* crearScript(char * bufferScript, int etapa) {
 
 	return script;
 
+}
+
+t_file * crearArchivo(char * bufferArchivo, char*nombreArchivo){
+	t_file * archivo = file_create(nombreArchivo);
+	int aux = string_length(bufferArchivo);
+	file_open(file_path(archivo));
+	fwrite(bufferArchivo, sizeof(char), aux, file_pointer(archivo));
+	fclose(file_pointer(archivo));
+	return archivo;
 }
 
 tEtapaReduccionLocalWorker * etapa_rl_unpack_bis(t_serial * serial) {
@@ -115,92 +68,7 @@ tEtapaReduccionGlobalWorker * rg_unpack(t_serial * serial) {
 	return rg_w;
 }
 
-void manejador_master(t_packet* packet, int socketFor) {
-	log_print("Manejador Master");
-	char * bufferScript, *archivoEtapa, *archivoPreReduccion = "preReduccion";
-	int bloque = 6, bytesOcupados = 105615, status;
-	int offset = 0;
-	char * command;
-	char * rutaDatabin;
-	t_file*scriptTransformacion, *scriptReduccion;
-	tEtapaReduccionLocalWorker* rl;
-	tEtapaReduccionGlobalWorker * rg;
-	//	t_file * scriptAux;
-//	scriptAux = file_create("/home/utnso/yama-test1/transformador.sh");
-	const char * direccion = system_userdir();
-	rutaDatabin = mstring_create("%s/%s", direccion,
-			config_get("RUTA_DATABIN"));
 
-	switch (packet->operation) {
-	case OP_INICIAR_TRANSFORMACION:
-		log_print("OP_INICIAR_TRANSFORMACION");
-		serial_unpack(packet->content, "ssii", &bufferScript, &archivoEtapa,
-				&bloque, &bytesOcupados);
-		scriptTransformacion = crearScript(bufferScript,
-				OP_INICIAR_TRANSFORMACION);
-		free(bufferScript);
-		offset = (bloque - 1) * BLOCK_SIZE + bytesOcupados;
-		command = mstring_create(
-				"head -c %d < %s | tail -c %d | sh %s | sort > %s%s", offset,
-				rutaDatabin, bytesOcupados, file_path(scriptTransformacion),
-				system_userdir(), archivoEtapa);
-		if ((status = system(command)) < 0) {
-			log_report(
-					"NO SE PUDO EJECTUAR EL COMANDO EN SYSTEM, FALLA TRANSFORMACION");
-			free(command);
-			free(archivoEtapa);
-			protocol_send_response(socketFor, -1);
-			break;
-		}
-		free(command);
-		free(archivoEtapa);
-		log_print("Status:%d", status);
-		protocol_send_response(socketFor, 1);
-		break;
-	case OP_INICIAR_REDUCCION_LOCAL:
-		log_print("OP_INICIAR_REDUCCION_LOCAL");
-		rl = etapa_rl_unpack_bis(packet->content);
-		scriptReduccion = crearScript(rl->script, OP_INICIAR_REDUCCION_LOCAL);
-		path_merge(rl->archivosTemporales, archivoPreReduccion);
-		command = mstring_create(" %s | sh %s > %s ", archivoPreReduccion,
-				rl->script, rl->archivoTemporal);
-		archivoTemporalDeReduccionLocal = mstring_create("%s",rl->archivoTemporal);
-		system(command);
-		if ((status = system(command)) < 0) {
-			log_report(
-					"NO SE PUDO EJECTUAR EL COMANDO EN SYSTEM, FALLA REDUCCION LOCAL");
-			free(command);
-			free(archivoEtapa);
-			protocol_send_response(socketFor, -1);
-			break;
-		}
-		free(command);
-		free(archivoEtapa);
-		log_print("Status:%d", status);
-		protocol_send_response(socketFor, 1);
-		break;
-	case OP_INICIAR_REDUCCION_GLOBAL:
-		log_print("OP_INICIAR_REDUCCION_GLOBAL");
-		rg = rg_unpack(packet->content);
-
-		path_merge(rg->datosWorker, rg->archivoEtapa);
-
-		socketWorker = connect_to_worker(rg->rg->ip, rg->rg->nodo);
-		mandarDatosAWorkerHomologo(rg->rg, socketFor);
-
-		break;
-	case OP_INICIAR_ALMACENAMIENTO:
-		log_print("OP_INICIAR_ALMACENAMIENTO");
-		break;
-	default:
-		break;
-	}
-
-}
-
-void manejador_worker(t_packet * packet, int socketWorker) {
-
-}
 t_socket connect_to_worker(const char *ip, const char *port) { // La ip y el puerto son obtenidos mediante YAMA
 	t_socket socket = socket_connect(ip, port);
 	if (socket == -1) {
@@ -214,7 +82,161 @@ t_socket connect_to_worker(const char *ip, const char *port) { // La ip y el pue
 	return socket;
 }
 
-void mandarDatosAWorkerHomologo(tEtapaReduccionGlobal * rg,int socket) {
-	t_packet packet;
 
+void asignarOffset(int * offset,int bloque,int bytesOcuapdos){
+	if (bloque == 0)
+		*offset = bytesOcuapdos; // 0 * BLOCK_SIZE = 0 //Con saber los bytes ocuapdos alcanza
+	else
+		*offset = (bloque - 1) * BLOCK_SIZE + bytesOcuapdos;
 }
+
+void ejecutarComando(char * command, int socketAceptado) {
+	int status;
+	system(command);
+	if ((status = system(command)) < 0) {
+		log_report("NO SE PUDO EJECTUAR EL COMANDO EN SYSTEM, FALLA REDUCCION LOCAL");
+		free(command);
+		protocol_send_response(socketAceptado, -1);
+		exit(1);
+	}
+}
+
+mlist_t * crearListaParaReducir(tEtapaReduccionGlobalWorker * rg) {
+		mlist_t * archivosAReducir = mlist_create();
+		mlist_t * socketsAWorker = mlist_create();
+		int socket;
+		char * bufferArchivoTemporal;
+	for (int i = 0; i < rg->lenLista; i++) {
+		rg->rg = mlist_get(rg->datosWorker, i);
+		if (!mstring_equal(rg->rg->ip, config_get("IP"))
+				&& !mstring_equal(rg->rg->puerto,
+						config_get("PUERTO_WORKER"))) {
+			t_socket socketWorker = connect_to_worker(rg->rg->ip,
+					rg->rg->puerto);
+			socket = socketWorker;
+			mlist_append(socketsAWorker,&socket);
+			t_packet paquete;
+			paquete.content = serial_pack("s", rg->rg->archivo_temporal_de_rl);
+			paquete.operation = 3;
+			protocol_send_packet(paquete, socketWorker);
+			paquete = protocol_receive_packet(socketWorker);
+			serial_unpack(paquete.content, "s", &bufferArchivoTemporal);
+			t_file * archivo = crearArchivo(bufferArchivoTemporal,
+					rg->rg->archivo_temporal_de_rl);
+			mlist_append(archivosAReducir, (char *) file_path(archivo));
+		}
+	}
+	free(bufferArchivoTemporal);
+	return archivosAReducir;
+}
+
+void listen_to_master() {
+	log_print("Escuchando puertos");
+	socketEscuchaMaster = socket_init(NULL, config_get("PUERTO_WORKER"));
+	socketEscuchaWorker = socket_init(NULL, config_get("PUERTO_WORKER"));
+	t_socket socketAceptado;
+	char * bufferScript, *archivoEtapa, *archivoPreReduccion = "preReduccion";
+	int bloque = 6, bytesOcupados = 105615, status;
+	int offset = 0;
+	char * command;
+	char * rutaDatabin;
+	t_file*scriptTransformacion, *scriptReduccion,*archivoTemporalDeReduccionLocal,*scriptReduccionGlobal;
+	tEtapaReduccionLocalWorker* rl;
+	tEtapaReduccionGlobalWorker * rg;
+	mlist_t * archivosAReducir = mlist_create();
+	const char * direccion = system_userdir();
+	rutaDatabin = mstring_create("%s/%s", direccion,
+			config_get("RUTA_DATABIN"));
+	char * bufferArchivoTemporalLocal,*archivoAReducir;
+	while (true) {
+		pid_t pid;
+		socketAceptado = socket_accept(socketEscuchaMaster);
+		printf("Socket Aceptado:%d\n", socketAceptado);
+		if (protocol_receive_handshake(socketAceptado, PROC_MASTER)) {
+			if ((pid = fork()) == 0) {
+				log_print("PROCESO_HIJO:%d", pid);
+				t_packet packet = protocol_receive_packet(socketAceptado);
+				switch (packet.operation) {
+				case OP_INICIAR_TRANSFORMACION:
+					log_print("OP_INICIAR_TRANSFORMACION");
+					serial_unpack(packet.content, "ssii", &bufferScript,
+							&archivoEtapa, &bloque, &bytesOcupados);
+					scriptTransformacion = crearScript(bufferScript,OP_INICIAR_TRANSFORMACION);
+					free(bufferScript);
+					asignarOffset(&offset,bloque,bytesOcupados);
+					command =	mstring_create(
+									"head -c %d < %s | tail -c %d | sh %s | sort > %s%s",
+									offset, rutaDatabin, bytesOcupados,
+									file_path(scriptTransformacion),
+									system_userdir(), archivoEtapa);
+					ejecutarComando(command,socketAceptado);
+					free(command);
+					protocol_send_response(socketAceptado, 1);
+					exit(1);
+					break;
+				case OP_INICIAR_REDUCCION_LOCAL:
+					log_print("OP_INICIAR_REDUCCION_LOCAL");
+					rl = etapa_rl_unpack_bis(packet.content);
+					scriptReduccion = crearScript(rl->script,OP_INICIAR_REDUCCION_LOCAL);
+					path_merge(rl->archivosTemporales, archivoPreReduccion);
+				archivoTemporalDeReduccionLocal = file_create(rl->archivoTemporal);
+					command = mstring_create(" %s | sh %s > %s ",archivoPreReduccion, rl->script,rl->archivoTemporal);
+					free(command);
+					protocol_send_response(socketAceptado, 1);
+					exit(1);
+					break;
+				case OP_INICIAR_REDUCCION_GLOBAL:
+					log_print("OP_INICIAR_REDUCCION_GLOBAL");
+					rg = rg_unpack(packet.content);
+					scriptReduccionGlobal = crearScript(rg->scriptReduccion,OP_INICIAR_REDUCCION_GLOBAL);
+					archivosAReducir = crearListaParaReducir(rg);
+					path_merge(archivosAReducir, archivoAReducir);
+					command = mstring_create("%s | sh %s > %s",archivoAReducir,file_path(scriptReduccionGlobal),rg->archivoEtapa);
+					ejecutarComando(command,socketAceptado);
+					free(command);
+					exit(1);
+					break;
+				case OP_INICIAR_ALMACENAMIENTO:
+					log_print("OP_INICIAR_ALMACENAMIENTO");
+					exit(1);
+					break;
+				default:
+					break;
+				}
+			} else if (pid > 0) {
+				log_print("PROCESO_PADRE:%d", pid);
+			} else if (pid < 0) {
+				log_report("NO SE PUDO HACER EL FORK");
+			}
+
+		} else if (protocol_receive_handshake(socketAceptado, PROC_WORKER)) {
+			if((pid = fork()) == 0){
+				t_packet paquete = protocol_receive_packet(socketAceptado);
+				t_file * archivo;
+				char * nombreDelArchivo;
+				void *bufferArchivo;
+				switch(paquete.operation){
+				case(3)://OP_MANDAR_ARCHIVO
+				serial_unpack(paquete.content,"s",&nombreDelArchivo);
+				archivo = file_open(nombreDelArchivo);
+				bufferArchivo = file_map(archivo);
+				paquete.content = serial_pack("s",bufferArchivo); paquete.operation = 4;//OP_MANDAR_ARCHIVO
+				protocol_send_packet(paquete,socketAceptado);
+				exit(1);
+				break;
+				default:
+					log_report("OP_UNDIFINED");
+					exit(1);
+					break;
+				}
+			}else if(pid >0){
+
+			}else if(pid<0){
+
+			}
+		}
+	}
+}
+
+
+
