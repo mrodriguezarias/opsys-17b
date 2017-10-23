@@ -126,13 +126,13 @@ static void yama_listener() {
 		t_packet packet = protocol_receive_packet(yama_socket);
 		if(packet.operation != OP_HANDSHAKE || packet.sender != PROC_YAMA) {
 			socket_close(yama_socket);
-			break;
+			continue;
 		}
 
 		if(!fs.formatted){
 			log_inform("Filesystem no estable. Se rechaza conexión de YAMA");
 			socket_close(yama_socket);
-			break;
+			continue;
 		}
 
 		log_inform("Yama conectado en socket: %d", yama_socket);
