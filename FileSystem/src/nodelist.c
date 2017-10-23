@@ -121,8 +121,7 @@ void nodelist_print() {
 }
 
 void nodelist_format(){
-	for(int i = 0; i < nodelist_size(); i++){
-		t_node* node = nodelist_get(i);
+	void format_node(t_node* node){
 		if (!nodelist_active(node)){
 			nodelist_remove(node->name);
 		}else{
@@ -130,6 +129,8 @@ void nodelist_format(){
 		}
 		node->free_blocks = node->total_blocks;
 	}
+	mlist_traverse(nodes, format_node);
+
 	update_file();
 }
 
