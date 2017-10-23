@@ -75,3 +75,4 @@ int protocol_receive_response(t_socket socket) {
 		serial_destroy(packet.content);
 	return code;
 }
+

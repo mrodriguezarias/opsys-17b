@@ -7,18 +7,10 @@
 
 #ifndef STRUCT_H_
 #define STRUCT_H_
-
-typedef struct {
-	int bloque;
-	size_t bytesOcupados;
-	t_block_copy copies[2];
-} tinformacionArchivo;
-
-typedef struct {
-	char *node;
-	int blockno;
-} t_block_copy;
-
+#include <stdint.h>
+#include <mlist.h>
+#include <serial.h>
+#include <stdlib.h>
 
 typedef struct{
 	int job;
@@ -33,17 +25,24 @@ typedef struct{
 
 typedef struct{
 	uint32_t disponibilidad;
-	int nombreWorker;
+	char*  nombreWorker;
 	mlist_t* bloque;
 }t_workerPlanificacion;
 
 typedef struct{
 	char* nodo;
-	int ip;
-	int puerto;
+	char* ip;
+	char* puerto;
 
 }t_infoNodo;
 
+mlist_t *nodelist_unpack(t_serial *);
+
+typedef struct{
+	char* nodo;
+	int bloque;
+	int response;
+} respuestaOperacion;
 
 
 #endif /* STRUCT_H_ */

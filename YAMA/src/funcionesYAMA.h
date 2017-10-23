@@ -12,7 +12,8 @@
 #include <socket.h>
 #include <struct.h>
 #include <config.h>
-
+#include "struct.h"
+#include <yfile.h>
 #include <commons/collections/list.h>
 
 
@@ -21,9 +22,9 @@
 
 void planificar();
 void mostrar_configuracion();
-
-
-
+void llenarArrayPlanificador(t_workerPlanificacion[],int,int *);
+void verificarCondicion(int, int *,t_workerPlanificacion[],int *,t_yfile);
+respuestaOperacion* serial_unpackRespuestaOperacion(t_serial *);
 
 
 

@@ -25,16 +25,14 @@ typedef struct {
 	int id;
 	int tamanio;
 } t_cabecera;
-int socket_FileSystem;
 
 t_yama yama;
-mlist_t * listaEstados;
 int numeroJob = 1;
-mlist_t* listaNodosConectados;
+mlist_t* listaNodosActivos;
 
 int main() {
 	process_init();
-	connect_to_filesystem();
+	//connect_to_filesystem();
 	listaEstados = mlist_create();
 	listen_to_master();
 	return EXIT_SUCCESS;
