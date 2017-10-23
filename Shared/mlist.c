@@ -13,7 +13,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <mstring.h>
-#include "thread.h"
+#include <thread.h>
+#include <system.h>
 
 #define is_empty(list) (list->length == 0)
 #define get_elem(node) (node != NULL ? node->elem : NULL)
@@ -159,6 +160,12 @@ bool mlist_contains(mlist_t *list, void *element) {
 	}
 	int index = mlist_index(list, condition);
 	return index != -1;
+}
+
+void *mlist_random(mlist_t *list) {
+	if(list->length == 0) return NULL;
+	int index = system_rand() % list->length;
+	return mlist_get(list, index);
 }
 
 void *mlist_replace(mlist_t *list, int index, void *element) {

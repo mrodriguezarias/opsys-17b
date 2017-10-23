@@ -38,6 +38,8 @@ void *mlist_find(mlist_t *list, void *condition);
 
 bool mlist_contains(mlist_t *list, void *element);
 
+void *mlist_random(mlist_t *list);
+
 void *mlist_replace(mlist_t *list, int index, void *element);
 
 void mlist_traverse(mlist_t *list, void *routine);

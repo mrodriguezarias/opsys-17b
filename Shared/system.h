@@ -58,7 +58,13 @@ const char *system_proc(void);
  * Devuelve el directorio actual donde se ejecutó el proceso.
  * @return Ruta al directorio actual.
  */
-const char *system_cwd();
+const char *system_cwd(void);
+
+/**
+ * Devuelve un número aleatorio.
+ * @return Número entero aleatorio entre 0 y RAND_MAX.
+ */
+int system_rand(void);
 
 /**
  * Termina la ejecución del proceso corriendo.
