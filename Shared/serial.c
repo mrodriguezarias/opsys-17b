@@ -40,6 +40,10 @@ t_serial *serial_create(void *data, size_t size) {
 	t_serial *serial = malloc(sizeof(t_serial));
 	serial->data = data;
 	serial->size = size;
+	if(data != NULL) {
+		serial->data = malloc(size);
+		memcpy(serial->data, data, size);
+	}
 	return serial;
 }
 

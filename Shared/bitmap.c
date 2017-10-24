@@ -3,9 +3,9 @@
 #include <file.h>
 #include <path.h>
 #include <commons/bitarray.h>
-#include <math.h>
+#include <number.h>
 
-#define byte_size(size) ceil((double) size / 8.0)
+#define byte_size(size) number_ceiling((double) size / 8.0)
 
 struct bitmap {
 	t_bitarray *bitarray;

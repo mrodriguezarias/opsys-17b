@@ -55,6 +55,12 @@ size_t file_size(t_file *file);
 FILE *file_pointer(t_file *file);
 
 /**
+ * Mueve la posición actual del archivo al inicio del mismo.
+ * @param file Archivo abierto.
+ */
+void file_rewind(t_file *file);
+
+/**
  * Lee la siguiente línea de un archivo de texto.
  * La cadena devuelta debe ser liberada con free().
  * @param file Archivo a leer.

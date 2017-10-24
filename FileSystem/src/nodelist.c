@@ -9,6 +9,8 @@
 #include <serial.h>
 #include <string.h>
 #include <data.h>
+#include <log.h>
+#include <number.h>
 #include "server.h"
 
 static char *path = NULL;
@@ -29,15 +31,17 @@ static void balance_nodes(t_node *bnodes[]);
 // ========== Funciones públicas ==========
 
 void nodelist_init() {
-	if(nodes != NULL) return;
+	if (nodes != NULL)
+		return;
 	path = mstring_create("%s/metadata/nodos.bin", system_userdir());
 	nodes = mlist_create();
 	init_config();
 
 	char **snodes = config_get_array_value(config, "NODOS");
-	if(snodes == NULL) return;
+	if (snodes == NULL)
+		return;
 
-	for(char **pnode = snodes; *pnode != NULL; pnode++) {
+	for (char **pnode = snodes; *pnode != NULL; pnode++) {
 		char *key = mstring_create("%sTotal", *pnode);
 		int blocks = config_get_int_value(config, key);
 
@@ -50,8 +54,15 @@ void nodelist_init() {
 	free(snodes);
 }
 
-int nodelist_size() {
+int nodelist_length() {
 	return mlist_length(nodes);
+}
+
+int nodelist_freeblocks() {
+	int adder(int nblocks, t_node *node) {
+		return nblocks + node->free_blocks;
+	}
+	return mlist_reduce(nodes, adder);
 }
 
 t_node * nodelist_get(int pos) {
@@ -64,13 +75,11 @@ bool nodelist_active(t_node *node) {
 
 t_serial* nodelist_active_pack() {
 	t_serial *serial = serial_create(NULL, 0);
-	serial_add(serial, "i", nodelist_size());
+	serial_add(serial, "i", mlist_length(nodes));
 
 	void routine(t_node *node) {
-		if (!nodelist_active(node)){
-			serial_add(serial, "sss",
-					node->name,
-					socket_address(node->socket),
+		if (!nodelist_active(node)) {
+			serial_add(serial, "sss", node->name, socket_address(node->socket),
 					socket_port(node->socket));
 		}
 	}
@@ -80,7 +89,7 @@ t_serial* nodelist_active_pack() {
 
 t_node *nodelist_add(const char *name, int blocks) {
 	t_node *node = nodelist_find(name);
-	if(node == NULL) {
+	if (node == NULL) {
 		node = create_node(name, blocks);
 		mlist_append(nodes, node);
 		add_node_to_file(node);
@@ -89,7 +98,8 @@ t_node *nodelist_add(const char *name, int blocks) {
 }
 
 t_node *nodelist_find(const char *name) {
-	if(mstring_isempty(name)) return NULL;
+	if (mstring_isempty(name))
+		return NULL;
 	bool finder(t_node *elem) {
 		return mstring_equal(elem->name, name);
 	}
@@ -100,15 +110,18 @@ void nodelist_addblock(t_block *block, void *data) {
 	t_node *bnodes[2];
 	balance_nodes(bnodes);
 
-	for(int i = 0; i < 2; i++) {
+	for (int i = 0; i < 2; i++) {
 		t_node *node = bnodes[i];
-		if(node == NULL) continue;
+		if (node == NULL)
+			continue;
+
 		int blockno = bitmap_firstzero(node->bitmap);
-		block->copies[i].blockno = blockno;
-		block->copies[i].node = node->name;
 		bitmap_set(node->bitmap, blockno);
 		node->free_blocks--;
 		add_node_to_file(node);
+
+		block->copies[i].blockno = blockno;
+		block->copies[i].node = node->name;
 		t_nodeop *op = server_nodeop(NODE_SEND, blockno, serial_create(data, BLOCK_SIZE));
 		thread_send(node->handler, op);
 	}
@@ -119,7 +132,8 @@ void nodelist_remove(const char *name) {
 		return mstring_equal(elem->name, name);
 	}
 	t_node *node = mlist_remove(nodes, condition, NULL);
-	if(node == NULL) return;
+	if (node == NULL)
+		return;
 
 	remove_node_from_file(node);
 	destroy_node(node);
@@ -134,18 +148,18 @@ void nodelist_clear() {
 void nodelist_print() {
 	puts("Nombre\tActivo\tTotal\tLibre\t%Libre");
 	void iterator(t_node *node) {
-		node->free_blocks = 5023;
-		printf("%s\t%s\t%i\t%i\t%.1f\n", node->name, node_active(node) ? "Sí" : "No",
-				node->total_blocks, node->free_blocks, node_empty_rate(node) * 100);
+		printf("%s\t%s\t%i\t%i\t%.1f\n", node->name,
+				node_active(node) ? "Sí" : "No", node->total_blocks,
+				node->free_blocks, node_empty_rate(node) * 100);
 	}
 	mlist_traverse(nodes, iterator);
 }
 
-void nodelist_format(){
-	void format_node(t_node* node){
-		if (!nodelist_active(node)){
+void nodelist_format() {
+	void format_node(t_node* node) {
+		if (!nodelist_active(node)) {
 			nodelist_remove(node->name);
-		}else{
+		} else {
 			bitmap_clear(node->bitmap);
 			node->free_blocks = node->total_blocks;
 		}
@@ -154,7 +168,6 @@ void nodelist_format(){
 
 	update_file();
 }
-
 
 void nodelist_term() {
 	update_file();
@@ -166,10 +179,12 @@ void nodelist_term() {
 // ========== Funciones privadas ==========
 
 static void init_config() {
-	if(config != NULL) return;
+	if (config != NULL)
+		return;
 	path_mkfile(path);
 	config = config_create(path);
-	if(config_has_property(config, "NODOS")) return;
+	if (config_has_property(config, "NODOS"))
+		return;
 
 	config_set_value(config, "TAMANIO", "0");
 	config_set_value(config, "LIBRE", "0");
@@ -178,14 +193,17 @@ static void init_config() {
 }
 
 static void update_file() {
-	char *keys[] = {"TAMANIO", "LIBRE", "NODOS"};
+	char *keys[] = { "TAMANIO", "LIBRE", "NODOS" };
 	char *key, *value = mstring_empty(NULL);
 
 	int adder(int total, t_node *elem) {
-		return total + (mstring_equal(key, "LIBRE") ? elem->free_blocks : elem->total_blocks);
+		return total
+				+ (mstring_equal(key, "LIBRE") ?
+						elem->free_blocks : elem->total_blocks);
 	}
 
-	for(char **pkey = keys; key = *pkey, !mstring_equal(key, "NODOS"); pkey++) {
+	for (char **pkey = keys; key = *pkey, !mstring_equal(key, "NODOS");
+			pkey++) {
 		mstring_format(&value, "%i", mlist_reduce(nodes, adder));
 		config_set_value(config, key, value);
 	}
@@ -240,14 +258,16 @@ static t_node *create_node(const char *name, int blocks) {
 }
 
 static void destroy_node(t_node *node) {
-	if(node->handler != NULL) thread_kill(node->handler);
+	if (node->handler != NULL)
+		thread_kill(node->handler);
 	bitmap_destroy(node->bitmap);
 	free(node->name);
 	free(node);
 }
 
 static bool node_active(t_node *node) {
-	if(node == NULL || node->handler == NULL) return false;
+	if (node == NULL || node->handler == NULL)
+		return false;
 	thread_send(node->handler, server_nodeop(NODE_PING, -1, NULL));
 	bool active = (bool) thread_receive();
 	return active;
@@ -262,22 +282,27 @@ static void balance_nodes(t_node *bnodes[]) {
 	double r2 = 0;
 
 	void routine(t_node *node) {
-		if(!node_active(node)) return;
+		if (!node_active(node))
+			return;
 		double rate = node_empty_rate(node);
-		if(rate > r1) {
+		if (rate > r1) {
 			r2 = r1;
 			r1 = rate;
 		}
 	}
 	mlist_traverse(nodes, routine);
 
-	bool filter1(t_node *node) { return node_empty_rate(node) == r1; }
-	bool filter2(t_node *node) { return node_empty_rate(node) == r2; }
+	bool filter1(t_node *node) {
+		return number_equals(node_empty_rate(node), r1);
+	}
+	bool filter2(t_node *node) {
+		return number_equals(node_empty_rate(node), r2);
+	}
 
 	mlist_t *f = mlist_filter(nodes, filter1);
 	t_node *n1 = mlist_random(f);
 
-	if(mlist_length(f) == 1) {
+	if (mlist_length(f) == 1) {
 		mlist_destroy(f, NULL);
 		f = mlist_filter(nodes, filter2);
 	}
@@ -285,7 +310,7 @@ static void balance_nodes(t_node *bnodes[]) {
 	t_node *n2 = NULL;
 	do {
 		n2 = mlist_random(f);
-	} while(n2 == n1);
+	} while (n2 == n1);
 
 	mlist_destroy(f, NULL);
 	bnodes[0] = n1;

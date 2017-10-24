@@ -27,7 +27,7 @@ static struct {
 } cfile;
 
 static t_node *receive_node_info(t_socket socket);
-static void datanode_listener(void);
+static void node_listener(void);
 static void yama_listener(void);
 static void datanode_handler(t_node *node);
 static void yama_handler();
@@ -37,7 +37,7 @@ static void update_current_file(void);
 
 void server_start() {
 	cfile.mut = thread_mutex_create();
-	thread_create(datanode_listener, NULL);
+	thread_create(node_listener, NULL);
 	thread_create(yama_listener, NULL);
 }
 
@@ -83,8 +83,8 @@ static t_node *receive_node_info(t_socket socket) {
 	return node;
 }
 
-static void datanode_listener() {
-	t_socket sv_sock = socket_init(NULL, config_get("PUERTO_DATANODE"));
+static void node_listener() {
+	t_socket sv_sock = socket_init(NULL, config_get("PUERTO_NODO"));
 
 	while(thread_active()) {
 		t_socket cli_sock = socket_accept(sv_sock);

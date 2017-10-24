@@ -27,10 +27,16 @@ typedef struct t_node {
 void nodelist_init(void);
 
 /**
- * Devuelve la cantidad de nodos en la lista de nodos.
+ * Devuelve la cantidad total de nodos.
  * @return Cantidad de nodos.
  */
-int nodelist_size(void);
+int nodelist_length(void);
+
+/**
+ * Devuelve la cantidad total de bloques libres.
+ * @return Cantidad de bloques libres.
+ */
+int nodelist_freeblocks(void);
 
 /**
  * Determina si un nodo está activo.

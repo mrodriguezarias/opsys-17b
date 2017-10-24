@@ -38,7 +38,7 @@ static void init() {
 	dirtree_init();
 	filetable_init();
 	nodelist_init();
-	fs.formatted = nodelist_size() > 0;
+	fs.formatted = nodelist_length() > 0;
 }
 
 static void clear_previous_state() {
