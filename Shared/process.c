@@ -16,8 +16,8 @@ void process_init() {
 	current = process_type(path_name(system_proc()));
 	system_init();
 
-	config_init();
 	log_init();
+	config_init();
 	thread_init();
 }
 
