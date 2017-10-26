@@ -4,7 +4,7 @@
 static int contadorBloquesSeguidosNoAsignados = 0;
 static bool asigneBloquesDeArchivo = false;
 
-void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, t_yfile file){
+void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mlist_t* listaBloque){
 	int posicionArray;
 
 	llenarArrayPlanificador(planificador,tamaniolistaNodos,&posicionArray);
@@ -13,7 +13,7 @@ void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, t_y
 		if(posicionArray == tamaniolistaNodos){
 			posicionArray = 0;
 		}
-		verificarCondicion(tamaniolistaNodos, &posicionArray,planificador, &bloque, file);
+		verificarCondicion(tamaniolistaNodos, &posicionArray,planificador, &bloque, listaBloque);
 	}
 }
 
@@ -42,24 +42,26 @@ void llenarArrayPlanificador(t_workerPlanificacion planificador[],int tamaniolis
 		t_infoNodo* nodoObtenido = mlist_get(listaNodosActivos,i);
 		planificador[i].nombreWorker = malloc(sizeof(char)*6);
 		strcpy( planificador[i].nombreWorker, nodoObtenido->nodo);
+		planificador[i].bloque = mlist_create();
 
 	}
 }
 
 
-void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificacion planificador[],int *bloque,t_yfile file){
-	t_block* infoArchivo = mlist_get(file.blocks, *bloque);
+void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificacion planificador[],int *bloque,mlist_t* listaBloque){
+	void* infoArchivoObtenido = mlist_get(listaBloque, *bloque);
+	t_block* infoArchivo = (t_block*) infoArchivoObtenido;
 	if(planificador[*posicion].disponibilidad == 0){
 		planificador[*posicion].disponibilidad = Disponibilidad();
 		posicion++;
 		contadorBloquesSeguidosNoAsignados++;
-	}else if(strcmp(infoArchivo->copies[0].node, planificador[*posicion].nombreWorker) ||  strcmp(infoArchivo->copies[1].node, planificador[*posicion].nombreWorker)){
+	}else if(!strcmp(infoArchivo->copies[0].node, planificador[*posicion].nombreWorker) || !strcmp(infoArchivo->copies[1].node, planificador[*posicion].nombreWorker)){
 		planificador[*posicion].disponibilidad--;
-		mlist_append(planificador[*posicion].bloque, bloque); //ROMPE ESTA LINEA(no cree la lista de bloque)
-		if(mlist_length(file.blocks) == *bloque){
+		mlist_append(planificador[*posicion].bloque,(void*)*bloque);
+		*bloque = *bloque + 1;
+		if(mlist_length(listaBloque) == *bloque){
 			asigneBloquesDeArchivo = true;
 		}
-		*bloque = *bloque + 1;
 		*posicion = *posicion +1;
 		contadorBloquesSeguidosNoAsignados = 0;
 	}

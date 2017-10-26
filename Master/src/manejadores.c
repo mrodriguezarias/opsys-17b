@@ -2,8 +2,12 @@
 
 void finalizar_manejador_transf(int response, t_socket socket,
 		tEtapaTransformacion* transformacion) {
-	t_serial *serial_yama = serial_pack("sii", transformacion->nodo,
-			transformacion->bloque, response);
+	t_serial *serial_yama = serial_pack("siis",
+			transformacion->nodo,
+			transformacion->bloque,
+			response,
+			job.arch);
+
 	pthread_mutex_lock(&mutex_hilos);
 	actualizar_hilo(response);
 	pthread_mutex_unlock(&mutex_hilos);
@@ -27,7 +31,8 @@ void finalizar_manejador_transf(int response, t_socket socket,
 }
 
 void manejador_transformacion(tEtapaTransformacion* transformacion) {
-	log_print("Hilo %d creado ETAPA_TRANSFORMACION", thread_self());
+	thread_t *hilo = thread_self();
+	log_print("Hilo %lu creado ETAPA_TRANSFORMACION", hilo);
 	int response;
 
 	t_socket socket = connect_to_worker(transformacion->ip, transformacion->puerto);
@@ -94,7 +99,7 @@ void manejador_rl(tEtapaReduccionLocal * etapa_rl) {
 
 	t_socket socket = connect_to_worker(etapa_rl->ip, etapa_rl->puerto);
 
-	if (socket == 1){
+	if (socket == -1){
 		response = -1;
 		finalizar_manejador_rl(response, socket, etapa_rl);
 		thread_send(hilo_node_drop, etapa_rl->nodo);
@@ -113,6 +118,7 @@ void manejador_rl(tEtapaReduccionLocal * etapa_rl) {
 		log_inform("Envío a %s socket %d OP_INICIAR_REDUCCION_LOCAL",
 				etapa_rl->nodo,
 				socket);
+
 		if(!enviar_operacion_worker(OP_INICIAR_REDUCCION_LOCAL, socket, serial_worker)){
 			response = -1;
 			finalizar_manejador_rl(response, socket, etapa_rl);
@@ -141,6 +147,7 @@ void finalizar_manejador_rg(int response, t_socket socket, mlist_t* list,
 				worker->nodo);
 	}else{
 		log_print("Finalización hilo %d REDUCCION_GLOBAL realizada", thread_self());
+
 	}
 
 	socket_close(socket);
@@ -167,7 +174,7 @@ void manejador_rg(mlist_t* list) {
 
 	t_socket socket = connect_to_worker(worker_manager->ip, worker_manager->puerto);
 
-	if (socket == 1){
+	if (socket == -1){
 		response = -1;
 		finalizar_manejador_rg(response, socket, list, worker_manager);
 		thread_send(hilo_node_drop, worker_manager->nodo);
@@ -222,10 +229,11 @@ void finalizar_manejador_af(int response, t_socket socket, tAlmacenadoFinal* af)
 		log_print("Finalización hilo %d ALMACENAMIENTO_FINAL realizada", thread_self());
 	}
 
-	times.job_end = get_current_time();
 	socket_close(socket);
 	log_print("Conexión a Worker en %s:%s por el socket %i cerrada",
 			af->ip, af->puerto, socket);
+	times.job_end = get_current_time();
+
 	free(af);
 	enviar_resultado_yama(OP_ALMACENAMIENTO_LISTA, serial_yama);
 	log_inform("Envío a YAMA socket %d OP_ALMACENAMIENTO_LISTA",
@@ -238,7 +246,7 @@ void manejador_af(tAlmacenadoFinal* af) {
 	int response;
 
 	t_socket socket = connect_to_worker(af->ip, af->puerto);
-	if (socket == 1){
+	if (socket == -1){
 		response = -1;
 		finalizar_manejador_af(response, socket, af);
 		thread_send(hilo_node_drop, af->nodo);

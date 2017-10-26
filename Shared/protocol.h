@@ -16,9 +16,13 @@ typedef enum {
 	OP_RESPONSE,
 	OP_INIT_JOB,
 	OP_NODE_INFO,
-	OP_GET_FILE, 					//yama -> filesystem
 	OP_REQUEST_BLOCK,
 	OP_SEND_BLOCK,
+	OP_REQUEST_FILE_INFO,			// yama -> filesystem
+
+	OP_NODES_ACTIVE_INFO,			// filesystem -> yama
+	OP_ARCHIVO_NODES,			// filesystem -> yama
+	OP_ARCHIVO_INEXISTENTE,			// filesystem -> yama
 	OP_INICIAR_TRANSFORMACION,		// yama -> master
   	OP_INICIAR_REDUCCION_LOCAL,		// yama -> master
 	OP_INICIAR_REDUCCION_GLOBAL,	// yama -> master

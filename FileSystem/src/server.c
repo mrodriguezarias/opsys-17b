@@ -16,6 +16,7 @@
 
 #include "FileSystem.h"
 #include "nodelist.h"
+#include "filetable.h"
 
 static struct {
 	mutex_t *mut;
@@ -26,15 +27,18 @@ static struct {
 } cfile;
 
 static t_node *receive_node_info(t_socket socket);
-static void datanode_listener(void);
+static void node_listener(void);
+static void yama_listener(void);
 static void datanode_handler(t_node *node);
+static void yama_handler();
 static void update_current_file(void);
 
 // ========== Funciones públicas ==========
 
 void server_start() {
 	cfile.mut = thread_mutex_create();
-	thread_create(datanode_listener, NULL);
+	thread_create(node_listener, NULL);
+	thread_create(yama_listener, NULL);
 }
 
 t_nodeop *server_nodeop(int opcode, int blockno, t_serial *block) {
@@ -79,8 +83,8 @@ static t_node *receive_node_info(t_socket socket) {
 	return node;
 }
 
-static void datanode_listener() {
-	t_socket sv_sock = socket_init(NULL, config_get("PUERTO_DATANODE"));
+static void node_listener() {
+	t_socket sv_sock = socket_init(NULL, config_get("PUERTO_NODO"));
 
 	while(thread_active()) {
 		t_socket cli_sock = socket_accept(sv_sock);
@@ -112,6 +116,63 @@ static void datanode_listener() {
 
 	socket_close(sv_sock);
 }
+
+static void yama_listener() {
+	t_socket sv_sock = socket_init(NULL, config_get("PUERTO_YAMA"));
+
+	while(thread_active()) {
+		t_socket yama_socket = socket_accept(sv_sock);
+
+		t_packet packet = protocol_receive_packet(yama_socket);
+		if(packet.operation != OP_HANDSHAKE || packet.sender != PROC_YAMA) {
+			socket_close(yama_socket);
+			continue;
+		}
+
+		if(!fs.formatted){
+			log_inform("Filesystem no estable. Se rechaza conexión de YAMA");
+			socket_close(yama_socket);
+			continue;
+		}
+
+		log_inform("Yama conectado en socket: %d", yama_socket);
+
+		yama_handler();
+	}
+
+	socket_close(sv_sock);
+}
+
+static void yama_handler() {
+
+	while(thread_active()) {
+
+		t_packet packet = protocol_receive_packet(yama_socket);
+
+		if (packet.operation == OP_REQUEST_FILE_INFO) {
+				log_inform("Receive OP_REQUEST_FILE_INFO");
+
+				char* file_request;
+				serial_unpack(packet.content, "s", &file_request);
+				packet = protocol_packet(OP_NODES_ACTIVE_INFO, nodelist_active_pack());
+				protocol_send_packet(packet, yama_socket);
+				log_inform("Send OP_NODES_ACTIVE_INFO");
+
+				t_yfile * yfile = filetable_find(file_request);
+				if(yfile == NULL){
+					packet = protocol_packet(OP_ARCHIVO_INEXISTENTE, serial_pack("s", file_request));
+					protocol_send_packet(packet, yama_socket);
+					log_inform("Send OP_ARCHIVO_INEXISTENTE %s", file_request);
+				}else{
+					packet = protocol_packet(OP_ARCHIVO_NODES, yfile_pack(yfile));
+					protocol_send_packet(packet, yama_socket);
+					log_inform("Send OP_ARCHIVO_NODES");
+				}
+		}
+		serial_destroy(packet.content);
+	}
+}
+
 
 static void datanode_handler(t_node *node) {
 	t_nodeop *op;

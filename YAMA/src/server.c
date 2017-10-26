@@ -36,27 +36,26 @@ void listen_to_master() {
 				} else {
 					socket_close(cli_sock);
 				}
+				serial_destroy(packet.content);
 			} else {
-				t_packet packet = protocol_receive_packet(sock);
-				if(packet.operation == OP_UNDEFINED) {
+				t_packet packetOperacion = protocol_receive_packet(sock);
+				if(packetOperacion.operation == OP_UNDEFINED) {
 					socket_close(sock);
 					socket_set_remove(sock, &sockets);
 					continue;
 				}
 
-				switch(packet.operation) {
+				switch(packetOperacion.operation) {
 				case OP_INIT_JOB:
-					{init_job(packet.content);
-					t_yfile Datosfile;
-					listaNodosActivos = mlist_create(); //luego borrar es para el hardcodeo
-					Datosfile.blocks = mlist_create(); //luego borrar es para el hardcodeo
+					{init_job(packetOperacion.content);
+					t_yfile* Datosfile = malloc(sizeof(t_yfile));
+					/*listaNodosActivos = mlist_create(); //luego borrar es para el hardcodeo
+					Datosfile->blocks = mlist_create(); //luego borrar es para el hardcodeo */
 					log_print("OP_INIT_JOB");
-					/*requerirInfoNodos();
-					reciboInfoNodos(listaNodosActivos);
-					requerirInfoArchivo(packet.content);
-					reciboInfoArchivo(&Datosfile);*/
+					requerirInformacionFilesystem(packetOperacion.content);
+					reciboInformacionSolicitada(listaNodosActivos,Datosfile,sock);
 					///////////////////////////// hardcodeado
-					t_infoNodo* UnNodo = malloc(sizeof(t_infoNodo));
+					/*t_infoNodo* UnNodo = malloc(sizeof(t_infoNodo));
 					t_infoNodo* UnNodo2 = malloc(sizeof(t_infoNodo));
 
 					UnNodo->nodo = "NODO1";
@@ -76,21 +75,21 @@ void listen_to_master() {
 					bloque->copies[0].node = "NODO1";
 					bloque->copies[1].blockno = 11;
 					bloque->copies[1].node = "NODO2";
-					mlist_append(Datosfile.blocks,bloque);
+					mlist_append(Datosfile->blocks,bloque); */
 
 
 					/////////////////////////////////
 					//planifico
 					int tamaniolistaNodos = mlist_length(listaNodosActivos);
 					t_workerPlanificacion planificador[tamaniolistaNodos];
-					planificar(planificador, tamaniolistaNodos,Datosfile);
+					planificar(planificador, tamaniolistaNodos,Datosfile->blocks);
 					//inicio etapa de tranformacion
-					enviarEtapa_transformacion_Master(tamaniolistaNodos,planificador,listaNodosActivos,Datosfile.blocks,sock);
+					enviarEtapa_transformacion_Master(tamaniolistaNodos,planificador,listaNodosActivos,Datosfile->blocks,sock);
 					numeroJob +=1;
 					}
 					break;
 				case OP_TRANSFORMACION_LISTA :
-					{respuestaOperacion* finalizoOperacion = serial_unpackRespuestaOperacion(packet.content);
+					{respuestaOperacion* finalizoOperacion = serial_unpackRespuestaOperacion(packetOperacion.content);
 					if(finalizoOperacion->response == -1){
 						//replanifacion();
 						//actualizoTablaEstado(finalizoOperacion.nodo,finalizoOperacion.bloque,"Transformacion");hay que agregar una entrada para el nuevo nodo que va a ejecutar
@@ -107,12 +106,12 @@ void listen_to_master() {
 					}
 				break;
 				default:
-					log_report("Operación desconocida: %s", packet.operation);
+					log_report("Operación desconocida: %s", packetOperacion.operation);
 				break;
 
 				}
-
-				serial_destroy(packet.content);
+				printf("llegue aca \n");
+				//serial_destroy(packetOperacion.content);
 			}
 		}
 	}
@@ -139,47 +138,66 @@ void agregarAtablaEstado(char* nodo,int Master,int bloque,char* etapa,char* arch
 
 }
 
-void requerirInfoArchivo(t_serial *file){
+void requerirInformacionFilesystem(t_serial *file){
 	t_serial *content = serial_pack("s", file);
-	t_packet packet = protocol_packet(OP_GET_FILE, content);
-	protocol_send_packet(packet,yama.fs_socket);
+	t_packet packetInfoFs = protocol_packet(OP_REQUEST_FILE_INFO, content);
+	protocol_send_packet(packetInfoFs,yama.fs_socket);
+	serial_destroy(packetInfoFs.content);
 }
 
 
-void requerirInfoNodos(){
-	protocol_send_response(yama.fs_socket,OP_NODE_INFO);
-}
-
-void reciboInfoNodos(mlist_t* listaNodosActivos){
-	t_packet packet = protocol_receive_packet(yama.fs_socket);
-	listaNodosActivos = nodelist_unpack(packet.content);
-
-}
-
-void reciboInfoArchivo(t_yfile* Datosfile){
-	t_packet packet = protocol_receive_packet(yama.fs_socket);
-	if(packet.operation == OP_GET_FILE){
-		Datosfile = yfile_unpack(packet.content);
+void reciboInformacionSolicitada(mlist_t* listaNodosActivos,t_yfile* Datosfile,int master){
+	t_packet packetNodosActivos = protocol_receive_packet(yama.fs_socket);
+	if(packetNodosActivos.operation == OP_NODES_ACTIVE_INFO){
+	listaNodosActivos = nodelist_unpack(packetNodosActivos.content);
 	}
+		t_packet packetArchivo = protocol_receive_packet(yama.fs_socket);
+		if(packetArchivo.operation == OP_ARCHIVO_INEXISTENTE){
+			envioMasterErrorArchivo(master);
+		}
+
+		else if(packetArchivo.operation == OP_ARCHIVO_NODES){
+		Datosfile = yfile_unpack(packetArchivo.content);
+		}
+
+		serial_destroy(packetNodosActivos.content);
+		serial_destroy(packetArchivo.content);
+
+}
+
+void envioMasterErrorArchivo(int master){
+	t_packet packetError;
+	packetError = protocol_packet(OP_ERROR_JOB, serial_pack("ARCHIVO_INEXISTENTE"));
+	protocol_send_packet(packetError, master);
+	serial_destroy(packetError.content);
+
 }
 
 void enviarEtapa_transformacion_Master(int tamaniolistaNodos,t_workerPlanificacion planificador[],mlist_t* listaNodosActivos,mlist_t* listabloques,int sock){
 	mlist_t* lista = mlist_create();
 	int i, j = 0;
+	int nroIndex;
 	for(i = 0; i < tamaniolistaNodos; i++){
 		for(j = 0; j < mlist_length(planificador[i].bloque); j++){
-			void* nroBloqueObtenido = mlist_get(planificador[i].bloque, j);
-			int  nroBloque = (int)nroBloqueObtenido;
+			void* nroIndexOBtenido = mlist_get(planificador[i].bloque, j);
+			nroIndex = (int)nroIndexOBtenido; //error en el numero de bloque devuelto
 
 		  t_infoNodo* datosNodoAEnviar = mlist_get(listaNodosActivos, i);
 
 		  bool condition(void* datosDeUnBloque){
-		  	return ((t_block *) datosDeUnBloque)->index == nroBloque ? true : false;
+		  	return ((t_block *) datosDeUnBloque)->index == nroIndex ? true : false;
 		  }
-		  t_block * datosDeUnBloque = mlist_find(listabloques,(void*) condition);
+		  void* datosDeUnBloqueObtenido = mlist_find(listabloques,(void*) condition); //devuelve void* hay que machear
+		  t_block* datosDeUnBloque = (t_block*)datosDeUnBloqueObtenido;
+		  int nroBloque;
+		  if(!strcmp(datosDeUnBloque->copies[0].node, datosNodoAEnviar->nodo)){
+			  nroBloque = datosDeUnBloque->copies[0].blockno;
+		  } else{
+			  nroBloque = datosDeUnBloque->copies[1].blockno;
+		  }
 		  char* nombreArchivoTemporal = malloc(sizeof(char)*21);
 		  strcpy(nombreArchivoTemporal, generarNombreArchivoTemporal(sock, nroBloque));
-		  tEtapaTransformacion* et = new_etapa_transformacion(datosNodoAEnviar->nodo,datosNodoAEnviar->ip,datosNodoAEnviar->puerto,nroBloque, datosDeUnBloque->size,nombreArchivoTemporal);
+		  tEtapaTransformacion* et = new_etapa_transformacion(datosNodoAEnviar->nodo,datosNodoAEnviar->ip,datosNodoAEnviar->puerto,nroBloque, datosDeUnBloque->size,nombreArchivoTemporal); //ROMPE EN ESTA funcion
 		  mlist_append(lista,et);
 		  agregarAtablaEstado(datosNodoAEnviar->nodo,sock,nroBloque,"Transformacion",nombreArchivoTemporal,"En proceso");
 		}

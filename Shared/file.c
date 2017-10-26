@@ -52,6 +52,12 @@ FILE *file_pointer(t_file *file) {
 	return file->fp;
 }
 
+void file_rewind(t_file *file) {
+	if(file != NULL) {
+		rewind(file->fp);
+	}
+}
+
 char *file_readline(t_file *file) {
 	if(file == NULL) return NULL;
 	char *line = get_line(file->fp);

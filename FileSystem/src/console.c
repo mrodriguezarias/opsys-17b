@@ -62,11 +62,12 @@ static char *rl_generator(const char*, int);
 
 static t_command commands[] = {
 		{"cat", cmd_cat, "Muestra el contenido de un archivo", "archivo"},
-		{"clear", cmd_clear, "Borra la pantalla", ""},
+		{"clear", cmd_clear, "", ""},
 		{"cpblock", cmd_cpblock, "Copia un bloque de un archivo en un nodo", "archivo bloque nodo"},
 		{"cpfrom", cmd_cpfrom, "Copia un archivo local a yamafs", "archivo_local directorio_yamafs"},
 		{"cpto", cmd_cpto, "Copia un archivo yamafs al sistema local", "archivo_yamafs directorio_local"},
-		{"debug", cmd_debug, "Comando para depuración", "nodes | dirs"},
+		{"debug", cmd_debug, "", ""},
+		{"exit", cmd_quit, "", ""},
 		{"format", cmd_format, "Da formato al sistema de archivos", ""},
 		{"help", cmd_help, "Lista los comandos disponibles", "[comando]"},
 		{"info", cmd_info, "Muestra información de un archivo", "archivo"},
@@ -239,8 +240,8 @@ static void cmd_format() {
 
 	char* scan;
 	scan = readline("> ");
-	if (mstring_equal(scan, "S")) {
-		if (nodelist_size() > 0) {
+	if (mstring_equali(scan, "S")) {
+		if (nodelist_length() > 0) {
 
 			dirtree_clear();
 			filetable_clear();
@@ -259,7 +260,8 @@ static void cmd_help() {
 	int printed = 0;
 
 	for(int i = 0; commands[i].name; i++) {
-		if(!*current_args || (strcmp(current_args, commands[i].name) == 0)) {
+		if((!*current_args || mstring_equal(current_args, commands[i].name))
+				&& !mstring_isempty(commands[i].info)) {
 			printf("%s\t\t%s.\n", commands[i].name, commands[i].info);
 			printed++;
 			if(*current_args) {
@@ -416,11 +418,19 @@ static void execute_line(const char *line) {
 		command_not_found(cmd);
 		return;
 	}
-	if(!mstring_equal(command->name, "format") && !fs.formatted) {
-		printf("\nEl Filesystem no se encuentra formateado.\n"
-				"Para poder operar proceda a formatear con el comando <<format>>\n");
-		return;
-	}
+
+	// Lo comento para no tener que estar haciendo format a cada rato.
+	// Cuando terminemos con los otros comandos lo descomentamos.
+//	if(!fs.formatted
+//			&& !mstring_equal(command->name, "format")
+//			&& !mstring_equal(command->name, "debug")
+//			&& !mstring_equal(command->name, "help")
+//			&& !mstring_equal(command->name, "clear")
+//			&& !mstring_equal(command->name, "quit")) {
+//		printf("\nEl Filesystem no se encuentra formateado.\n"
+//				"Para poder operar proceda a formatear con el comando <<format>>\n");
+//		return;
+//	}
 
 	current_cmd = command - commands;
 	current_args = args;

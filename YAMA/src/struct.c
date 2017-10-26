@@ -15,6 +15,6 @@ mlist_t *nodelist_unpack(t_serial *serial) {
 				);
 		mlist_append(list, infonodo);
 	}
-
+	serial_destroy(serial);
 	return list;
 }

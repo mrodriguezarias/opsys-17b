@@ -89,6 +89,15 @@ const char *system_cwd() {
 	return cwd;
 }
 
+int system_rand() {
+	static bool seed = false;
+	if(!seed) {
+		srand(time(NULL));
+		seed = true;
+	}
+	return rand();
+}
+
 void system_exit(const char *error, ...) {
 	if(mstring_isempty(error)) exit(EXIT_SUCCESS);
 

@@ -4,10 +4,9 @@
 #include "struct.h"
 
 void listen_to_master(void);
-void requerirInfoNodos();
-void reciboInfoNodos(mlist_t*);
-void requerirInfoArchivo(t_serial*);
-void reciboInfoArchivo(t_yfile*);
+void requerirInformacionFilesystem(t_serial*);
+void reciboInformacionSolicitada(mlist_t*,t_yfile*,int);
+void envioMasterErrorArchivo(int);
 void enviarEtapa_transformacion_Master(int,t_workerPlanificacion[],mlist_t*,mlist_t*,int);
 char* generarNombreArchivoTemporal(int, int);
 void actualizoTablaEstado(char*,int,char*);

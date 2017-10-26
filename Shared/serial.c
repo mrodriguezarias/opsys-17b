@@ -40,6 +40,10 @@ t_serial *serial_create(void *data, size_t size) {
 	t_serial *serial = malloc(sizeof(t_serial));
 	serial->data = data;
 	serial->size = size;
+	if(data != NULL) {
+		serial->data = malloc(size);
+		memcpy(serial->data, data, size);
+	}
 	return serial;
 }
 
@@ -91,7 +95,8 @@ void serial_destroy(t_serial *serial) {
 // ========== Funciones privadas ==========
 
 static void add_variadic(t_serial *serial, const char *format, va_list ap) {
-	char buffer[SERIAL_MAX];
+	size_t cap = 256;
+	char *buffer = malloc(cap);
 	char *buf = buffer;
 
 	signed char c;
@@ -115,6 +120,11 @@ static void add_variadic(t_serial *serial, const char *format, va_list ap) {
 	t_serial *x;
 
 	for(; *format != '\0'; format++) {
+		if(buf - buffer > cap) {
+			cap *= 2;
+			buffer = realloc(buffer, cap);
+		}
+
 		switch(*format) {
 		case 'c': // 8-bit
 			c = (signed char)va_arg(ap, int); // promoted
@@ -195,6 +205,7 @@ static void add_variadic(t_serial *serial, const char *format, va_list ap) {
 	serial->data = realloc(serial->data, serial->size + added_size);
 	memcpy(serial->data + serial->size, buffer, added_size);
 	serial->size += added_size;
+	free(buffer);
 }
 
 static void remove_variadic(t_serial *serial, const char *format, va_list ap) {

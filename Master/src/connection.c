@@ -34,10 +34,10 @@ t_socket connect_to_worker(const char *ip, const char *port) { // La ip y el pue
 	t_socket socket = socket_connect(ip, port);
 	if(socket == -1) {
 		log_print("Worker no está corriendo en %s:%s", ip, port);
-		return -1;
+	}else{
+		protocol_send_handshake(socket);
+		log_print("Conectado a Worker en %s:%s por el socket %i", ip, port, socket);
 	}
-
-	protocol_send_handshake(socket);
-	log_print("Conectado a Worker en %s:%s por el socket %i", ip, port, socket);
 	return socket;
+
 }

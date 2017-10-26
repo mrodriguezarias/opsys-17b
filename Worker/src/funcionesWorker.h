@@ -73,7 +73,7 @@ typedef struct{
 }tEtapaReduccionGlobalWorker;
 
 t_socket socketEscuchaMaster,socketEscuchaWorker, socketFileSystem,socketWorker;
-char * archivoTemporalDeReduccionLocal;
+
 
 void listen_to_master();
 t_file* crearScript(char * bufferScript,int);
@@ -83,4 +83,8 @@ void manejador_master(t_packet *packet,int socket);
 void manejador_worker(t_packet * packet,int socket);
 t_socket connect_to_worker(const char *ip, const char *port);
 void mandarDatosAWorkerHomologo(tEtapaReduccionGlobal * rg,int);
+void asignarOffset(int * offset,int bloque,int bytesOcuapdos);
+void ejecutarComando(char * command, int socketAceptado);
+mlist_t * crearListaParaReducir(tEtapaReduccionGlobalWorker * rg);
+
 #endif
