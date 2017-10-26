@@ -1,4 +1,5 @@
 #include "Master.h"
+#include "funcionesMaster.h"
 
 #include <process.h>
 #include <protocol.h>
@@ -14,30 +15,17 @@ int main(int argc, char *argv[]) {
 		puts("Faltan argumentos");
 		return EXIT_SUCCESS;
 	}
-	job_init = get_current_time();
 
-	job.path_transf = string_duplicate(argv[1]);
-	job.path_reduc = string_duplicate(argv[2]);
-	job.arch = string_duplicate(argv[3]);
-	job.arch_result = string_duplicate(argv[4]);
-	cargar_scripts(job.path_transf, job.path_reduc);
-	hilos = mlist_create();
-	pthread_mutex_init(&mutex_hilos, NULL);
+	init(argv);
 
-	tareasParalelo.total = 0;
-	tareasParalelo.transf = 0;
-	tareasParalelo.reducc = 0;
+	hilo_node_drop = thread_create(node_drop, NULL);
 
-	process_init();
-	connect_to_yama();
-	request_job_for_file(job.arch);
-	job_active = true;
-
-	t_packet packet;
 	do {
-		packet = protocol_receive_packet(yama_socket);
-		manejador_yama(packet);
-	} while(job_active);
+		t_packet paquete = protocol_receive_packet(yama_socket);
+		manejador_yama(paquete);
+	}while(job_active);
+
+
 	terminate();
 	return EXIT_SUCCESS;
 }

@@ -1,5 +1,6 @@
 #include "socket.h"
 
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -7,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <mstring.h>
 
 #define BACKLOG 5
 #define MAXSIZE 1024
@@ -115,6 +117,25 @@ int socket_set_contains(t_socket fd, t_fdset *fds) {
 	return FD_ISSET(fd, &fds->set);
 }
 
+char *socket_address(t_socket sock) {
+	struct sockaddr_in addr;
+	socklen_t len = sizeof addr;
+	getsockname(sock, (struct sockaddr*) &addr, &len);
+
+	char ip[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &addr.sin_addr, ip, sizeof ip);
+	return mstring_duplicate(ip);
+}
+
+char *socket_port(t_socket sock) {
+	struct sockaddr_in addr;
+	socklen_t len = sizeof addr;
+	getsockname(sock, (struct sockaddr*) &addr, &len);
+
+	int port = ntohs(addr.sin_port);
+	return mstring_create("%i", port);
+}
+
 t_fdset socket_select(t_fdset fds) {
 	t_fdset sfds = fds;
 	int r = select(sfds.max + 1, &sfds.set, NULL, NULL, NULL);
@@ -170,7 +191,8 @@ static size_t sendall(t_socket sockfd, const void *buf, size_t len) {
 	size_t bytes_sent = 0;
 
 	while(bytes_sent < len) {
-		ssize_t n = send(sockfd, buf + bytes_sent, len - bytes_sent, 0);
+		ssize_t n = send(sockfd, buf + bytes_sent, len - bytes_sent, MSG_NOSIGNAL);
+		if(n == -1 && errno == EPIPE) break;
 		check_descriptor(n);
 		bytes_sent += n;
 	}

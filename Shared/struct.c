@@ -59,6 +59,7 @@ void mandar_etapa_transformacion(mlist_t* list,t_socket sock){
 	t_serial *serial = list_transformacion_pack(list);
 	t_packet paquete = protocol_packet(OP_INICIAR_TRANSFORMACION, serial);
 	protocol_send_packet(paquete, sock);
+	serial_destroy(serial);
 }
 
 /*
@@ -119,6 +120,7 @@ tEtapaReduccionLocal* etapa_rl_unpack(t_serial *serial){
 		mlist_append(rl->archivos_temporales_de_transformacion, arch[i]);
 		i++;
 	}
+
 	return rl;
 }
 
@@ -126,6 +128,7 @@ void mandar_etapa_rl(tEtapaReduccionLocal* rl,t_socket sock){
 	t_serial *serial = etapa_rl_pack(rl);
 	t_packet paquete = protocol_packet(OP_INICIAR_REDUCCION_LOCAL, serial);
 	protocol_send_packet(paquete, sock);
+	serial_destroy(serial);
 }
 
 /*
@@ -208,6 +211,7 @@ void mandar_etapa_rg(mlist_t* list,t_socket sock){
 	t_serial *serial = list_reduccionGlobal_pack(list);
 	t_packet paquete = protocol_packet(OP_INICIAR_REDUCCION_GLOBAL, serial);
 	protocol_send_packet(paquete, sock);
+	serial_destroy(serial);
 }
 
 /*
@@ -254,4 +258,5 @@ void mandar_etapa_af(tAlmacenadoFinal* af,t_socket sock){
 	t_serial *serial = etapa_af_pack(af);
 	t_packet paquete = protocol_packet(OP_INICIAR_ALMACENAMIENTO, serial);
 	protocol_send_packet(paquete, sock);
+	serial_destroy(serial);
 }

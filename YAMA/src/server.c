@@ -48,6 +48,8 @@ void listen_to_master() {
 				case OP_INIT_JOB:
 					{init_job(packet.content);
 					t_yfile Datosfile;
+					listaNodosActivos = mlist_create(); //luego borrar es para el hardcodeo
+					Datosfile.blocks = mlist_create(); //luego borrar es para el hardcodeo
 					log_print("OP_INIT_JOB");
 					/*requerirInfoNodos();
 					reciboInfoNodos(listaNodosActivos);
@@ -55,15 +57,17 @@ void listen_to_master() {
 					reciboInfoArchivo(&Datosfile);*/
 					///////////////////////////// hardcodeado
 					t_infoNodo* UnNodo = malloc(sizeof(t_infoNodo));
+					t_infoNodo* UnNodo2 = malloc(sizeof(t_infoNodo));
+
 					UnNodo->nodo = "NODO1";
 					UnNodo->ip = "127.0.0.1";
 					UnNodo->puerto = "9262";
-					mlist_append(listaNodosActivos,UnNodo);
+					UnNodo2->nodo = "NODO2";
+					UnNodo2->ip = "127.0.0.1";
+					UnNodo2->puerto = "9263";
 
-					UnNodo->nodo = "NODO2";
-					UnNodo->ip = "127.0.0.1";
-					UnNodo->puerto = "9263";
 					mlist_append(listaNodosActivos,UnNodo);
+					mlist_append(listaNodosActivos,UnNodo2);
 
 					t_block* bloque = malloc(sizeof(t_block));
 					bloque->index = 0;

@@ -22,7 +22,7 @@ int availabilityClock(){
 }
 
 int Disponibilidad(){
-	if(strcmp("CLOCK",config_get("ALGORITMO_BALANCEO"))){
+	if(!strcmp("CLOCK",config_get("ALGORITMO_BALANCEO"))){
 		return availabilityClock();
 	}
 	else{
@@ -40,7 +40,9 @@ void llenarArrayPlanificador(t_workerPlanificacion planificador[],int tamaniolis
 			*posicion = i;
 		}
 		t_infoNodo* nodoObtenido = mlist_get(listaNodosActivos,i);
+		planificador[i].nombreWorker = malloc(sizeof(char)*6);
 		strcpy( planificador[i].nombreWorker, nodoObtenido->nodo);
+
 	}
 }
 
@@ -53,7 +55,7 @@ void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificaci
 		contadorBloquesSeguidosNoAsignados++;
 	}else if(strcmp(infoArchivo->copies[0].node, planificador[*posicion].nombreWorker) ||  strcmp(infoArchivo->copies[1].node, planificador[*posicion].nombreWorker)){
 		planificador[*posicion].disponibilidad--;
-		mlist_append(planificador[*posicion].bloque, bloque);
+		mlist_append(planificador[*posicion].bloque, bloque); //ROMPE ESTA LINEA(no cree la lista de bloque)
 		if(mlist_length(file.blocks) == *bloque){
 			asigneBloquesDeArchivo = true;
 		}

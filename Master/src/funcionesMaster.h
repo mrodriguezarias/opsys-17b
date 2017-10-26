@@ -2,6 +2,7 @@
 #define FUNCIONESMASTER_H_
 
 #include <string.h>
+#include <serial.h>
 #include "Master.h"
 #include "manejadores.h"
 #include <file.h>
@@ -12,6 +13,20 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <unistd.h>
+
+void kill_thread(t_hilos*);
+
+void node_drop();
+
+void actualizar_hilo(int);
+
+bool enviar_operacion_worker(int, t_socket, t_serial*);
+
+void response_worker(t_socket, int*);
+
+bool enviar_resultado_yama(int, t_serial*);
+
+t_hilos* set_hilo(int, char*);
 
 void cargar_scripts(char*, char*);
 
@@ -25,6 +40,7 @@ const char *timediff(time_t, time_t);
 
 void verificarParalelismo();
 
+void init(char*[]);
 void terminate();
 
 #endif //MASTER_H

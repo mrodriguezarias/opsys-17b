@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/select.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 typedef int t_socket;
 
@@ -106,6 +107,22 @@ void socket_set_remove(t_socket fd, t_fdset *fds);
  * @param fds Conjunto de sockets.
  */
 int socket_set_contains(t_socket fd, t_fdset *fds);
+
+/**
+ * Obtiene la dirección IP de un socket.
+ * La cadena resultante debe ser liberada con free().
+ * @param sock Descriptor del socket.
+ * @return IP del socket.
+ */
+char *socket_address(t_socket sock);
+
+/**
+ * Obtiene el puerto de un socket.
+ * La cadena resultante debe ser liberada con free().
+ * @param sock Descriptor del socket.
+ * @return Puerto del socket.
+ */
+char *socket_port(t_socket sock);
 
 /**
  * Realiza un select() sobre un determinado set de sockets.

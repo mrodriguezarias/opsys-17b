@@ -11,17 +11,15 @@
 
 typedef enum {
 	OP_UNDEFINED,
+	OP_PING,
 	OP_HANDSHAKE,
 	OP_RESPONSE,
 	OP_INIT_JOB,
 	OP_NODE_INFO,
 	OP_GET_FILE, 					//yama -> filesystem
-
-	OP_SET_BLOCK,
-	OP_GET_BLOCK,
-
+	OP_REQUEST_BLOCK,
+	OP_SEND_BLOCK,
 	OP_INICIAR_TRANSFORMACION,		// yama -> master
-	OP_INICIAR_REPLANIFICACION,		// yama -> master
   	OP_INICIAR_REDUCCION_LOCAL,		// yama -> master
 	OP_INICIAR_REDUCCION_GLOBAL,	// yama -> master
 	OP_INICIAR_ALMACENAMIENTO,		// yama -> master
@@ -38,6 +36,14 @@ typedef enum {
 	REGISTRARNODO,					// filesystem -> datanode
 
 } t_operation;
+
+//interrupciones del job
+enum{FS_NO_ESTABLE,
+	ARCHIVO_INEXISTENTE,
+	ERROR_REPLANIFICACION,
+	ERROR_REDUCCION_LOCAL,
+	ERROR_REDUCCION_GLOBAL
+}; //yama -> master
 
 typedef struct {
 	t_process sender;		// Proceso remitente
