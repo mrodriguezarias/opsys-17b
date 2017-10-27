@@ -32,6 +32,7 @@ static t_yfile *create_file_from_config(t_config *config);
 static void update_file(t_yfile *file);
 static char *real_file_path(const char *path);
 static bool add_blocks_from_file(t_yfile *yfile, const char *path);
+static void copy_from_bin_file(char buffer[BLOCK_SIZE], t_file* source, t_yfile* yfile);
 static int copy_from_text_file(t_file *source, t_yfile *target, char *buffer);
 static int add_and_send_block(t_yfile *yfile, char *buffer, size_t size);
 static void print_block(t_block *block);
@@ -345,6 +346,7 @@ static char *real_file_path(const char *path) {
 	return rpath;
 }
 
+
 static bool add_blocks_from_file(t_yfile *yfile, const char *path) {
 	char buffer[BLOCK_SIZE];
 	t_file *source = file_open(path);
@@ -353,7 +355,7 @@ static bool add_blocks_from_file(t_yfile *yfile, const char *path) {
 	if(yfile->type == FTYPE_TXT) {
 		count = copy_from_text_file(source, NULL, buffer);
 	} else {
-		// TODO Calcular cantidad de bloques en archivo binario
+		count = (file_size(source)/BLOCK_SIZE) + (file_size(source) % BLOCK_SIZE != 0);
 	}
 
 	bool success = nodelist_freeblocks() >= count;
@@ -363,11 +365,30 @@ static bool add_blocks_from_file(t_yfile *yfile, const char *path) {
 	} else if(yfile->type == FTYPE_TXT) {
 		copy_from_text_file(source, yfile, buffer);
 	} else {
-		// TODO Enviar bloques de archivo binario
+		copy_from_bin_file(buffer, source, yfile);
 	}
 
 	file_close(source);
 	return success;
+}
+
+static void copy_from_bin_file(char buffer[BLOCK_SIZE], t_file* source, t_yfile* yfile) {
+	char* map = file_map(source);
+	int size = 0;
+	int size_bytes = file_size(source);
+	void line_handler(const char *line) {
+		if (size_bytes > BLOCK_SIZE) {
+			memcpy(buffer, map + size, BLOCK_SIZE - 1);
+			size += BLOCK_SIZE;
+			size_bytes -= BLOCK_SIZE;
+		} else {
+			memcpy(buffer, map + size, size_bytes + 1);
+			size += size_bytes;
+		}
+		add_and_send_block(yfile, buffer, size);
+	}
+	file_traverse(source, line_handler);
+	file_unmap(source, map);
 }
 
 static int copy_from_text_file(t_file *source, t_yfile *target, char *buffer) {
