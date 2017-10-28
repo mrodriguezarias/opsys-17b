@@ -47,7 +47,7 @@ void listen_to_master() {
 
 				switch(packetOperacion.operation) {
 				case OP_INIT_JOB:
-					{init_job(packetOperacion.content);
+					{//init_job(packetOperacion.content);
 					t_yfile* Datosfile = malloc(sizeof(t_yfile));
 					/*listaNodosActivos = mlist_create(); //luego borrar es para el hardcodeo
 					Datosfile->blocks = mlist_create(); //luego borrar es para el hardcodeo */
@@ -89,18 +89,35 @@ void listen_to_master() {
 					}
 					break;
 				case OP_TRANSFORMACION_LISTA :
-					{respuestaOperacion* finalizoOperacion = serial_unpackRespuestaOperacion(packetOperacion.content);
+					{respuestaOperacionTranf* finalizoOperacion = serial_unpackRespuestaOperacion(packetOperacion.content);
 					if(finalizoOperacion->response == -1){
 						//replanifacion();
 						//actualizoTablaEstado(finalizoOperacion.nodo,finalizoOperacion.bloque,"Transformacion");hay que agregar una entrada para el nuevo nodo que va a ejecutar
 					}
 					else{
-						actualizoTablaEstado(finalizoOperacion->nodo,finalizoOperacion->bloque,"FinalizadoOK");
-						if(verificoFinalizacionTransformacion(finalizoOperacion->nodo,sock)){
+						int job = 0; //cambiar deberia venir de master
+						actualizoTablaEstado(finalizoOperacion->nodo,finalizoOperacion->bloque,sock,job,"FinalizadoOK");
+						if(verificoFinalizacionTransformacion(finalizoOperacion->nodo,sock,job)){
 							t_infoNodo* IP_PUERTOnodo = BuscoIP_PUERTO(finalizoOperacion->nodo);
-							mlist_t* archivosTemporales_Transf = BuscoArchivosTemporales(finalizoOperacion->nodo,sock);
+							mlist_t* archivosTemporales_Transf = BuscoArchivosTemporales(finalizoOperacion->nodo,sock,job);
 							char* temporal_local = generarNombreTemporal_local(finalizoOperacion->nodo,sock);
-							mandarEtapaTransformacionLocal(sock,finalizoOperacion->nodo,IP_PUERTOnodo,archivosTemporales_Transf,temporal_local);
+							mandarEtapaReduccionLocal(sock,finalizoOperacion->nodo,IP_PUERTOnodo,archivosTemporales_Transf,temporal_local);
+						}
+					}
+					}
+				break;
+				case OP_REDUCCION_LOCAL_LISTA:
+					{respuestaOperacionRL* finalizoRL = serial_unpackrespuestaOperacionRL(packetOperacion.content);
+					int job = 0; //cambiar
+					if(finalizoRL->response == -1){
+
+						actualizoTablaEstado(finalizoRL->nodo,-1,sock,job,"Error");
+						abortarJob(sock);
+					}
+					else{
+						actualizoTablaEstado(finalizoRL->nodo,-1,sock,job,"FinalizadoOK");
+						if(verificoFinalizacionRl(finalizoRL->nodo,job)){
+							mandarEtapaReduccionGL(sock,job);
 						}
 					}
 					}
@@ -139,9 +156,11 @@ void agregarAtablaEstado(char* nodo,int Master,int bloque,char* etapa,char* arch
 }
 
 void requerirInformacionFilesystem(t_serial *file){
-	t_serial *content = serial_pack("s", file);
-	t_packet packetInfoFs = protocol_packet(OP_REQUEST_FILE_INFO, content);
-	protocol_send_packet(packetInfoFs,yama.fs_socket);
+	//t_serial *content = serial_pack("s", file->data); //debo enviar un char* no un serial
+	t_packet packetInfoFs = protocol_packet(OP_REQUEST_FILE_INFO, file);
+	printf("operacion a enviar %d \n", packetInfoFs.operation);
+	protocol_send_packet(packetInfoFs,yama.fs_socket); //ROMPE ESTA LINEA en el socket send bytes
+	printf("Ya envie la solicitud \n ");
 	serial_destroy(packetInfoFs.content);
 }
 
@@ -149,6 +168,7 @@ void requerirInformacionFilesystem(t_serial *file){
 void reciboInformacionSolicitada(mlist_t* listaNodosActivos,t_yfile* Datosfile,int master){
 	t_packet packetNodosActivos = protocol_receive_packet(yama.fs_socket);
 	if(packetNodosActivos.operation == OP_NODES_ACTIVE_INFO){
+		printf("recibi la primer info \n");
 	listaNodosActivos = nodelist_unpack(packetNodosActivos.content);
 	}
 		t_packet packetArchivo = protocol_receive_packet(yama.fs_socket);
@@ -157,7 +177,8 @@ void reciboInformacionSolicitada(mlist_t* listaNodosActivos,t_yfile* Datosfile,i
 		}
 
 		else if(packetArchivo.operation == OP_ARCHIVO_NODES){
-		Datosfile = yfile_unpack(packetArchivo.content);
+			printf("recibi la segunda info \n");
+			Datosfile = yfile_unpack(packetArchivo.content);
 		}
 
 		serial_destroy(packetNodosActivos.content);
@@ -196,7 +217,7 @@ void enviarEtapa_transformacion_Master(int tamaniolistaNodos,t_workerPlanificaci
 			  nroBloque = datosDeUnBloque->copies[1].blockno;
 		  }
 		  char* nombreArchivoTemporal = malloc(sizeof(char)*21);
-		  strcpy(nombreArchivoTemporal, generarNombreArchivoTemporal(sock, nroBloque));
+		  strcpy(nombreArchivoTemporal, generarNombreArchivoTemporalTransf(sock, nroBloque));
 		  tEtapaTransformacion* et = new_etapa_transformacion(datosNodoAEnviar->nodo,datosNodoAEnviar->ip,datosNodoAEnviar->puerto,nroBloque, datosDeUnBloque->size,nombreArchivoTemporal); //ROMPE EN ESTA funcion
 		  mlist_append(lista,et);
 		  agregarAtablaEstado(datosNodoAEnviar->nodo,sock,nroBloque,"Transformacion",nombreArchivoTemporal,"En proceso");
@@ -206,18 +227,18 @@ void enviarEtapa_transformacion_Master(int tamaniolistaNodos,t_workerPlanificaci
 
 }
 
-char* generarNombreArchivoTemporal(int master, int bloque){
- char* nombreArchivoTemporal = malloc(sizeof(char)*21);
- sprintf(nombreArchivoTemporal,"/tmp/Master%d-temp%d",master,bloque);
+char* generarNombreArchivoTemporalTransf(int master, int bloque){
+	char* nombreArchivoTemporal = malloc(sizeof(char)*21);
+ sprintf(nombreArchivoTemporal,"/tmp/j%dMaster%d-temp%d",numeroJob,master,bloque);
  return nombreArchivoTemporal;
 }
 
 
-void actualizoTablaEstado(char* nodo,int bloque,char* estado){
+void actualizoTablaEstado(char* nodo,int bloque,int socketMaster,int job,char* estado){
 	t_Estado* estadoActual;
 	t_Estado* nuevoEstado = malloc(sizeof(t_Estado));
 	bool condition(void* estadoTarea){
-	  	return ((t_Estado *) estadoTarea)->nodo == nodo && ((t_Estado *) estadoTarea)->block == bloque ? true : false;
+	  	return ((t_Estado *) estadoTarea)->nodo == nodo && ((t_Estado *) estadoTarea)->block == bloque && ((t_Estado *) estadoTarea)->master == socketMaster && ((t_Estado *) estadoTarea)->job == job ? true : false;
 	}
 	int posicion = mlist_index(listaEstados,(void*) condition);
 	void* estadoActualObtenido = mlist_get(listaEstados,posicion);
@@ -232,15 +253,15 @@ void actualizoTablaEstado(char* nodo,int bloque,char* estado){
 	mlist_replace(listaEstados,posicion,nuevoEstado);
 }
 
-bool verificoFinalizacionTransformacion(char* nodo,int socket){
+bool verificoFinalizacionTransformacion(char* nodo,int socket,int job){
 	bool esNodoBuscado(void* estadoTarea){
-		  	return !strcmp(((t_Estado *) estadoTarea)->nodo,nodo) && ((t_Estado *) estadoTarea)->master == socket && strcmp(((t_Estado *) estadoTarea)->estado, "Error");
+		  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->nodo,nodo) && ((t_Estado *) estadoTarea)->master == socket && !string_equals_ignore_case(((t_Estado *) estadoTarea)->estado, "Error") && ((t_Estado *) estadoTarea)->job == job;
 	}
 
 	mlist_t* listaFiltradaDelNodo = mlist_filter(listaEstados, (void*)esNodoBuscado);
 
 	bool FinalizacionDeTransf_Nodo(void* estadoTarea){
-			  	return !strcmp(((t_Estado *) estadoTarea)->estado,"TerminadoOK");
+			  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->estado,"TerminadoOK");
 	}
 
 
@@ -248,9 +269,11 @@ bool verificoFinalizacionTransformacion(char* nodo,int socket){
 
 }
 
-void mandarEtapaTransformacionLocal(int socket,char* nodo,t_infoNodo* nodo_worker,mlist_t* archivos_transf,char* archivoTemporal_local){
+void mandarEtapaReduccionLocal(int socket,char* nodo,t_infoNodo* nodo_worker,mlist_t* archivos_transf,char* archivoTemporal_local){
 	tEtapaReduccionLocal* etapaRL = new_etapa_rl(nodo,nodo_worker->ip,nodo_worker->puerto,archivos_transf,archivoTemporal_local);
+	agregarAtablaEstado(nodo,socket,-1,"ReduccionLocal",archivoTemporal_local,"En proceso");
 	mandar_etapa_rl(etapaRL,socket);
+
 }
 
 t_infoNodo* BuscoIP_PUERTO(char* nodo){
@@ -264,10 +287,10 @@ t_infoNodo* BuscoIP_PUERTO(char* nodo){
 	 return Nodo;
 }
 
-mlist_t* BuscoArchivosTemporales(char* nodo,int socket){
+mlist_t* BuscoArchivosTemporales(char* nodo,int socket,int job){
 
 	bool esNodoBuscado(void* estadoTarea){
-		  	return !strcmp(((t_Estado *) estadoTarea)->nodo,nodo) && ((t_Estado *) estadoTarea)->master == socket && !strcmp(((t_Estado *) estadoTarea)->estado, "FinalizadoOK");
+		  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->nodo,nodo) && ((t_Estado *) estadoTarea)->master == socket && ((t_Estado *) estadoTarea)->job == job && string_equals_ignore_case(((t_Estado *) estadoTarea)->estado, "FinalizadoOK");
 	}
 
 	mlist_t* listaFiltradaDelNodo = mlist_filter(listaEstados, (void*)esNodoBuscado);
@@ -284,8 +307,66 @@ mlist_t* BuscoArchivosTemporales(char* nodo,int socket){
 
 
 char* generarNombreTemporal_local(char* nodo,int master){
+	int job = 0;
 	char* nombreArchivoTemporal = malloc(sizeof(char)*21);
-	sprintf(nombreArchivoTemporal,"/tmp/Master%d-%s",master,nodo);
+	sprintf(nombreArchivoTemporal,"/tmp/J%dMaster%d-%s",job,master,nodo);
 	return nombreArchivoTemporal;
 
+}
+
+void abortarJob(int socketMaster){
+	t_serial *serial = serial_pack("ERROR_REDUCCION_LOCAL");
+	t_packet packet = protocol_packet(OP_ERROR_JOB,serial);
+	protocol_send_packet(packet, socketMaster);
+	serial_destroy(serial);
+}
+
+
+bool verificoFinalizacionRl(char* nodo,int job){
+	return true;
+}
+
+void mandarEtapaReduccionGL(int master,int job){
+	/*mlist_t* listaRG = mlist_create();
+	mlist_t* NodosRL = BuscoNodos(master,job);
+	char* nodo = seleccionarEncargado(NodosRL);
+	int i;
+	for(i=0; i< mlist_length(NodosRL); i++){
+	void* unNodo_sendObtenido	= mlist_get(NodosRL,i);
+	t_nodotemporalRL* unNodo_send = (t_nodotemporalRL*) unNodo_sendObtenido;
+	t_infoNodo* infoNodo = BuscoIP_PUERTO(unNodo_send->nodo);
+	if(string_equals_ignore_case(unNodo_send->nodo,nodo)){
+	char* nombreRG = generarArchivoRG();
+	tEtapaReduccionGlobal* etapaRG = new_etapa_rg(unNodo_send->nodo,infoNodo->ip,infoNodo->puerto,unNodo_send->archivoTemporalLocal,nombreRG,"SI");
+	mlist_append(listaRG,etapaRG);
+	}
+	else{
+		tEtapaReduccionGlobal* etapaRG = new_etapa_rg(unNodo_send->nodo,infoNodo->ip,infoNodo->puerto,unNodo_send->archivoTemporalLocal,"-1","NO");
+		mlist_append(listaRG,etapaRG);
+	}
+	}
+	mandar_etapa_rg(listaRG,master);
+	*/
+}
+
+mlist_t* BuscoNodos(int master, int job){
+
+	bool NodosReadyRL(void* unEstadoObtenido){
+		t_Estado* Estado = (t_Estado*) unEstadoObtenido;
+		return Estado->master == master && Estado->job == job && string_equals_ignore_case(Estado->etapa, "ReduccionLocal") ? true : false;
+	}
+
+	mlist_t* listaFiltrada = mlist_filter(listaEstados,(void*) NodosReadyRL);
+
+	t_nodotemporalRL* getNodoTemporal(void* unEstadoObtenido){
+			t_Estado* Estado;
+			t_nodotemporalRL* info_enviar_toRG = malloc(sizeof(t_nodotemporalRL));
+			Estado = (t_Estado*) unEstadoObtenido;
+			info_enviar_toRG->nodo = Estado->nodo;
+			info_enviar_toRG->archivoTemporalLocal = Estado->archivoTemporal;
+			return info_enviar_toRG;
+		}
+
+	mlist_t* Nodos = mlist_map(listaFiltrada, (void*) getNodoTemporal);
+	return Nodos;
 }

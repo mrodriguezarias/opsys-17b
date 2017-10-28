@@ -81,9 +81,15 @@ void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificaci
 
 
 
-respuestaOperacion* serial_unpackRespuestaOperacion(t_serial *serial){
-	respuestaOperacion* operacion = malloc(sizeof(respuestaOperacion));
-		serial_unpack(serial, "sii", &operacion->nodo, &operacion->bloque,
-				&operacion->response);
+respuestaOperacionTranf* serial_unpackRespuestaOperacion(t_serial *serial){
+	respuestaOperacionTranf* operacion = malloc(sizeof(respuestaOperacionTranf));
+		serial_unpack(serial, "siis", &operacion->nodo, &operacion->bloque,
+				&operacion->response,&operacion->file);
 		return operacion;
+}
+
+respuestaOperacionRL* serial_unpackrespuestaOperacionRL(t_serial * serial){
+	respuestaOperacionRL* operacion = malloc(sizeof(respuestaOperacionRL));
+	serial_unpack(serial,"si",&operacion->nodo,&operacion->response);
+	return operacion;
 }

@@ -148,7 +148,6 @@ static void yama_handler() {
 	while(thread_active()) {
 
 		t_packet packet = protocol_receive_packet(yama_socket);
-
 		if (packet.operation == OP_REQUEST_FILE_INFO) {
 				log_inform("Receive OP_REQUEST_FILE_INFO");
 

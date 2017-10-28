@@ -32,7 +32,7 @@ mlist_t* listaNodosActivos;
 
 int main() {
 	process_init();
-	//connect_to_filesystem();
+	connect_to_filesystem();
 	listaEstados = mlist_create();
 	listen_to_master();
 	return EXIT_SUCCESS;

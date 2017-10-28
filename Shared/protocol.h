@@ -14,7 +14,7 @@ typedef enum {
 	OP_PING,
 	OP_HANDSHAKE,
 	OP_RESPONSE,
-	OP_INIT_JOB,
+	OP_INIT_JOB, //master -> Yama
 	OP_NODE_INFO,
 	OP_REQUEST_BLOCK,
 	OP_SEND_BLOCK,

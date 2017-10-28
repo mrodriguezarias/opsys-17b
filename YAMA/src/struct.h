@@ -42,7 +42,16 @@ typedef struct{
 	char* nodo;
 	int bloque;
 	int response;
-} respuestaOperacion;
+	char* file;
+} respuestaOperacionTranf;
 
+typedef struct{
+	char* nodo;
+	int response;
+}respuestaOperacionRL;
 
+typedef struct{
+	char* nodo;
+	char* archivoTemporalLocal;
+}t_nodotemporalRL;
 #endif /* STRUCT_H_ */
