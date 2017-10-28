@@ -249,7 +249,7 @@ static void load_bitmap(t_node *node) {
 }
 
 static t_node *create_node(const char *name, int blocks) {
-	t_node *node = malloc(sizeof(t_node));
+	t_node *node = calloc(1, sizeof(t_node));
 	node->name = mstring_duplicate(name);
 	node->total_blocks = blocks;
 	node->free_blocks = blocks;
