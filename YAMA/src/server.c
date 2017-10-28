@@ -181,14 +181,10 @@ void reciboInformacionSolicitada(mlist_t* listaNodosActivos,t_yfile* Datosfile,i
 			Datosfile = yfile_unpack(packetArchivo.content);
 		}
 
-		serial_destroy(packetNodosActivos.content);
-		serial_destroy(packetArchivo.content);
-
 }
 
 void envioMasterErrorArchivo(int master){
-	t_packet packetError;
-	packetError = protocol_packet(OP_ERROR_JOB, serial_pack("ARCHIVO_INEXISTENTE"));
+	t_packet packetError = protocol_packet(OP_ERROR_JOB, serial_pack("i",ARCHIVO_INEXISTENTE));
 	protocol_send_packet(packetError, master);
 	serial_destroy(packetError.content);
 

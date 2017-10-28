@@ -30,7 +30,7 @@ static t_node *receive_node_info(t_socket socket);
 static void node_listener(void);
 static void yama_listener(void);
 static void datanode_handler(t_node *node);
-static void yama_handler();
+static void yama_handler(t_socket socket);
 static void update_current_file(void);
 
 // ========== Funciones públicas ==========
@@ -137,13 +137,13 @@ static void yama_listener() {
 
 		log_inform("Yama conectado en socket: %d", yama_socket);
 
-		yama_handler();
+		yama_handler(yama_socket);
 	}
 
 	socket_close(sv_sock);
 }
 
-static void yama_handler() {
+static void yama_handler(t_socket yama_socket) {
 
 	while(thread_active()) {
 

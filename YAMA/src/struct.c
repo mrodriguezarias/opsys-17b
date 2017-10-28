@@ -9,7 +9,7 @@ mlist_t *nodelist_unpack(t_serial *serial) {
 
 	while(tamanioLista--) {
 		t_infoNodo *infonodo = malloc(sizeof(t_infoNodo));
-		serial_remove(serial,"sii",&infonodo->nodo,
+		serial_remove(serial,"sss",&infonodo->nodo,
 				&infonodo->ip,
 				&infonodo->puerto
 				);
