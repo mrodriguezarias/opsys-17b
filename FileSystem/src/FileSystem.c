@@ -19,9 +19,9 @@ static void term(void);
 // ========== Funciones públicas ==========
 
 int main(int argc, char *argv[]) {
-//	if(argc == 2 && mstring_equal(argv[1], "--clean")) {
+	if(argc == 2 && mstring_equal(argv[1], "--clean")) {
 		clear_previous_state();
-//	}
+	}
 
 	init();
 	server_start();
