@@ -75,15 +75,17 @@ bool nodelist_active(t_node *node) {
 
 t_serial* nodelist_active_pack() {
 	t_serial *serial = serial_create(NULL, 0);
-	serial_add(serial, "i", mlist_length(nodes));
+	bool nodeActive(t_node *node) {
+		return nodelist_active(node);
+	}
+	mlist_t* nodes_active = mlist_filter(nodes, nodeActive);
+	serial_add(serial, "i", mlist_length(nodes_active));
 
 	void routine(t_node *node) {
-		if (!nodelist_active(node)) {
 			serial_add(serial, "sss", node->name, socket_address(node->socket),
 					socket_port(node->socket));
-		}
 	}
-	mlist_traverse(nodes, routine);
+	mlist_traverse(nodes_active, routine);
 	return serial;
 }
 

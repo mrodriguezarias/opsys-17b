@@ -131,12 +131,13 @@ static void yama_listener() {
 
 		if(!filetable_stable()){
 			log_inform("Filesystem no estable. Se rechaza conexión de YAMA");
+			protocol_send_response(yama_socket, RESPONSE_ERROR);
 			socket_close(yama_socket);
 			continue;
 		}
 
 		log_inform("Yama conectado en socket: %d", yama_socket);
-
+		protocol_send_response(yama_socket, RESPONSE_OK);
 		yama_handler(yama_socket);
 	}
 

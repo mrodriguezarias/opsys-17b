@@ -53,7 +53,7 @@ void listen_to_master() {
 					Datosfile->blocks = mlist_create(); //luego borrar es para el hardcodeo */
 					log_print("OP_INIT_JOB");
 					requerirInformacionFilesystem(packetOperacion.content);
-					reciboInformacionSolicitada(listaNodosActivos,Datosfile,sock);
+					reciboInformacionSolicitada(Datosfile,sock);
 					///////////////////////////// hardcodeado
 					/*t_infoNodo* UnNodo = malloc(sizeof(t_infoNodo));
 					t_infoNodo* UnNodo2 = malloc(sizeof(t_infoNodo));
@@ -84,7 +84,7 @@ void listen_to_master() {
 					t_workerPlanificacion planificador[tamaniolistaNodos];
 					planificar(planificador, tamaniolistaNodos,Datosfile->blocks);
 					//inicio etapa de tranformacion
-					enviarEtapa_transformacion_Master(tamaniolistaNodos,planificador,listaNodosActivos,Datosfile->blocks,sock);
+					enviarEtapa_transformacion_Master(tamaniolistaNodos,planificador,Datosfile->blocks,sock);
 					numeroJob +=1;
 					}
 					break;
@@ -165,7 +165,7 @@ void requerirInformacionFilesystem(t_serial *file){
 }
 
 
-void reciboInformacionSolicitada(mlist_t* listaNodosActivos,t_yfile* Datosfile,int master){
+void reciboInformacionSolicitada(t_yfile* Datosfile,int master){
 	t_packet packetNodosActivos = protocol_receive_packet(yama.fs_socket);
 	if(packetNodosActivos.operation == OP_NODES_ACTIVE_INFO){
 		printf("recibi la primer info \n");
@@ -190,7 +190,7 @@ void envioMasterErrorArchivo(int master){
 
 }
 
-void enviarEtapa_transformacion_Master(int tamaniolistaNodos,t_workerPlanificacion planificador[],mlist_t* listaNodosActivos,mlist_t* listabloques,int sock){
+void enviarEtapa_transformacion_Master(int tamaniolistaNodos,t_workerPlanificacion planificador[],mlist_t* listabloques,int sock){
 	mlist_t* lista = mlist_create();
 	int i, j = 0;
 	int nroIndex;

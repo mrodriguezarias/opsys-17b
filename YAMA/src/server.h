@@ -5,9 +5,9 @@
 
 void listen_to_master(void);
 void requerirInformacionFilesystem(t_serial*);
-void reciboInformacionSolicitada(mlist_t*,t_yfile*,int);
+void reciboInformacionSolicitada(t_yfile*,int);
 void envioMasterErrorArchivo(int);
-void enviarEtapa_transformacion_Master(int,t_workerPlanificacion[],mlist_t*,mlist_t*,int);
+void enviarEtapa_transformacion_Master(int,t_workerPlanificacion[],mlist_t*,int);
 char* generarNombreArchivoTemporalTransf(int, int);
 void actualizoTablaEstado(char*,int,int,int,char*);
 bool verificoFinalizacionTransformacion(char* nodo,int bloque,int job);
