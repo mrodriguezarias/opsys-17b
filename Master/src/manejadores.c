@@ -2,7 +2,8 @@
 
 void finalizar_manejador_transf(int response, t_socket socket,
 		tEtapaTransformacion* transformacion) {
-	t_serial *serial_yama = serial_pack("siis",
+	t_serial *serial_yama = serial_pack("isiis",
+			IDJOB,
 			transformacion->nodo,
 			transformacion->bloque,
 			response,
@@ -69,7 +70,7 @@ void manejador_transformacion(tEtapaTransformacion* transformacion) {
 
 void finalizar_manejador_rl(int response, t_socket socket,
 		tEtapaReduccionLocal* etapa_rl) {
-	t_serial *serial_yama = serial_pack("si", etapa_rl->nodo, response);
+	t_serial *serial_yama = serial_pack("isi", IDJOB, etapa_rl->nodo, response);
 
 	pthread_mutex_lock(&mutex_hilos);
 	actualizar_hilo(response);
@@ -137,7 +138,7 @@ void manejador_rl(tEtapaReduccionLocal * etapa_rl) {
 
 void finalizar_manejador_rg(int response, t_socket socket, mlist_t* list,
 		tEtapaReduccionGlobal* worker) {
-	t_serial *serial_yama = serial_pack("si", worker->nodo, response);
+	t_serial *serial_yama = serial_pack("isi", IDJOB, worker->nodo, response);
 
 	actualizar_hilo(response);
 
@@ -217,7 +218,7 @@ void manejador_rg(mlist_t* list) {
 }
 
 void finalizar_manejador_af(int response, t_socket socket, tAlmacenadoFinal* af) {
-	t_serial *serial_yama = serial_pack("si", af->nodo, response);
+	t_serial *serial_yama = serial_pack("isi", IDJOB, af->nodo, response);
 
 	actualizar_hilo(response);
 
