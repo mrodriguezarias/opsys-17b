@@ -51,13 +51,15 @@ void listen_to_master() {
 				switch(packetOperacion.operation) {
 				case OP_INIT_JOB:
 					{
+					t_pedidoTrans*	pedidoInicio = serial_unpackPedido(packetOperacion.content);
 					t_yfile* Datosfile = malloc(sizeof(t_yfile));
-					listaNodosActivos = mlist_create(); //luego borrar es para el hardcodeo
-					Datosfile->blocks = mlist_create(); //luego borrar es para el hardcodeo
+					//listaNodosActivos = mlist_create(); //luego borrar es para el hardcodeo
+					//Datosfile->blocks = mlist_create(); //luego borrar es para el hardcodeo
 					log_print("OP_INIT_JOB");
-					//requerirInformacionFilesystem(packetOperacion.content);
-					//if(reciboInformacionSolicitada(listaNodosActivos,Datosfile,sock)==0){
-					///////////////////////////// hardcodeado
+					t_serial* file_serial = serial_pack("s",pedidoInicio->file);
+					requerirInformacionFilesystem(file_serial);
+					if(reciboInformacionSolicitada(listaNodosActivos,Datosfile,sock)==0){
+					/*///////////////////////////// hardcodeado
 					t_infoNodo* UnNodo = malloc(sizeof(t_infoNodo));
 					t_infoNodo* UnNodo2 = malloc(sizeof(t_infoNodo));
 
@@ -81,18 +83,18 @@ void listen_to_master() {
 					mlist_append(Datosfile->blocks,bloque);
 
 
-					/////////////////////////////////
+					///////////////////////////////// */
 					int tamaniolistaNodos = mlist_length(listaNodosActivos);
 					t_workerPlanificacion planificador[tamaniolistaNodos];
 					planificar(planificador, tamaniolistaNodos,Datosfile->blocks);
-					enviarEtapa_transformacion_Master(tamaniolistaNodos,planificador,listaNodosActivos,Datosfile->blocks,sock);
-					//}
+					enviarEtapa_transformacion_Master(pedidoInicio->idJOB,tamaniolistaNodos,planificador,listaNodosActivos,Datosfile->blocks,sock);
+					}
 					}
 					break;
 				case OP_TRANSFORMACION_LISTA :
 					{respuestaOperacionTranf* finalizoOperacion = serial_unpackRespuestaOperacion(packetOperacion.content);
 					if(finalizoOperacion->response == -1){
-						replanifacion(finalizoOperacion->nodo,finalizoOperacion->file,sock,finalizoOperacion->idJOB);
+						//replanifacion(finalizoOperacion->nodo,finalizoOperacion->file,sock,finalizoOperacion->idJOB);
 						//actualizoTablaEstado(finalizoOperacion.nodo,finalizoOperacion.bloque,"Transformacion");hay que agregar una entrada para el nuevo nodo que va a ejecutar
 					}
 					else{
@@ -154,7 +156,7 @@ void listen_to_master() {
 	}
 }
 
-void enviarEtapa_transformacion_Master(int tamaniolistaNodos,t_workerPlanificacion planificador[],mlist_t* listaNodosActivos,mlist_t* listabloques,int sock){
+void enviarEtapa_transformacion_Master(int job,int tamaniolistaNodos,t_workerPlanificacion planificador[],mlist_t* listaNodosActivos,mlist_t* listabloques,int sock){
 	mlist_t* lista = mlist_create();
 	int i, j = 0;
 	int nroIndex;
@@ -177,10 +179,10 @@ void enviarEtapa_transformacion_Master(int tamaniolistaNodos,t_workerPlanificaci
 			  nroBloque = datosDeUnBloque->copies[1].blockno;
 		  }
 		  char* nombreArchivoTemporal = malloc(sizeof(char)*21);
-		  strcpy(nombreArchivoTemporal, generarNombreArchivoTemporalTransf(numeroJob,sock, nroBloque));
+		  strcpy(nombreArchivoTemporal, generarNombreArchivoTemporalTransf(job,sock, nroBloque));
 		  tEtapaTransformacion* et = new_etapa_transformacion(datosNodoAEnviar->nodo,datosNodoAEnviar->ip,datosNodoAEnviar->puerto,nroBloque, datosDeUnBloque->size,nombreArchivoTemporal); //ROMPE EN ESTA funcion
 		  mlist_append(lista,et);
-		  agregarAtablaEstado(numeroJob,datosNodoAEnviar->nodo,sock,nroBloque,"Transformacion",nombreArchivoTemporal,"En proceso");
+		  agregarAtablaEstado(job,datosNodoAEnviar->nodo,sock,nroBloque,"Transformacion",nombreArchivoTemporal,"En proceso");
 		}
 	}
 	mandar_etapa_transformacion(lista,sock);

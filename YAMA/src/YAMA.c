@@ -6,6 +6,8 @@
 #include <protocol.h>
 #include <socket.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <string.h>
 
 #include "server.h"
 #include "client.h"
@@ -29,11 +31,26 @@ typedef struct {
 t_yama yama;
 int numeroJob = 1;
 mlist_t* listaNodosActivos;
+int retardoPlanificacion;
+//char* algoritmoBalanceo;
+//void trapper(int signum);
 
 int main() {
+	//signal(SIGUSR1,trapper);
 	process_init();
-	//connect_to_filesystem();
+	//retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));
+	//algoritmoBalanceo = malloc(sizeof(char)*8);
+	//strcpy(algoritmoBalanceo,config_get("ALGORITMO_BALANCEO"));
+	connect_to_filesystem();
 	listaEstados = mlist_create();
 	listen_to_master();
+	//while(1);
+	//free(algoritmoBalanceo);
 	return EXIT_SUCCESS;
 }
+
+/*void trapper(int signum){
+	printf("\nRecibi la señal\n");
+	retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));
+	strcpy(algoritmoBalanceo,config_get("ALGORITMO_BALANCEO"));
+}*/

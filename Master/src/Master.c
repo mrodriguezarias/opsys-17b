@@ -10,6 +10,8 @@
 #include "connection.h"
 #include "manejadores.h"
 
+int IDJOB;
+
 int main(int argc, char *argv[]) {
 	if(argc < 5) {
 		puts("Faltan argumentos");

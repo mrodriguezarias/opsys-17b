@@ -56,4 +56,10 @@ typedef struct{
 	char* nodo;
 	char* archivoTemporal;
 }t_nodotemporal;
+
+typedef struct{
+	int idJOB;
+	char* file;
+}t_pedidoTrans;
+
 #endif /* STRUCT_H_ */

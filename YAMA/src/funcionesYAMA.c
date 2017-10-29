@@ -13,6 +13,7 @@ void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mli
 		if(posicionArray == tamaniolistaNodos){
 			posicionArray = 0;
 		}
+		usleep(retardoPlanificacion);
 		verificarCondicion(tamaniolistaNodos, &posicionArray,planificador, &bloque, listaBloque);
 	}
 }
@@ -22,6 +23,7 @@ int availabilityClock(){
 }
 
 int Disponibilidad(){
+	//string_equals_ignore_case("CLOCK",algoritmoBalanceo)
 	if(!strcmp("CLOCK",config_get("ALGORITMO_BALANCEO"))){
 		return availabilityClock();
 	}
@@ -94,6 +96,11 @@ respuestaOperacion* serial_unpackrespuestaOperacion(t_serial * serial){
 	return operacion;
 }
 
+t_pedidoTrans* serial_unpackPedido(t_serial* serial){
+	t_pedidoTrans* operacion = malloc(sizeof(t_pedidoTrans));
+	serial_unpack(serial,"is",&operacion->idJOB,&operacion->file);
+	return operacion;
+}
 
 void requerirInformacionFilesystem(t_serial *file){
 	t_packet packetInfoFs = protocol_packet(OP_REQUEST_FILE_INFO, file);
@@ -173,7 +180,7 @@ void replanifacion(char* nodo, const char* pathArchivo,int master,int job){
 	t_serial* serial_send = serial_pack("s",pathArchivo);
 	t_yfile* Datosfile = malloc(sizeof(t_yfile));
 	requerirInformacionFilesystem(serial_send);
-	reciboInformacionSolicitada(master);
+	//reciboInformacionSolicitada(master);
 	Datosfile->blocks = mlist_create();
 
 	bool esNodoBuscado(void* estadoTarea){
@@ -204,6 +211,7 @@ void replanifacion(char* nodo, const char* pathArchivo,int master,int job){
 
 
 	for(i=0; i < mlist_length(listaDeBloquesAReplanificar); i++){
+		usleep(retardoPlanificacion);
 		void* bloqueDeListaObtenido = mlist_get(listaDeBloquesAReplanificar, i);
 		t_block* bloqueAReplanificar = (t_block *) bloqueDeListaObtenido;
 		if(string_equals_ignore_case(nodo, bloqueAReplanificar->copies[0].node) && NodoConCopia_is_active(bloqueAReplanificar->copies[1].node) ){
