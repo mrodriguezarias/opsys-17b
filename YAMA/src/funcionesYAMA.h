@@ -25,8 +25,8 @@ void mostrar_configuracion();
 void llenarArrayPlanificador(t_workerPlanificacion[],int,int *);
 void verificarCondicion(int, int *,t_workerPlanificacion[],int *,mlist_t*);
 respuestaOperacionTranf* serial_unpackRespuestaOperacion(t_serial *);
-respuestaOperacionRL* serial_unpackrespuestaOperacionRL(t_serial *);
-
-
+respuestaOperacion* serial_unpackrespuestaOperacion(t_serial *);
+bool NodoConCopia_is_active(char*);
+void destruirlista(void*);
 
 #endif
