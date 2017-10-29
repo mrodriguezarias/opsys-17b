@@ -129,7 +129,7 @@ static void yama_listener() {
 			continue;
 		}
 
-		if(!fs.formatted){
+		if(!filetable_stable()){
 			log_inform("Filesystem no estable. Se rechaza conexión de YAMA");
 			socket_close(yama_socket);
 			continue;

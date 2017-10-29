@@ -39,6 +39,7 @@ static void print_block(t_block *block);
 static void receive_blocks(t_yfile *file);
 static void receive_block(t_block *block);
 static t_block_copy *first_available_copy(t_block *block);
+static bool available_copy(t_block *block);
 
 // ========== Funciones públicas ==========
 
@@ -235,6 +236,13 @@ void filetable_cat(const char *path) {
 	t_yfile *file = filetable_find(path);
 	if(file == NULL) return;
 	receive_blocks(file);
+}
+
+bool filetable_stable(){
+	bool available_block(t_yfile* file){
+		return mlist_all(file->blocks, available_copy);
+	}
+	return (mlist_all(files, available_block) && fs.formatted);
 }
 
 // ========== Funciones privadas ==========
@@ -462,4 +470,15 @@ static t_block_copy *first_available_copy(t_block *block) {
 		else thread_sleep(500);
 	}
 	return copy;
+}
+
+static bool available_copy(t_block *block) {
+	t_block_copy *copy = NULL;
+	t_node *node0 = nodelist_find(block->copies[0].node);
+	t_node *node1 = nodelist_find(block->copies[1].node);
+
+	if(nodelist_active(node0)) copy = block->copies;
+	else if(nodelist_active(node1)) copy = block->copies + 1;
+
+	return (copy != NULL);
 }

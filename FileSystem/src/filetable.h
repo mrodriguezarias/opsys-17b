@@ -2,6 +2,7 @@
 #define FILETABLE_H_
 
 #include "yfile.h"
+#include "FileSystem.h"
 
 /**
  * Inicializa la tabla de archivos.
@@ -104,5 +105,12 @@ void filetable_cpto(const char *path, const char *dir);
  * @param path Ruta al archivo yamafs.
  */
 void filetable_cat(const char *path);
+
+/**
+ * Determina si el filesystem está estable.
+ * @return Valor lógico indicando si hay al menos una copia
+ * disponible de cada bloque.
+ */
+bool filetable_stable();
 
 #endif /* FILETABLE_H_ */
