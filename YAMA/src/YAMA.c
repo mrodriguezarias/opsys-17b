@@ -41,7 +41,7 @@ int main() {
 	//retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));
 	//algoritmoBalanceo = malloc(sizeof(char)*8);
 	//strcpy(algoritmoBalanceo,config_get("ALGORITMO_BALANCEO"));
-	connect_to_filesystem();
+	if(connect_to_filesystem() == RESPONSE_ERROR) return EXIT_SUCCESS;;
 	listaEstados = mlist_create();
 	listen_to_master();
 	//while(1);

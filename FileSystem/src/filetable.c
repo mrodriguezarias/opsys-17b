@@ -242,7 +242,7 @@ bool filetable_stable(){
 	bool available_block(t_yfile* file){
 		return mlist_all(file->blocks, available_copy);
 	}
-	return (mlist_all(files, available_block) && fs.formatted);
+	return (fs.formatted && mlist_all(files, available_block));
 }
 
 // ========== Funciones privadas ==========

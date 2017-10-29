@@ -43,11 +43,11 @@ typedef enum {
 } t_operation;
 
 //interrupciones del job
-enum{FS_NO_ESTABLE,
-	ARCHIVO_INEXISTENTE,
-	ERROR_REPLANIFICACION,
-	ERROR_REDUCCION_LOCAL,
-	ERROR_REDUCCION_GLOBAL
+enum{FS_NO_ESTABLE = -1,
+	ARCHIVO_INEXISTENTE = -2,
+	ERROR_REPLANIFICACION = -3,
+	ERROR_REDUCCION_LOCAL = -4,
+	ERROR_REDUCCION_GLOBAL = -5
 }; //yama -> master
 
 typedef struct {

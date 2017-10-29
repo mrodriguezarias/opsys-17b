@@ -13,7 +13,7 @@ void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mli
 		if(posicionArray == tamaniolistaNodos){
 			posicionArray = 0;
 		}
-		usleep(retardoPlanificacion);
+		//usleep(retardoPlanificacion);
 		verificarCondicion(tamaniolistaNodos, &posicionArray,planificador, &bloque, listaBloque);
 	}
 }
@@ -50,10 +50,11 @@ void llenarArrayPlanificador(t_workerPlanificacion planificador[],int tamaniolis
 }
 
 
-void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificacion planificador[],int *bloque,mlist_t* listaBloque){
-	void* infoArchivoObtenido = mlist_get(listaBloque, *bloque);
-	t_block* infoArchivo = (t_block*) infoArchivoObtenido;
+void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificacion planificador[],int* bloque,mlist_t* listaBloque){
+	t_block* infoArchivo = mlist_get(listaBloque, *bloque);
+
 	if(planificador[*posicion].disponibilidad == 0){
+		printf("Disponibilidad1\n");
 		planificador[*posicion].disponibilidad = Disponibilidad();
 		posicion++;
 		contadorBloquesSeguidosNoAsignados++;
