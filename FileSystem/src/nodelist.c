@@ -101,7 +101,7 @@ t_serial* nodelist_active_pack() {
 
 	void routine(t_node *node) {
 			serial_add(serial, "sss", node->name, socket_address(node->socket),
-					socket_port(node->socket));
+					node->worker_port);
 	}
 	mlist_traverse(nodes_active, routine);
 	return serial;

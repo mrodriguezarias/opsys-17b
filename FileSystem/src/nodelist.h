@@ -13,6 +13,7 @@ typedef struct t_node {
 	int free_blocks;
 	thread_t *handler;
 	t_socket socket;
+	char* worker_port;
 	t_bitmap *bitmap;
 } t_node;
 

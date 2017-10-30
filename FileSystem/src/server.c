@@ -13,6 +13,7 @@
 #include <data.h>
 #include <path.h>
 #include <string.h>
+#include <commons/string.h>
 
 #include "FileSystem.h"
 #include "nodelist.h"
@@ -66,9 +67,9 @@ void server_end() {
 static t_node *receive_node_info(t_socket socket) {
 	t_packet packet = protocol_receive_packet(socket);
 	if(packet.operation != OP_NODE_INFO) return NULL;
-	char *name;
+	char *name, *worker_port;
 	int blocks;
-	serial_unpack(packet.content, "si", &name, &blocks);
+	serial_unpack(packet.content, "sis", &name, &blocks, &worker_port);
 	t_node *node = nodelist_find(name);
 
 	if(node == NULL && fs.formatted) {
@@ -78,6 +79,7 @@ static t_node *receive_node_info(t_socket socket) {
 		log_inform("El nodo %s se quiso conectar pero ya estaba activo en el FS", name);
 	} else {
 		node = nodelist_add(name, blocks);
+		node->worker_port = string_duplicate(worker_port);
 	}
 	free(name);
 	return node;

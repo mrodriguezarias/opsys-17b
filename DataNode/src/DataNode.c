@@ -58,11 +58,11 @@ static void load_name_from_args(int argc, char **argv) {
 }
 
 static void connect_to_filesystem() {
-	t_socket socket = socket_connect(config_get("IP_FILESYSTEM"), config_get("PUERTO_DATANODE"));
+	t_socket socket = socket_connect(config_get("IP_FILESYSTEM"), config_get("PUERTO_FILESYSTEM"));
 	if(socket == -1) puts("Esperando conexión del FileSystem...");
 	while(socket == -1) {
 		thread_sleep(500);
-		socket = socket_connect(config_get("IP_FILESYSTEM"), config_get("PUERTO_DATANODE"));
+		socket = socket_connect(config_get("IP_FILESYSTEM"), config_get("PUERTO_FILESYSTEM"));
 	}
 
 	protocol_send_handshake(socket);
@@ -71,7 +71,7 @@ static void connect_to_filesystem() {
 }
 
 static void send_node_info() {
-	t_serial *node_info = serial_pack("si", node_name, data_blocks());
+	t_serial *node_info = serial_pack("sis", node_name, data_blocks(), config_get("PUERTO_WORKER"));
 	t_packet packet = protocol_packet(OP_NODE_INFO, node_info);
 	protocol_send_packet(packet, fs_socket);
 	serial_destroy(node_info);
