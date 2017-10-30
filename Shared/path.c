@@ -106,7 +106,7 @@ bool path_istext(const char *path) {
 	free(cmd);
 	if(pd == NULL) show_error_and_exit(upath, "verificar");
 	char *output = mstring_buffer();
-	fgets(output, mstring_maxsize(), pd);
+	fgets(output, MSTRING_MAXSIZE, pd);
 	pclose(pd);
 
 	istext = mstring_contains(output, "text");
@@ -188,7 +188,10 @@ char *path_dir(const char *path) {
 	char *upath = system_upath(path);
 
 	char *end = mstring_end(upath);
-	if(*end == '/') *end = '\0';
+	if(*end == '/') {
+		if(mstring_count(upath, "/") == 1) return upath;
+		*end = '\0';
+	}
 
 	char *slash = strrchr(upath, '/');
 	if(strchr(upath, '/') == slash) slash++;
@@ -338,7 +341,7 @@ void path_sort(const char *path) {
 	void reader(const char *line) {
 		mlist_append(lines, mstring_create("%s\n", line));
 	}
-	file_traverse(file, reader);
+	file_ltraverse(file, reader);
 
 	mlist_sort(lines, mstring_asc);
 	file_clear(file);

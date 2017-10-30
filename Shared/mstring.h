@@ -5,10 +5,10 @@
 #include <alloca.h>
 
 // Tamaño máximo de buffer.
-#define mstring_maxsize() 1024
+#define MSTRING_MAXSIZE 1024
 
 // Devuelve un buffer que se libera automáticamente al finalizar la función que lo llamó.
-#define mstring_buffer() ((char*)alloca(mstring_maxsize()))
+#define mstring_buffer() ((char*)alloca(MSTRING_MAXSIZE))
 
 /**
  * Crea una nueva cadena con el mismo contenido que otra.

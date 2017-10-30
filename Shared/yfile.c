@@ -36,14 +36,6 @@ void yfile_print(t_yfile *file) {
 	printf("Tipo: %s\n", file->type == FTYPE_TXT ? "TEXTO" : "BINARIO");
 	printf("Tamaño: %d\n", file->size);
 	printf("Bloques: %d\n", mlist_length(file->blocks));
-	int blockno = 0;
-	void routine(t_block *block) {
-		printf("Bloque %d:\n", blockno++);
-		printf(" Tamaño: %d\n", block->size);
-		printf(" Copia 0: [%s, %d]\n", block->copies[0].node, block->copies[0].blockno);
-		printf(" Copia 1: [%s, %d]\n", block->copies[1].node, block->copies[1].blockno);
-	}
-	mlist_traverse(file->blocks, routine);
 }
 
 t_serial *yfile_pack(t_yfile *file) {

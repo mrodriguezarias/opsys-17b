@@ -12,6 +12,7 @@
 #include <log.h>
 #include <number.h>
 #include "server.h"
+#include "FileSystem.h"
 
 static char *path = NULL;
 static mlist_t *nodes = NULL;
@@ -26,7 +27,7 @@ static t_node *create_node(const char *name, int blocks);
 static void destroy_node(t_node *node);
 static bool node_active(t_node *node);
 static double node_empty_rate(t_node *node);
-static void balance_nodes(t_node *bnodes[]);
+static t_node *node_for_backup(t_node *original);
 
 // ========== Funciones públicas ==========
 
@@ -65,7 +66,24 @@ int nodelist_freeblocks() {
 	return mlist_reduce(nodes, adder);
 }
 
-t_node * nodelist_get(int pos) {
+t_node *nodelist_freestnode() {
+	int free = 0;
+	mlist_t *candidates = mlist_create();
+
+	void routine(t_node *node) {
+		if(node->free_blocks < free || !node_active(node)) return;
+		if(node->free_blocks != free) mlist_clear(candidates, NULL);
+		mlist_append(candidates, node);
+		free = node->free_blocks;
+	}
+	mlist_traverse(nodes, routine);
+
+	t_node *node = mlist_random(candidates);
+	mlist_destroy(candidates, NULL);
+	return node;
+}
+
+t_node *nodelist_get(int pos) {
 	return mlist_get(nodes, pos);
 }
 
@@ -106,14 +124,11 @@ t_node *nodelist_find(const char *name) {
 	return mlist_find(nodes, finder);
 }
 
-void nodelist_addblock(t_block *block, void *data) {
-	t_node *bnodes[2];
-	balance_nodes(bnodes);
-
-	for (int i = 0; i < 2; i++) {
+void nodelist_addblock(t_block *block, void *data, t_node *node) {
+	t_node *bnodes[] = {node, node_for_backup(node)};
+	for(int i = 0; i < 2; i++) {
 		t_node *node = bnodes[i];
-		if (node == NULL)
-			continue;
+		if(node == NULL) continue;
 
 		int blockno = bitmap_firstzero(node->bitmap);
 		bitmap_set(node->bitmap, blockno);
@@ -193,6 +208,8 @@ static void init_config() {
 }
 
 static void update_file() {
+	if(!fs.formatted) return;
+
 	char *keys[] = { "TAMANIO", "LIBRE", "NODOS" };
 	char *key, *value = mstring_empty(NULL);
 
@@ -266,7 +283,7 @@ static void destroy_node(t_node *node) {
 }
 
 static bool node_active(t_node *node) {
-	if (node == NULL || node->handler == NULL)
+	if(node == NULL || node->handler == NULL)
 		return false;
 	thread_send(node->handler, server_nodeop(NODE_PING, -1, NULL));
 	bool active = (bool) thread_receive();
@@ -277,42 +294,21 @@ static double node_empty_rate(t_node *node) {
 	return node->free_blocks * 1.0f / node->total_blocks;
 }
 
-static void balance_nodes(t_node *bnodes[]) {
-	double r1 = 0;
-	double r2 = 0;
+static t_node *node_for_backup(t_node *original) {
+	double rate = 0;
+	mlist_t *candidates = mlist_create();
 
 	void routine(t_node *node) {
-		if (!node_active(node))
-			return;
-		double rate = node_empty_rate(node);
-		if (rate > r1) {
-			r2 = r1;
-			r1 = rate;
-		}
+		double cur = node_empty_rate(node);
+		if(cur < rate || node == original || !node_active(node)) return;
+
+		if(!number_equals(cur, rate)) mlist_clear(candidates, NULL);
+		mlist_append(candidates, node);
+		rate = cur;
 	}
 	mlist_traverse(nodes, routine);
 
-	bool filter1(t_node *node) {
-		return number_equals(node_empty_rate(node), r1);
-	}
-	bool filter2(t_node *node) {
-		return number_equals(node_empty_rate(node), r2);
-	}
-
-	mlist_t *f = mlist_filter(nodes, filter1);
-	t_node *n1 = mlist_random(f);
-
-	if (mlist_length(f) == 1) {
-		mlist_destroy(f, NULL);
-		f = mlist_filter(nodes, filter2);
-	}
-
-	t_node *n2 = NULL;
-	do {
-		n2 = mlist_random(f);
-	} while (n2 == n1);
-
-	mlist_destroy(f, NULL);
-	bnodes[0] = n1;
-	bnodes[1] = n2;
+	t_node *node = mlist_random(candidates);
+	mlist_destroy(candidates, NULL);
+	return node;
 }

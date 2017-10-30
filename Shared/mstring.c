@@ -7,8 +7,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define MAX_SIZE mstring_maxsize()
-
 static char *create_format_template(const char *format, va_list args);
 
 // ========== Funciones públicas ==========
@@ -193,7 +191,7 @@ char *mstring_bsize(size_t size) {
 // ========== Funciones privadas ==========
 
 static char *create_format_template(const char *format, va_list args) {
-	char buffer[MAX_SIZE];
+	char buffer[MSTRING_MAXSIZE];
 	vsnprintf(buffer, sizeof buffer, format, args);
 	return strdup(buffer);
 }

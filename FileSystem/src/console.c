@@ -8,6 +8,7 @@
 #include <system.h>
 #include <protocol.h>
 #include <path.h>
+#include <stdarg.h>
 
 #include "nodelist.h"
 #include "dirtree.h"
@@ -52,6 +53,7 @@ static void term_console();
 static void show_usage_for(int cmd);
 static char *extract_arg(int no);
 static int num_args(void);
+static void print_error(const char *format, ...);
 static void execute_line(const char *);
 static t_command *find_command(const char *);
 static void command_not_found(const char *);
@@ -163,6 +165,15 @@ static int num_args() {
 	return count;
 }
 
+static void print_error(const char *format, ...) {
+	va_list args;
+	char *err = mstring_create("Error: %s.\n", format);
+	va_start(args, format);
+	vfprintf(stderr, err, args);
+	va_end(args);
+	free(err);
+}
+
 // ========== Funciones de comandos ==========
 
 static void cmd_cat() {
@@ -171,7 +182,7 @@ static void cmd_cat() {
 	if(filetable_contains(path)) {
 		filetable_cat(path);
 	} else {
-		fprintf(stderr, "Error: archivo inexistente.\n");
+		print_error("archivo inexistente");
 	}
 	free(path);
 }
@@ -195,7 +206,7 @@ static void cmd_cpfrom() {
 	if(path_isfile(upath)) {
 		filetable_cpfrom(upath, dir);
 	} else {
-		fprintf(stderr, "Error: archivo inexistente.\n");
+		print_error("archivo inexistente");
 	}
 
 	free(upath);
@@ -234,26 +245,29 @@ static void cmd_debug() {
 }
 
 static void cmd_format() {
-	printf("!: El filesystem se va a formatear."
-			" Continuar? \n"
-			"[S]í. [N]o. \n");
-
-	char* scan;
-	scan = readline("> ");
-	if (mstring_equali(scan, "S")) {
-		if (nodelist_length() > 0) {
-
-			dirtree_clear();
-			filetable_clear();
-			nodelist_format();
-
-			printf("\nFilesystem formateado.\n");
-			fs.formatted = true;
-		}else{
-			printf("\nNo hay nodos conectados. Aguardar la conexión de al menos un nodo.\n");
-		}
+	if(nodelist_length() == 0) {
+		print_error("ningún nodo conectado");
+		return;
 	}
-	free(scan);
+
+	bool proceed = mstring_equal(current_args, "-f");
+	if(!proceed) {
+		printf("!: El filesystem se va a formatear."
+				" Continuar? \n"
+				"[S]í. [N]o. \n");
+		char *scan = readline("> ");
+		proceed = mstring_equali(scan, "S");
+		free(scan);
+	}
+
+	if(!proceed) return;
+
+	dirtree_clear();
+	filetable_clear();
+	nodelist_format();
+
+	printf("\nFilesystem formateado.\n");
+	fs.formatted = true;
 }
 
 static void cmd_help() {
@@ -279,8 +293,9 @@ static void cmd_info() {
 	char *path = extract_arg(1);
 	if(filetable_contains(path)) {
 		filetable_info(path);
+
 	} else {
-		fprintf(stderr, "Error: archivo inexistente.\n");
+		print_error("archivo inexistente");
 	}
 	free(path);
 }
@@ -312,7 +327,7 @@ static void cmd_mkdir() {
 	if(num_args() != 1) show_usage();
 	char *path = extract_arg(1);
 	if(dirtree_contains(path)) {
-		fprintf(stderr, "Error: ya existe el directorio.\n");
+		print_error("ya existe el directorio");
 	} else {
 		dirtree_add(path);
 	}
@@ -329,7 +344,7 @@ static void cmd_mv() {
 	} else if(filetable_contains(path)) {
 		filetable_move(path, new_path);
 	} else {
-		fprintf(stderr, "Error: ruta inexistente.\n");
+		print_error("ruta inexistente");
 	}
 
 	free(path);
@@ -350,7 +365,7 @@ static void cmd_rename() {
 	} else if(filetable_contains(path)) {
 		filetable_rename(path, new_name);
 	} else {
-		fprintf(stderr, "Error: ruta inexistente.\n");
+		print_error("ruta inexistente");
 	}
 
 	free(path);
@@ -373,16 +388,16 @@ static void cmd_rm() {
 		if(filetable_contains(path)) {
 			filetable_remove(path);
 		} else {
-			fprintf(stderr, "Error: archivo inexistente.\n");
+			print_error("archivo inexistente");
 		}
 		break;
 	case 'd':
 		if(nargs != 2) show_usage();
 		mstring_format(&path, "%s", extract_arg(2));
 		if(!dirtree_contains(path)) {
-			fprintf(stderr, "Error: directorio inexistente.\n");
+			print_error("directorio inexistente");
 		} else if(dirtree_count(path) + filetable_count(path) > 0) {
-			fprintf(stderr, "Error: directorio no vacío.\n");
+			print_error("directorio no vacío");
 		} else {
 			dirtree_remove(path);
 		}
@@ -419,18 +434,16 @@ static void execute_line(const char *line) {
 		return;
 	}
 
-	// Lo comento para no tener que estar haciendo format a cada rato.
-	// Cuando terminemos con los otros comandos lo descomentamos.
-//	if(!fs.formatted
-//			&& !mstring_equal(command->name, "format")
-//			&& !mstring_equal(command->name, "debug")
-//			&& !mstring_equal(command->name, "help")
-//			&& !mstring_equal(command->name, "clear")
-//			&& !mstring_equal(command->name, "quit")) {
-//		printf("\nEl Filesystem no se encuentra formateado.\n"
-//				"Para poder operar proceda a formatear con el comando <<format>>\n");
-//		return;
-//	}
+	if(!fs.formatted
+			&& !mstring_equal(command->name, "format")
+			&& !mstring_equal(command->name, "debug")
+			&& !mstring_equal(command->name, "help")
+			&& !mstring_equal(command->name, "clear")
+			&& !mstring_equal(command->name, "quit")) {
+		printf("\nEl Filesystem no se encuentra formateado.\n"
+				"Para poder operar proceda a formatear con el comando <<format>>\n");
+		return;
+	}
 
 	current_cmd = command - commands;
 	current_args = args;

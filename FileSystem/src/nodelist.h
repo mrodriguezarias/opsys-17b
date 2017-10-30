@@ -39,6 +39,12 @@ int nodelist_length(void);
 int nodelist_freeblocks(void);
 
 /**
+ * Devuelve el nodo con mayor espacio libre.
+ * @return Nodo con mayor espacio disponible.
+ */
+t_node *nodelist_freestnode(void);
+
+/**
  * Determina si un nodo está activo.
  * @param node Nodo.
  * @return Valor lógico con el resultado.
@@ -78,8 +84,9 @@ t_node *nodelist_find(const char *name);
  * Le envía el contenido del bloque al DataNode correspondiente.
  * @param block Bloque a agregar.
  * @param data Contenido del bloque.
+ * @param node Nodo donde poner la copia original.
  */
-void nodelist_addblock(t_block *block, void *data);
+void nodelist_addblock(t_block *block, void *data, t_node *node);
 
 /**
  * Elimina un nodo de la lista de nodos.

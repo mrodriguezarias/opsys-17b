@@ -16,10 +16,12 @@
 #include <thread.h>
 #include <yfile.h>
 #include <log.h>
+#include <number.h>
 
 #include "dirtree.h"
 #include "nodelist.h"
 #include "server.h"
+#include "FileSystem.h"
 
 static mlist_t *files = NULL;
 
@@ -32,14 +34,15 @@ static t_yfile *create_file_from_config(t_config *config);
 static void update_file(t_yfile *file);
 static char *real_file_path(const char *path);
 static bool add_blocks_from_file(t_yfile *yfile, const char *path);
-static void copy_from_bin_file(char buffer[BLOCK_SIZE], t_file* source, t_yfile* yfile);
-static int copy_from_text_file(t_file *source, t_yfile *target, char *buffer);
-static int add_and_send_block(t_yfile *yfile, char *buffer, size_t size);
+static int copy_from_bin_file(t_file *source, char *buffer, t_yfile *target, t_node *onode);
+static int copy_from_text_file(t_file *source, char *buffer, t_yfile *target, t_node *onode);
+static int add_and_send_block(t_yfile *yfile, char *buffer, size_t size, t_node *onode);
 static void print_block(t_block *block);
 static void receive_blocks(t_yfile *file);
 static void receive_block(t_block *block);
 static t_block_copy *first_available_copy(t_block *block);
 static bool available_copy(t_block *block);
+static bool block_saved(t_block *block);
 
 // ========== Funciones públicas ==========
 
@@ -175,7 +178,7 @@ void filetable_info(const char *path) {
 			if(node != NULL) {
 				node = mstring_duplicate(node);
 				mstring_crop(&node, 6);
-				mstring_format(&str, "%s#%i", node, block->copies[i].blockno);
+				mstring_format(&str, "%s#%02i", node, block->copies[i].blockno);
 				free(node);
 			}
 			printf("%10s  ", mstring_crop(&str, 10));
@@ -328,6 +331,8 @@ static t_yfile *create_file_from_config(t_config *config) {
 }
 
 static void update_file(t_yfile *file) {
+	if(!fs.formatted) return;
+
 	t_config *config = config_create(file->path);
 	config_set_value(config, "TIPO", file->type == FTYPE_TXT ? "TEXTO" : "BINARIO");
 	char *sizestr = mstring_create("%i", file->size);
@@ -358,75 +363,89 @@ static char *real_file_path(const char *path) {
 static bool add_blocks_from_file(t_yfile *yfile, const char *path) {
 	char buffer[BLOCK_SIZE];
 	t_file *source = file_open(path);
+	int count, recount;
 
-	int count = 0;
 	if(yfile->type == FTYPE_TXT) {
-		count = copy_from_text_file(source, NULL, buffer);
+		count = copy_from_text_file(source, buffer, NULL, NULL);
 	} else {
-		count = (file_size(source)/BLOCK_SIZE) + (file_size(source) % BLOCK_SIZE != 0);
+		count = number_ceiling(file_size(source) * 1.0 / BLOCK_SIZE);
 	}
 
-	bool success = nodelist_freeblocks() >= count;
+	bool success = false;
+	t_node *onode = nodelist_freestnode();
 
-	if(!success) {
-		fprintf(stderr, "No hay suficiente espacio libre para guardar este archivo.\n");
-	} else if(yfile->type == FTYPE_TXT) {
-		copy_from_text_file(source, yfile, buffer);
-	} else {
-		copy_from_bin_file(buffer, source, yfile);
+	if(onode == NULL) {
+		fprintf(stderr, "Error: no hay nodos disponibles.\n");
+		goto end;
 	}
 
+	if(onode->free_blocks < count) {
+		fprintf(stderr, "Error: no hay suficiente espacio libre para guardar este archivo.\n");
+		goto end;
+	}
+
+	if(yfile->type == FTYPE_TXT) {
+		recount = copy_from_text_file(source, buffer, yfile, onode);
+	} else {
+		recount = copy_from_bin_file(source, buffer, yfile, onode);
+	}
+
+	success = count == recount;
+	if(!success) fprintf(stderr, "Error: no se pudo guardar el archivo.\n");
+
+	end:
 	file_close(source);
 	return success;
 }
 
-static void copy_from_bin_file(char buffer[BLOCK_SIZE], t_file* source, t_yfile* yfile) {
-	char* map = file_map(source);
-	int size = 0;
-	int size_bytes = file_size(source);
-	void line_handler(const char *line) {
-		if (size_bytes > BLOCK_SIZE) {
-			memcpy(buffer, map + size, BLOCK_SIZE - 1);
-			size += BLOCK_SIZE;
-			size_bytes -= BLOCK_SIZE;
-		} else {
-			memcpy(buffer, map + size, size_bytes + 1);
-			size += size_bytes;
-		}
-		add_and_send_block(yfile, buffer, size);
-	}
-	file_traverse(source, line_handler);
-	file_unmap(source, map);
-}
-
-static int copy_from_text_file(t_file *source, t_yfile *target, char *buffer) {
-	int size = 0;
+static int copy_from_bin_file(t_file *source, char *buffer, t_yfile *target, t_node *onode) {
+	size_t size = 0;
 	int count = 0;
-	file_rewind(source);
 
-	void line_handler(const char *line) {
-		printf("Copiando línea: %s\n", line);
-		if(size + mstring_length(line) + 1 > BLOCK_SIZE) {
-			count += add_and_send_block(target, buffer, size);
+	void block_handler(const void *block, size_t bsize) {
+		printf("Copiando datos binarios\n");
+		if(size + bsize > BLOCK_SIZE) {
+			count += add_and_send_block(target, buffer, size, onode);
 			size = 0;
 		}
-		size += sprintf(buffer + size, "%s\n", line);
+		memcpy(buffer + size, block, bsize);
+		size += bsize;
 	}
-	file_traverse(source, line_handler);
-	count += add_and_send_block(target, buffer, size);
+	file_btraverse(source, block_handler);
+	count += add_and_send_block(target, buffer, size, onode);
 
 	return count;
 }
 
-static int add_and_send_block(t_yfile *yfile, char *buffer, size_t size) {
+static int copy_from_text_file(t_file *source, char *buffer, t_yfile *target, t_node *onode) {
+	size_t size = 0;
+	int count = 0;
+
+	void line_handler(const char *line) {
+		printf("Copiando línea: %s\n", line);
+		if(size + mstring_length(line) + 1 > BLOCK_SIZE) {
+			count += add_and_send_block(target, buffer, size, onode);
+			size = 0;
+		}
+		size += sprintf(buffer + size, "%s\n", line);
+	}
+	file_ltraverse(source, line_handler);
+	count += add_and_send_block(target, buffer, size, onode);
+
+	return count;
+}
+
+static int add_and_send_block(t_yfile *yfile, char *buffer, size_t size, t_node *onode) {
 	if(size == 0) return 0;
 	if(yfile != NULL) {
-		printf("\nEnviando bloque:\n%s\n", buffer);
 		t_block *block = calloc(1, sizeof(t_block));
 		block->size = size;
-		nodelist_addblock(block, buffer);
-		print_block(block);
+
+		nodelist_addblock(block, buffer, onode);
+		if(!block_saved(block)) return 0;
+
 		yfile_addblock(yfile, block);
+		print_block(block);
 	}
 	return 1;
 }
@@ -481,4 +500,8 @@ static bool available_copy(t_block *block) {
 	else if(nodelist_active(node1)) copy = block->copies + 1;
 
 	return (copy != NULL);
+}
+
+static bool block_saved(t_block *block) {
+	return !mstring_isempty(block->copies[0].node);
 }
