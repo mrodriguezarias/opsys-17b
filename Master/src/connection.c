@@ -19,12 +19,17 @@ void connect_to_yama() {
 
 	protocol_send_handshake(socket);
 	log_print("Conectado a YAMA en %s:%s por el socket %i", ip, port, socket);
+	t_packet packet = protocol_receive_packet(socket);
+	if(packet.operation == OP_IDJOB){
+		serial_unpack(packet.content,"i",&IDJOB);
+
+	}
 	yama_socket = socket;
 }
 
 void request_job_for_file(const char *file) {
 	log_print("Solicitud de job a YAMA");
-	t_serial *content = serial_pack("s", file);
+	t_serial *content = serial_pack("is",IDJOB ,file);
 	t_packet packet = protocol_packet(OP_INIT_JOB, content);
 	protocol_send_packet(packet, yama_socket);
 	serial_destroy(content);

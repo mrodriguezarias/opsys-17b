@@ -102,10 +102,10 @@ const char *datetime(time_t time){
 
 const char *timediff(time_t t1, time_t t2){
 	unsigned duration = abs((int) difftime(t1, t2));
+	unsigned mseconds = duration % 60;
 	unsigned seconds = duration % 60;
 	unsigned minutes = duration / 60;
-	unsigned hours = duration / 60;
-	return string_from_format("%02u:%02u:%02u", hours, minutes, seconds);
+	return string_from_format("%02u:%02u:%03u", minutes, seconds, mseconds);
 }
 
 const char *timeprom(time_t t1, time_t t2, int etapa){
@@ -113,13 +113,13 @@ const char *timeprom(time_t t1, time_t t2, int etapa){
 		return (hilo->etapa == etapa);
 	}
 	if(mlist_count(hilos, getEtapa) == 0){
-		return string_from_format("%02u:%02u:%02u", 0, 0, 0);
+		return string_from_format("%02u:%02u:%03u", 0, 0, 0);
 	}else{
 		unsigned duration = abs(((int) difftime(t1, t2)) / mlist_count(hilos, getEtapa));
 		unsigned seconds = duration % 60;
 		unsigned minutes = duration / 60;
 		unsigned hours = duration / 60;
-		return string_from_format("%02u:%02u:%02u", hours, minutes, seconds);
+		return string_from_format("%02u:%02u:%03u", hours, minutes, seconds);
 	}
 }
 

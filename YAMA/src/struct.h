@@ -39,6 +39,7 @@ typedef struct{
 mlist_t *nodelist_unpack(t_serial *);
 
 typedef struct{
+	int idJOB;
 	char* nodo;
 	int bloque;
 	int response;
@@ -46,12 +47,19 @@ typedef struct{
 } respuestaOperacionTranf;
 
 typedef struct{
+	int idJOB;
 	char* nodo;
 	int response;
-}respuestaOperacionRL;
+}respuestaOperacion;
 
 typedef struct{
 	char* nodo;
-	char* archivoTemporalLocal;
-}t_nodotemporalRL;
+	char* archivoTemporal;
+}t_nodotemporal;
+
+typedef struct{
+	int idJOB;
+	char* file;
+}t_pedidoTrans;
+
 #endif /* STRUCT_H_ */

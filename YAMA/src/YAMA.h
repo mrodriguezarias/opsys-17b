@@ -12,5 +12,7 @@ extern t_yama yama;
 mlist_t * listaEstados;
 extern int numeroJob;
 extern mlist_t* listaNodosActivos;
+extern int retardoPlanificacion;
+extern char* algoritmoBalanceo;
 
 #endif /* YAMA_H_ */
