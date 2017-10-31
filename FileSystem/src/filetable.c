@@ -248,6 +248,17 @@ bool filetable_stable(){
 	return (fs.formatted && mlist_all(files, available_block));
 }
 
+void rm_block(t_yfile *file, t_block* block, int copy) {
+	t_node* node = nodelist_find(
+			block->copies[copy].node);
+	bitmap_unset(node->bitmap,
+			block->copies[copy].blockno);
+	node->free_blocks++;
+	block->copies[copy].node = NULL;
+	block->copies[copy].blockno = -1;
+	update_file(file);
+}
+
 // ========== Funciones privadas ==========
 
 static mlist_t *files_in_path(const char *path) {
@@ -294,8 +305,13 @@ static void load_blocks(t_yfile *file, t_config *config) {
 		for(int copyno = 0; copyno < 2; copyno++) {
 			mstring_format(&key, "BLOQUE%iCOPIA%i", blockno, copyno);
 			char **vals = config_get_array_value(config, key);
-			block->copies[copyno].node = mstring_duplicate(vals[0]);
-			block->copies[copyno].blockno = mstring_toint(vals[1]);
+			if(!mstring_equali(vals[0],"(null)")){
+				block->copies[copyno].node = mstring_duplicate(vals[0]);
+				block->copies[copyno].blockno = mstring_toint(vals[1]);
+			}else{
+				block->copies[copyno].node = NULL;
+				block->copies[copyno].blockno = -1;
+			}
 		}
 
 		mlist_append(file->blocks, block);

@@ -113,4 +113,12 @@ void filetable_cat(const char *path);
  */
 bool filetable_stable();
 
+/**
+ * Elemina determinada copia de un bloque.
+ * @param file Arcchivo yama que se va a actualizar.
+ * @param block Bloque del cual se eliminará la copia.
+ * @param copy Copia a eliminar (0 ó 1).
+ */
+void rm_block(t_yfile *file, t_block* block, int copy);
+
 #endif /* FILETABLE_H_ */
