@@ -19,25 +19,15 @@
 #include "nodelist.h"
 #include "filetable.h"
 
-static struct {
-	mutex_t *mut;
-	int done;
-	int total;
-	t_file *fp;
-	void *map;
-} cfile;
-
 static t_node *receive_node_info(t_socket socket);
 static void node_listener(void);
 static void yama_listener(void);
 static void datanode_handler(t_node *node);
 static void yama_handler(t_socket socket);
-static void update_current_file(void);
 
 // ========== Funciones públicas ==========
 
-void server_start() {
-	cfile.mut = thread_mutex_create();
+void server() {
 	thread_create(node_listener, NULL);
 	thread_create(yama_listener, NULL);
 }
@@ -48,18 +38,6 @@ t_nodeop *server_nodeop(int opcode, int blockno, t_serial *block) {
 	op->blockno = blockno;
 	op->block = block;
 	return op;
-}
-
-void server_set_current_file(t_yfile *file) {
-	cfile.done = 0;
-	cfile.total = mlist_length(file->blocks);
-	path_truncate("metadata/blocks", cfile.total * BLOCK_SIZE);
-	cfile.fp = file_open("metadata/blocks");
-	cfile.map = file_map(cfile.fp);
-}
-
-void server_end() {
-	thread_mutex_destroy(cfile.mut);
 }
 
 // ========== Funciones privadas ==========
@@ -203,28 +181,14 @@ static void datanode_handler(t_node *node) {
 			packet = protocol_receive_packet(node->socket);
 			if(packet.operation != OP_SEND_BLOCK) {
 				log_report("Se esperaba recibir un bloque pero se recibió otra cosa");
-				continue;
+			} else {
+				filetable_writeblock(op->blockno, packet.content->data);
+				serial_destroy(packet.content);
 			}
-			memcpy(cfile.map + op->blockno * BLOCK_SIZE, packet.content->data, BLOCK_SIZE);
-			serial_destroy(packet.content);
-			update_current_file();
 		}
 		free(op);
 	}
 
 	node->handler = NULL;
 	log_inform("DataNode del nodo %s desconectado", node->name);
-}
-
-static void update_current_file() {
-	bool file_done = false;
-	thread_mutex_lock(cfile.mut);
-	cfile.done++;
-	file_done = cfile.done == cfile.total;
-	thread_mutex_unlock(cfile.mut);
-
-	if(!file_done) return;
-	file_unmap(cfile.fp, cfile.map);
-	file_close(cfile.fp);
-	thread_resume(thread_main());
 }

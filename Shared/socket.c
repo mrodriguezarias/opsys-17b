@@ -138,7 +138,9 @@ char *socket_port(t_socket sock) {
 
 t_fdset socket_select(t_fdset fds) {
 	t_fdset sfds = fds;
-	int r = select(sfds.max + 1, &sfds.set, NULL, NULL, NULL);
+	int r;
+	sel: r = select(sfds.max + 1, &sfds.set, NULL, NULL, NULL);
+	if(r == -1 && errno == EINTR) goto sel;
 	check_descriptor(r);
 	return sfds;
 }

@@ -326,11 +326,10 @@ char *path_md5(const char *path) {
 }
 
 void path_truncate(const char *path, size_t size) {
+	path_mkfile(path);
 	char *upath = system_upath(path);
-	int fd = open(upath, O_CREAT | O_WRONLY, FILE_PERMS);
+	truncate(upath, size);
 	free(upath);
-	ftruncate(fd, size);
-	close(fd);
 }
 
 void path_sort(const char *path) {

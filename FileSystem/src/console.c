@@ -224,13 +224,15 @@ static void cmd_cpto() {
 }
 
 static void cmd_debug() {
-	if(mstring_equal(current_args, "nodes")) {
+	if(num_args() == 0) return;
+	char *mode = extract_arg(1);
+	if(mstring_equal(mode, "nodes")) {
 		nodelist_print();
-	} else if(mstring_equal(current_args, "dirs")) {
+	} else if(mstring_equal(mode, "dirs")) {
 		dirtree_print();
-	} else if(mstring_equal(current_args, "files")) {
+	} else if(mstring_equal(mode, "files")) {
 		filetable_print();
-	} else if(mstring_equal(current_args, "recv")) {
+	} else if(mstring_equal(mode, "recv")) {
 		puts("Prueba de petición de un bloque a un DataNode. Datos recibidos:");
 		t_node *node = nodelist_find("NODO1");
 		t_serial *serial = serial_pack("ii", 0, 0);
@@ -242,6 +244,7 @@ static void cmd_debug() {
 		printf("Received: %s\n", (char*)response.content->data);
 		serial_destroy(response.content);
 	}
+	free(mode);
 }
 
 static void cmd_format() {
