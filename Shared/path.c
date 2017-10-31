@@ -43,6 +43,9 @@ char *_path_create(t_ptype type, const char *scount, ...) {
 	if(mstring_hasprefix(path, "./")) {
 		mstring_format(&path, "%s", path + 2);
 	}
+	char *rpath = realpath(path, NULL);
+	free(path);
+	path = rpath;
 	if(*path != '/') {
 		switch(type) {
 		case PTYPE_YATPOS: mstring_format(&path, "%s/%s", system_userdir(), path); break;
@@ -337,8 +340,9 @@ void path_sort(const char *path) {
 	t_file *file = file_open(path);
 
 	mlist_t *lines = mlist_create();
-	void reader(const char *line) {
+	bool reader(const char *line) {
 		mlist_append(lines, mstring_create("%s\n", line));
+		return true;
 	}
 	file_ltraverse(file, reader);
 

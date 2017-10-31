@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <system.h>
+#include <log.h>
 #include "data.h"
 
 static struct {
@@ -45,6 +46,9 @@ void data_open(const char *path, size_t size) {
 		fprintf(stderr, "mmap: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
+	char *bsize = mstring_bsize(data.size);
+	log_print("data.bin mapeado a memoria (%s)", bsize);
+	free(bsize);
 }
 
 void data_set(int blockno, void *block) {

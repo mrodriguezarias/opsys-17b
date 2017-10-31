@@ -80,20 +80,26 @@ void file_writeline(t_file *file, const char *line);
  * @param file Archivo de texto a recorrer.
  * @param routine Rutina a ejecutar para cada línea.
  */
-void file_ltraverse(t_file *file, void (*routine)(const char *line));
+void file_ltraverse(t_file *file, bool (*routine)(const char *line));
 
 /**
  * Itera sobre bloques alineados a memoria de un archivo binario.
  * @param file Archivo binario a recorrer.
  * @param routine Rutina a ejecutar para cada bloque de datos.
  */
-void file_btraverse(t_file *file, void (*routine)(const void *block, size_t size));
+void file_btraverse(t_file *file, bool (*routine)(const void *block, size_t size));
 
 /**
  * Elimina el contenido de un archivo.
  * @param file Archivo abierto.
  */
 void file_clear(t_file *file);
+
+/**
+ * Cierra y elimina un archivo.
+ * @param file Archivo abierto.
+ */
+void file_delete(t_file *file);
 
 /**
  * Mapea a memoria un archivo abierto.

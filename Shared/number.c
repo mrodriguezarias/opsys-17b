@@ -8,3 +8,11 @@ t_number number_ceiling(t_number x) {
 bool number_equals(t_number x, t_number y) {
 	return fabs(x - y) < 0.000001;
 }
+
+t_number number_min(t_number x, t_number y) {
+	return x < y ? x : y;
+}
+
+t_number number_max(t_number x, t_number y) {
+	return x > y ? x : y;
+}

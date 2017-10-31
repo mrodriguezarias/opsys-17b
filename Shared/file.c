@@ -71,17 +71,17 @@ void file_writeline(t_file *file, const char *line) {
 	}
 }
 
-void file_ltraverse(t_file *file, void (*routine)(const char *line)) {
+void file_ltraverse(t_file *file, bool (*routine)(const char *line)) {
 	if(file == NULL) return;
 	rewind(file->fp);
 	char *line = mstring_empty(NULL);
 	while(line = get_line(file->fp, line), line != NULL) {
-		routine(line);
+		if(!routine(line)) break;
 	}
 	free(line);
 }
 
-void file_btraverse(t_file *file, void (*routine)(const void *block, size_t size)) {
+void file_btraverse(t_file *file, bool (*routine)(const void *block, size_t size)) {
 	if(file == NULL) return;
 	rewind(file->fp);
 	size_t cap = 4096;
@@ -89,13 +89,20 @@ void file_btraverse(t_file *file, void (*routine)(const void *block, size_t size
 	size_t read = 0;
 
 	while(read = fread(buf, 1, cap, file->fp), read > 0) {
-		routine(buf, read);
+		if(!routine(buf, read)) break;
 	}
 }
 
 void file_clear(t_file *file) {
 	ftruncate(fileno(file->fp), 0);
 	rewind(file->fp);
+}
+
+void file_delete(t_file *file) {
+	char *path = mstring_duplicate(file->path);
+	file_close(file);
+	path_remove(path);
+	free(path);
 }
 
 void *file_map(t_file *file) {

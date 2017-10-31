@@ -215,12 +215,21 @@ static void cmd_cpfrom() {
 
 static void cmd_cpto() {
 	if(num_args() != 2) show_usage();
-	char *source_path = extract_arg(1);
-	char *local_dir = extract_arg(2);
+	char *path = extract_arg(1);
+	char *dir = extract_arg(2);
+	char *udir = path_create(PTYPE_USER, dir);
+	free(dir);
 
-	filetable_cpto(source_path, local_dir);
-	free(source_path);
-	free(local_dir);
+	if(!filetable_contains(path)) {
+		print_error("archivo inexistente");
+	} else if(!path_isdir(udir)) {
+		print_error("directorio inexistente");
+	} else {
+		filetable_cpto(path, udir);
+	}
+
+	free(path);
+	free(udir);
 }
 
 static void cmd_debug() {
@@ -323,7 +332,16 @@ static void cmd_ls() {
 }
 
 static void cmd_md5() {
-	puts("TODO");
+	if(num_args() != 1) show_usage();
+	char *path = extract_arg(1);
+	if(!filetable_contains(path)) {
+		print_error("archivo inexistente");
+	} else {
+		char *md5 = filetable_md5(path);
+		printf("%s\n", md5);
+		free(md5);
+	}
+	free(path);
 }
 
 static void cmd_mkdir() {

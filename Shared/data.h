@@ -4,8 +4,7 @@
 #include <stddef.h>
 
 // Tamaño de bloque = 1 MiB
-//#define BLOCK_SIZE 1048576
-#define BLOCK_SIZE 16384
+#define BLOCK_SIZE 1048576
 
 /**
  * Carga el espacio de datos a memoria.

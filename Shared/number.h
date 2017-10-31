@@ -20,4 +20,20 @@ t_number number_ceiling(t_number x);
  */
 bool number_equals(t_number x, t_number y);
 
+/**
+ * Devuelve el menor valor entre dos números.
+ * @param x Un número.
+ * @param y Otro número.
+ * @return Valor mínimo entre los números.
+ */
+t_number number_min(t_number x, t_number y);
+
+/**
+ * Devuelve el mayor valor entre dos números.
+ * @param x Un número.
+ * @param y Otro número.
+ * @return Valor máximo entre los números.
+ */
+t_number number_max(t_number x, t_number y);
+
 #endif /* NUMBER_H_ */

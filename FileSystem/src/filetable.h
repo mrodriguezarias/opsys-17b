@@ -107,6 +107,12 @@ void filetable_cpto(const char *path, const char *dir);
 void filetable_cat(const char *path);
 
 /**
+ * Devuelve el MD5 de un archivo YAMA.
+ * @param path Ruta al archivo yamafs.
+ */
+char *filetable_md5(const char *path);
+
+/**
  * Determina si el filesystem está estable.
  * @return Valor lógico indicando si hay al menos una copia
  * disponible de cada bloque.
