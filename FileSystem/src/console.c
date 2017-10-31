@@ -404,8 +404,33 @@ static void cmd_rm() {
 		break;
 	case 'b':
 		if(nargs != 4) show_usage();
-		mstring_format(&path, "%s", extract_arg(2));
-		puts("TODO");
+		if (mstring_toint(extract_arg(4)) > 1){
+			print_error("copia inválida - 0 ó 1");
+		}else{
+			mstring_format(&path, "%s", extract_arg(2));
+			if(!filetable_contains(path)) {
+				print_error("archivo inexistente");
+			}else{
+				t_yfile *yfile = filetable_find(path);
+				bool getBlock (t_block *bloque){
+					return mstring_toint(extract_arg(3)) == bloque->index;
+				}
+				t_block *block = mlist_find(yfile->blocks, getBlock);
+				if(block == NULL){
+					print_error("bloque inexistente");
+				}else if(block->copies[mstring_toint(extract_arg(4))].node == NULL){
+					print_error("copia inexistente");
+					}else if(block->copies[0].node == NULL || block->copies[1].node == NULL){
+						print_error("última copia");
+					}else{
+						rm_block(yfile, block, mstring_toint(extract_arg(4)));
+						printf("copia %d del bloque %d del archivo %s eliminada.\n",
+								mstring_toint(extract_arg(4)),
+								mstring_toint(extract_arg(3)),
+								path);
+					}
+			}
+		}
 		break;
 	default:
 		show_usage();
