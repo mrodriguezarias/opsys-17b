@@ -51,11 +51,10 @@
 #define ESCRITURA_PADRE pipe_padreAHijo[1]
 
 
-typedef struct {
-	char * IP_FILESYSTEM, *PUERTO_FILESYSTEM, *NOMBRE_NODO, *PUERTO_WORKER,
-			*PUERTO_DATANODE, *RUTA_DATABIN;
-} tWorker;
-
+typedef struct{
+		int bloque;
+		int bytesOcupados;
+	}tEtapaTransformacionWorker;
 
 typedef struct {
 	char * script;
@@ -72,6 +71,11 @@ typedef struct{
 			tEtapaReduccionGlobal * rg;
 }tEtapaReduccionGlobalWorker;
 
+typedef struct {
+	char * archivoReduccion;
+	char * archivoFinal;
+} tEtapaAlmacenamientoWorker;
+
 t_socket socketEscuchaMaster,socketEscuchaWorker, socketFileSystem,socketWorker;
 
 
@@ -86,5 +90,8 @@ void mandarDatosAWorkerHomologo(tEtapaReduccionGlobal * rg,int);
 void asignarOffset(int * offset,int bloque,int bytesOcuapdos);
 void ejecutarComando(char * command, int socketAceptado);
 mlist_t * crearListaParaReducir(tEtapaReduccionGlobalWorker * rg);
+tEtapaAlmacenamientoWorker * af_unpack(t_serial * serial);
+int connect_to_filesystem();
+
 
 #endif

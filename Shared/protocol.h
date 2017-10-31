@@ -40,6 +40,8 @@ typedef enum {
 
 	REGISTRARNODO,					// filesystem -> datanode
 
+	OP_MANDAR_ARCHIVO,				// worker -> worker
+
 } t_operation;
 
 //interrupciones del job
