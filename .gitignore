@@ -50,3 +50,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+DataNode/Debug/DataNode
+FileSystem/Debug/FileSystem
+Master/Debug/Master
+Worker/Debug/Worker
+YAMA/Debug/YAMA
