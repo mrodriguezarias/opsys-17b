@@ -59,8 +59,7 @@ static bool block_saved(t_block *block);
 // ========== Funciones públicas ==========
 
 void filetable_init() {
-	if (files != NULL)
-		return;
+	if(files != NULL) return;
 	files = mlist_create();
 	dirtree_traverse(dir_traverser);
 	bfile.mut = thread_mutex_create();

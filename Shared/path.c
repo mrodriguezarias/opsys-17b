@@ -43,9 +43,13 @@ char *_path_create(t_ptype type, const char *scount, ...) {
 	if(mstring_hasprefix(path, "./")) {
 		mstring_format(&path, "%s", path + 2);
 	}
+
 	char *rpath = realpath(path, NULL);
-	free(path);
-	path = rpath;
+	if(rpath != NULL) {
+		free(path);
+		path = rpath;
+	}
+
 	if(*path != '/') {
 		switch(type) {
 		case PTYPE_YATPOS: mstring_format(&path, "%s/%s", system_userdir(), path); break;

@@ -41,13 +41,17 @@ static t_directory *find_dir_by_index(int index);
 static t_directory *find_dir_by_name(const char *name, int parent);
 static void remove_children(t_directory *dir);
 static void remove_directory(t_directory *dir);
-static bool map_file(void);
+static void map_file(void);
 static void save_to_file(void);
 
 // ========== Funciones públicas ==========
 
 void dirtree_init() {
-	if(map_file()) return;
+	if(path_exists(DAT_PATH)) {
+		map_file();
+		memcpy(dirs, map, sizeof(t_directory) * MAX_SIZE);
+		return;
+	}
 
 	for(int i = 0; i < MAX_SIZE; i++) {
 		t_directory *dir = dirs + i;
@@ -314,8 +318,8 @@ char *dirtree_ypath(const char *rpath) {
 
 void dirtree_term() {
 	save_to_file();
-	file_unmap(file, map);
-	file_close(file);
+	if(map) file_unmap(file, map);
+	if(file) file_close(file);
 	map = NULL;
 	file = NULL;
 }
@@ -427,17 +431,18 @@ static void remove_directory(t_directory *dir) {
 	free(dir_path);
 }
 
-static bool map_file() {
-	bool exists = path_exists(DAT_PATH);
-	if(!exists) path_truncate(DAT_PATH, sizeof(t_directory) * MAX_SIZE);
+static void map_file() {
+	if(file != NULL) return;
+	if(!path_exists(DAT_PATH)) {
+		path_truncate(DAT_PATH, sizeof(t_directory) * MAX_SIZE);
+	}
 	file = file_open(DAT_PATH);
 	map = file_map(file);
-	if(exists) memcpy(dirs, map, sizeof(t_directory) * MAX_SIZE);
-	return exists;
 }
 
 static void save_to_file() {
 	if(!fs.formatted) return;
+	map_file();
 	size_t size = sizeof(t_directory) * MAX_SIZE;
 	memcpy(map, dirs, size);
 	file_sync(file, map);
