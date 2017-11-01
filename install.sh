@@ -28,6 +28,8 @@ rm -f *.deb
 echo -e "\r\e[0K • libssl-dev: done."
 
 echo "Building modules…"
+mkdir -p ~/git/tp-2017-2c-YATPOS
+cp -r Shared ~/git/tp-2017-2c-YATPOS
 
 echo -n " • DataNode: building…"
 make all -s -B -C DataNode/Debug &> /dev/null
