@@ -1,5 +1,6 @@
 #include "funcionesYAMA.h"
 #include "YAMA.h"
+#include "server.h"
 
 static int contadorBloquesSeguidosNoAsignados = 0;
 static bool asigneBloquesDeArchivo = false;
@@ -22,30 +23,50 @@ int availabilityClock(){
 	return atoi(config_get("DISP_BASE"));
 }
 
-int Disponibilidad(){
+int cargaActual(char* nodo){
+	bool condicion(void* cargaNodoRecibida){
+		return string_equals_ignore_case(nodo, ((t_cargaPorNodo*) cargaNodoRecibida)->nodo);
+	}
+	void* cargaNodoObtenida = mlist_find(listaCargaPorNodo,condicion);
+	t_cargaPorNodo* cargaNodo = (t_cargaPorNodo*) cargaNodoObtenida;
+	return cargaNodo->cargaActual;
+}
+
+int Disponibilidad(int cargaMax, char* nodo){
 	//string_equals_ignore_case("CLOCK",algoritmoBalanceo)
 	if(!strcmp("CLOCK",config_get("ALGORITMO_BALANCEO"))){
 		return availabilityClock();
 	}
 	else{
-		//return availabilityWClock();
-		return 0;
+		return availabilityClock() + ( cargaMax - cargaActual(nodo) );
 	}
 }
 
+int obtenerCargaMaxima(){
+	bool mayor(void* carga1, void* carga2){
+		return ((t_cargaPorNodo*) carga1)->cargaActual > ((t_cargaPorNodo*) carga2)->cargaActual;
+	}
+	mlist_sort(listaCargaPorNodo, mayor);
+	t_cargaPorNodo* cargaMayor = mlist_first(listaCargaPorNodo);
+	return cargaMayor->cargaActual;
+}
+
 void llenarArrayPlanificador(t_workerPlanificacion planificador[],int tamaniolistaNodos,int *posicion){
-	int i,MaximaDisponibilidad = 0;
+	int i,MaximaDisponibilidad = 0, cargaMax = 0;
+	if(string_equals_ignore_case("WCLOCK",algoritmoBalanceo)){
+		cargaMax = obtenerCargaMaxima();
+	}
 	for(i=0;i<tamaniolistaNodos;i++){
-		planificador[i].disponibilidad = Disponibilidad();
-		if(planificador[i].disponibilidad > MaximaDisponibilidad){
-			MaximaDisponibilidad = planificador[i].disponibilidad;
-			*posicion = i;
-		}
 		t_infoNodo* nodoObtenido = mlist_get(listaNodosActivos,i);
 		planificador[i].nombreWorker = malloc(sizeof(char)*6);
 		strcpy( planificador[i].nombreWorker, nodoObtenido->nodo);
 		planificador[i].bloque = mlist_create();
 
+		planificador[i].disponibilidad = Disponibilidad(cargaMax, planificador[i].nombreWorker);
+		if(planificador[i].disponibilidad > MaximaDisponibilidad){
+			MaximaDisponibilidad = planificador[i].disponibilidad;
+			*posicion = i;
+		}
 	}
 }
 
@@ -55,7 +76,7 @@ void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificaci
 
 	if(planificador[*posicion].disponibilidad == 0){
 		printf("Disponibilidad1\n");
-		planificador[*posicion].disponibilidad = Disponibilidad();
+		planificador[*posicion].disponibilidad = config_get("DISP_BASE");
 		posicion++;
 		contadorBloquesSeguidosNoAsignados++;
 	}else if(!strcmp(infoArchivo->copies[0].node, planificador[*posicion].nombreWorker) || !strcmp(infoArchivo->copies[1].node, planificador[*posicion].nombreWorker)){
@@ -74,7 +95,7 @@ void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificaci
 		if(contadorBloquesSeguidosNoAsignados == tamaniolistaNodos){
 			int i;
 			for(i = 0; i < tamaniolistaNodos; i++){
-				planificador[i].disponibilidad += Disponibilidad();
+				planificador[i].disponibilidad += atoi(config_get("DISP_BASE"));
 			}
 			contadorBloquesSeguidosNoAsignados = 0;
 		}
@@ -109,20 +130,22 @@ void requerirInformacionFilesystem(t_serial *file){
 	serial_destroy(packetInfoFs.content);
 }
 
-void abortarJob(int socketMaster, int codigoError){
+void abortarJob(int job, int socketMaster, int codigoError){
+	abortarJobEnTablaEstado(socketMaster, job);
+
 	t_packet packetError = protocol_packet(OP_ERROR_JOB, serial_pack("i",codigoError));
 	protocol_send_packet(packetError, socketMaster);
 	serial_destroy(packetError.content);
 }
 
-int reciboInformacionSolicitada(mlist_t* listaNodosActivos,t_yfile* Datosfile,int master){ //listaNodosactivos y datos file luego borrarlo, no lo debe recibir, es para el hardcodeo
+int reciboInformacionSolicitada(int job, mlist_t* listaNodosActivos,t_yfile* Datosfile,int master){ //listaNodosactivos y datos file luego borrarlo, no lo debe recibir, es para el hardcodeo
 	t_packet packetNodosActivos = protocol_receive_packet(yama.fs_socket);
 	if(packetNodosActivos.operation == OP_NODES_ACTIVE_INFO){
 	listaNodosActivos = nodelist_unpack(packetNodosActivos.content);
 	}
 		t_packet packetArchivo = protocol_receive_packet(yama.fs_socket);
 		if(packetArchivo.operation == OP_ARCHIVO_INEXISTENTE){
-			abortarJob(master,ARCHIVO_INEXISTENTE);
+			abortarJob(job, master,ARCHIVO_INEXISTENTE);
 			return -1;
 		}
 
@@ -150,6 +173,30 @@ void agregarAtablaEstado(int job, char* nodo,int Master,int bloque,char* etapa,c
 	nuevoEstado->estado = estado;
 	mlist_append(listaEstados,nuevoEstado);
 
+}
+
+
+void abortarJobEnTablaEstado(int socketMaster,int job){
+	bool condicionFiltro(void* unEstado){
+		return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == socketMaster && string_equals_ignore_case( ((t_Estado*) unEstado)->estado, "En proceso" );
+	}
+	mlist_t * listaFiltrada = mlist_filter(listaEstados, condicionFiltro);
+	int i, indiceEncontrado;
+	for(i = 0; i < mlist_length(listaFiltrada); i++){
+		void * estadoObtenido = mlist_get(listaFiltrada, i);
+		t_Estado* estadoEncontrado = (t_Estado *) estadoObtenido;
+
+		int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(estadoEncontrado->nodo);
+		actualizarCargaDelNodo(estadoEncontrado->nodo, job, posicionCargaNodoObtenida, 0, 1);
+
+		bool condicionIndice(void * unEstado){
+			return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == socketMaster && string_equals_ignore_case( ((t_Estado*) unEstado)->estado, "En proceso" ) && string_equals_ignore_case( ((t_Estado*) unEstado)->nodo, estadoEncontrado->nodo ) && ((t_Estado*) unEstado)->block == estadoEncontrado->block;
+		}
+		indiceEncontrado = mlist_index(listaEstados, condicionIndice);
+		estadoEncontrado->estado = "Error";
+		mlist_replace(listaEstados, indiceEncontrado, estadoEncontrado);
+	}
+	mlist_destroy(listaFiltrada, destruirlista);
 }
 
 void actualizoTablaEstado(char* nodo,int bloque,int socketMaster,int job,char* estado){
@@ -181,7 +228,7 @@ void replanifacion(char* nodo, const char* pathArchivo,int master,int job){
 	t_serial* serial_send = serial_pack("s",pathArchivo);
 	t_yfile* Datosfile = malloc(sizeof(t_yfile));
 	requerirInformacionFilesystem(serial_send);
-	//reciboInformacionSolicitada(master);
+	//reciboInformacionSolicitada(job, master);
 	Datosfile->blocks = mlist_create();
 
 	bool esNodoBuscado(void* estadoTarea){
@@ -210,37 +257,36 @@ void replanifacion(char* nodo, const char* pathArchivo,int master,int job){
 
 	mlist_t* list_to_send = mlist_create();
 
+	int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(nodo);
+	void * cargaNodoObtenida = mlist_get(listaCargaPorNodo, posicionCargaNodoObtenida);
+	t_cargaPorNodo * cargaNodo = (t_cargaPorNodo *) cargaNodoObtenida;
 
 	for(i=0; i < mlist_length(listaDeBloquesAReplanificar); i++){
 		usleep(retardoPlanificacion);
 		void* bloqueDeListaObtenido = mlist_get(listaDeBloquesAReplanificar, i);
 		t_block* bloqueAReplanificar = (t_block *) bloqueDeListaObtenido;
-		if(string_equals_ignore_case(nodo, bloqueAReplanificar->copies[0].node) && NodoConCopia_is_active(bloqueAReplanificar->copies[1].node) ){
-			bool condicion(void* datosDeUnNodo){
-				return string_equals_ignore_case(((t_infoNodo *) datosDeUnNodo)->nodo , bloqueAReplanificar->copies[1].node) ? true : false;
-			}
-			t_infoNodo* datosNodoAEnviar = mlist_find(listaNodosActivos, condicion);
-			char* nombreArchivoTemporal = malloc(sizeof(char)*21);
-			strcpy(nombreArchivoTemporal, generarNombreArchivoTemporalTransf(job, master, bloqueAReplanificar->copies[1].blockno));
-			tEtapaTransformacion* et = new_etapa_transformacion(bloqueAReplanificar->copies[1].node,datosNodoAEnviar->ip,datosNodoAEnviar->puerto,bloqueAReplanificar->copies[1].blockno,bloqueAReplanificar->size,nombreArchivoTemporal);
-			mlist_append(list_to_send,et);
+
+		if(nodoEstaEnLaCopia(bloqueAReplanificar, 0, nodo) ){
+			cargaNodo->cargaActual -= 1;
+			actualizarCargaDelNodo(bloqueAReplanificar->copies[1].node, job, posicionCargaNodoObtenida, 1, 1);
+			//revisar si es necesario recibir la lista con el valor agregado del append o no
+			generarEtapaTransformacionAEnviarParaCopia(1, bloqueAReplanificar, job, master, list_to_send);
+
 		}
-		else if(string_equals_ignore_case(nodo, bloqueAReplanificar->copies[1].node) && NodoConCopia_is_active(bloqueAReplanificar->copies[0].node)){
-			bool condicion(void* datosDeUnNodo){
-				return string_equals_ignore_case(((t_infoNodo *) datosDeUnNodo)->nodo , bloqueAReplanificar->copies[0].node);
-			}
-			t_infoNodo* datosNodoAEnviar = mlist_find(listaNodosActivos, condicion);
-			char* nombreArchivoTemporal = malloc(sizeof(char)*21);
-			strcpy(nombreArchivoTemporal, generarNombreArchivoTemporalTransf(job,master,bloqueAReplanificar->copies[0].blockno));
-			tEtapaTransformacion* et = new_etapa_transformacion(bloqueAReplanificar->copies[0].node,datosNodoAEnviar->ip,datosNodoAEnviar->puerto,bloqueAReplanificar->copies[0].blockno,bloqueAReplanificar->size,nombreArchivoTemporal);
-			mlist_append(list_to_send,et);
+		else if(nodoEstaEnLaCopia(bloqueAReplanificar, 1, nodo)){
+			cargaNodo->cargaActual -= 1;
+			actualizarCargaDelNodo(bloqueAReplanificar->copies[0].node, job, posicionCargaNodoObtenida, 1, 1);
+			//revisar si es necesario recibir la lista con el valor agregado del append o no
+			generarEtapaTransformacionAEnviarParaCopia(0, bloqueAReplanificar, job, master, list_to_send);
 		}
 		else{
-			abortarJob(master,ERROR_REPLANIFICACION);
 			aborto = true;
 		}
 	}
 	if(!aborto){
+		//eliminarCargaJobDelNodo(job, cargaNodo->cargaPorJob);
+		mlist_replace(listaCargaPorNodo, posicionCargaNodoObtenida, cargaNodo);
+
 		for(i=0; i< mlist_length(list_to_send);i++){
 			void* etapaObtenida = mlist_get(list_to_send,i);
 			tEtapaTransformacion* etapa = (tEtapaTransformacion*) etapaObtenida;
@@ -248,12 +294,101 @@ void replanifacion(char* nodo, const char* pathArchivo,int master,int job){
 		}
 		mandar_etapa_transformacion(list_to_send,master);
 	}
+	else{
+		abortarJob(job, master,ERROR_REPLANIFICACION);
+	}
+
 	free(Datosfile);
 	mlist_destroy(listaFiltradaEstadosBloquesDelNodo,destruirlista);
 	mlist_destroy(listaDeBloquesAReplanificar,destruirlista);
 	mlist_destroy(list_to_send,destruirlista);
 }
 
+void generarEtapaTransformacionAEnviarParaCopia(int copia, t_block* bloqueAReplanificar, int job, int master, mlist_t* list_to_send){
+	bool condicion(void* datosDeUnNodo){
+		return string_equals_ignore_case(((t_infoNodo *) datosDeUnNodo)->nodo , bloqueAReplanificar->copies[copia].node) ? true : false;
+	}
+	t_infoNodo* datosNodoAEnviar = mlist_find(listaNodosActivos, condicion);
+	char* nombreArchivoTemporal = malloc(sizeof(char)*21);
+	strcpy(nombreArchivoTemporal, generarNombreArchivoTemporalTransf(job, master, bloqueAReplanificar->copies[copia].blockno));
+	tEtapaTransformacion* et = new_etapa_transformacion(bloqueAReplanificar->copies[copia].node,datosNodoAEnviar->ip,datosNodoAEnviar->puerto,bloqueAReplanificar->copies[copia].blockno,bloqueAReplanificar->size,nombreArchivoTemporal);
+	mlist_append(list_to_send,et);
+}
+
+bool nodoEstaEnLaCopia(t_block* bloqueAReplanificar, int copia, char* nodoAReplanificar){
+	if(copia == 0){
+		return string_equals_ignore_case(nodoAReplanificar, bloqueAReplanificar->copies[0].node) && NodoConCopia_is_active(bloqueAReplanificar->copies[1].node);
+	}else{
+		return string_equals_ignore_case(nodoAReplanificar, bloqueAReplanificar->copies[1].node) && NodoConCopia_is_active(bloqueAReplanificar->copies[0].node);
+	}
+
+}
+
+int obtenerPosicionCargaNodo(char * nodoAReplanificar){
+	bool condicionIndice(void* cargaNodotraida){
+		return string_equals_ignore_case( ((t_cargaPorNodo *) cargaNodotraida)->nodo, nodoAReplanificar);
+	}
+	return mlist_index(listaCargaPorNodo, condicionIndice);
+}
+
+void actualizarCargaDelNodo(char* nodoCopia, int job, int posicionCargaNodoObtenida, int aumentarOQuitar, int cantidadAAumentar){//1 para aumentar, 0 para quitar
+	int posicionCargaNodoObtenidaCopia, posicionCargaJobObtenidoCopia;
+
+	bool condicionIndiceCopia1(void* cargaNodotraida){
+			return string_equals_ignore_case( ((t_cargaPorNodo *) cargaNodotraida)->nodo, nodoCopia);
+	}
+	posicionCargaNodoObtenidaCopia = mlist_index(listaCargaPorNodo, condicionIndiceCopia1);
+	void * cargaNodoObtenida = mlist_get(listaCargaPorNodo, posicionCargaNodoObtenida);
+	t_cargaPorNodo * cargaNodoCopia = (t_cargaPorNodo *) cargaNodoObtenida;
+
+	posicionCargaJobObtenidoCopia = existeElJobEnLaCopia(job, cargaNodoCopia->cargaPorJob);
+
+	if(aumentarOQuitar == 0){
+		if(posicionCargaJobObtenidoCopia != -1){
+			void * cargaJobObtenida = mlist_get(cargaNodoCopia->cargaPorJob, posicionCargaJobObtenidoCopia);
+			t_cargaPorJob * cargaJob = (t_cargaPorJob *) cargaJobObtenida;
+
+			cargaNodoCopia->cargaActual -= cargaJob->cargaDelJob;
+
+			eliminarCargaJobDelNodo(job, cargaNodoCopia->cargaPorJob);
+		}
+	}
+	else{
+		cargaNodoCopia->cargaActual += cantidadAAumentar;
+
+		if(posicionCargaJobObtenidoCopia != -1){
+			void * cargaJobObtenida = mlist_get(cargaNodoCopia->cargaPorJob, posicionCargaJobObtenidoCopia);
+			t_cargaPorJob * cargaJobCopia = (t_cargaPorNodo *) cargaJobObtenida;
+			cargaJobCopia->cargaDelJob += cantidadAAumentar;
+			mlist_replace(cargaNodoCopia->cargaPorJob, posicionCargaJobObtenidoCopia, cargaJobCopia);
+		}else{
+			t_cargaPorJob * cargaJobCopia;
+			cargaJobCopia->job = job;
+			cargaJobCopia->cargaDelJob = cantidadAAumentar;
+			mlist_append(cargaNodoCopia->cargaPorJob, cargaJobCopia);
+		}
+	}
+
+	mlist_replace(listaCargaPorNodo, posicionCargaNodoObtenidaCopia, cargaNodoCopia);
+
+}
+
+void eliminarCargaJobDelNodo(int job, mlist_t * listaJobsNodo){
+	bool esJobAEliminar(void* jobObtenido){
+		return ((t_cargaPorJob*) jobObtenido)->job == job;
+	}
+	void eliminarJob(void* jobObtenido){
+		free(jobObtenido);
+	}
+	mlist_remove(listaJobsNodo, esJobAEliminar, eliminarJob);
+}
+
+int existeElJobEnLaCopia(int job, mlist_t * listaJobsCopia){
+	bool esLaCargaDelJobBuscado(void* unaCargaJob){
+		return ((t_cargaPorJob *) unaCargaJob)->job == job;
+	}
+	return mlist_index(listaJobsCopia, esLaCargaDelJobBuscado);
+}
 
 bool NodoConCopia_is_active(char* nodo){
 	bool contieneNodo(void* unNodo){

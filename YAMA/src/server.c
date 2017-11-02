@@ -14,9 +14,10 @@
 #include "funcionesYAMA.h"
 #include "YAMA.h"
 
-
+static bool esLaPrimeraVezQueReciboLosNodos;
 
 void listen_to_master() {
+	esLaPrimeraVezQueReciboLosNodos = true;
 	log_print("Escuchando puertos de master");
 	t_socket sv_sock = socket_init(NULL, config_get("MASTER_PUERTO"));
 	t_fdset sockets = socket_set_create();
@@ -58,11 +59,11 @@ void listen_to_master() {
 					log_print("OP_INIT_JOB");
 					t_serial* file_serial = serial_pack("s",pedidoInicio->file);
 					requerirInformacionFilesystem(file_serial);
-					if(reciboInformacionSolicitada(Datosfile,sock)==0){
+					if(reciboInformacionSolicitada(pedidoInicio->idJOB, Datosfile,sock)==0){
 					/*///////////////////////////// hardcodeado
 					t_infoNodo* UnNodo = malloc(sizeof(t_infoNodo));
 					requerirInformacionFilesystem(packetOperacion.content);
-					reciboInformacionSolicitada(Datosfile,sock);
+					reciboInformacionSolicitada(pedidoInicio->idJOB, Datosfile,sock);
 					///////////////////////////// hardcodeado
 					t_infoNodo* UnNodo = malloc(sizeof(t_infoNodo));
 					t_infoNodo* UnNodo2 = malloc(sizeof(t_infoNodo));
@@ -86,11 +87,12 @@ void listen_to_master() {
 					bloque->copies[1].node = "NODO2";
 					mlist_append(Datosfile->blocks,bloque);
 
-
 					///////////////////////////////// */
+					completarPrimeraVez();
 					int tamaniolistaNodos = mlist_length(listaNodosActivos);
 					t_workerPlanificacion planificador[tamaniolistaNodos];
 					planificar(planificador, tamaniolistaNodos,Datosfile->blocks);
+					agregarCargaNodoSegunLoPlanificado(pedidoInicio->idJOB, planificador, tamaniolistaNodos);
 					enviarEtapa_transformacion_Master(pedidoInicio->idJOB,tamaniolistaNodos,planificador,Datosfile->blocks,sock);
 					}
 					}
@@ -99,7 +101,7 @@ void listen_to_master() {
 					{respuestaOperacionTranf* finalizoOperacion = serial_unpackRespuestaOperacion(packetOperacion.content);
 					if(finalizoOperacion->response == -1){
 						//replanifacion(finalizoOperacion->nodo,finalizoOperacion->file,sock,finalizoOperacion->idJOB);
-						//actualizoTablaEstado(finalizoOperacion.nodo,finalizoOperacion.bloque,"Transformacion");hay que agregar una entrada para el nuevo nodo que va a ejecutar
+						//esta no deberia estar, ya que se hace en repla - actualizoTablaEstado(finalizoOperacion.nodo,finalizoOperacion.bloque,"Transformacion");hay que agregar una entrada para el nuevo nodo que va a ejecutar
 					}
 					else{
 						actualizoTablaEstado(finalizoOperacion->nodo,finalizoOperacion->bloque,sock,finalizoOperacion->idJOB,"FinalizadoOK");
@@ -115,11 +117,11 @@ void listen_to_master() {
 				case OP_REDUCCION_LOCAL_LISTA:
 					{respuestaOperacion* finalizoRL = serial_unpackrespuestaOperacion(packetOperacion.content);
 					if(finalizoRL->response == -1){
-
+						abortarJob(finalizoRL->idJOB, sock,ERROR_REDUCCION_LOCAL);
 						actualizoTablaEstado(finalizoRL->nodo,-1,sock,finalizoRL->idJOB,"Error");
-						abortarJob(sock,ERROR_REDUCCION_LOCAL);
 					}
 					else{
+						//DEBERIA VERIFICAR PARA LOS NODOS FINALIZADOS MENOS EL SELECCIONADO DE MANDARLOS A FINALIZAR UNO POR UNO
 						actualizoTablaEstado(finalizoRL->nodo,-1,sock,finalizoRL->idJOB,"FinalizadoOK");
 						if(verificoFinalizacionRl(finalizoRL->idJOB,sock)){
 							mandarEtapaReduccionGL(sock,finalizoRL->idJOB);
@@ -130,8 +132,8 @@ void listen_to_master() {
 				case OP_REDUCCION_GLOBAL_LISTA:
 					{respuestaOperacion* finalizoRG = serial_unpackrespuestaOperacion(packetOperacion.content);
 					if(finalizoRG->response == -1){
+						abortarJob(finalizoRG->idJOB, sock,ERROR_REDUCCION_GLOBAL);
 						actualizoTablaEstado(finalizoRG->nodo,-2,sock,finalizoRG->idJOB,"Error");
-						abortarJob(sock,ERROR_REDUCCION_GLOBAL);
 					}
 					else{
 						actualizoTablaEstado(finalizoRG->nodo,-2,sock,finalizoRG->idJOB,"FinalizadoOK");
@@ -143,9 +145,11 @@ void listen_to_master() {
 				case OP_ALMACENAMIENTO_LISTA:
 					{respuestaOperacion* finalizoAF = serial_unpackrespuestaOperacion(packetOperacion.content);
 					if(finalizoAF->response == -1){
+						//abortarJobASIDESCUENTOCARGA
 						actualizoTablaEstado(finalizoAF->nodo,-3,sock,finalizoAF->idJOB,"Error");
 					}
 					else{
+						//abortarJOBFINALIZANDOASI DESCUENTOCARGA
 						actualizoTablaEstado(finalizoAF->nodo,-3,sock,finalizoAF->idJOB,"FinalizadoOK");
 					}
 					}
@@ -157,6 +161,45 @@ void listen_to_master() {
 				}
 			}
 		}
+	}
+}
+
+
+void completarPrimeraVez(){
+	if(esLaPrimeraVezQueReciboLosNodos){
+		listaCargaPorNodo = mlist_create();
+		int i;
+		for(i = 0; i < mlist_length(listaNodosActivos); i++){
+			t_infoNodo* datosNodo = mlist_get(listaNodosActivos, i);
+			t_cargaPorNodo* cargaPorNodo;
+			cargaPorNodo->nodo = malloc(sizeof(datosNodo->nodo) + 1);
+			cargaPorNodo->nodo = strcpy(cargaPorNodo->nodo, datosNodo->nodo);
+			cargaPorNodo->cargaActual = 0;
+			cargaPorNodo->cargaHistorica = 0;
+			cargaPorNodo->cargaPorJob = mlist_create();
+			mlist_append(listaCargaPorNodo, cargaPorNodo);
+			esLaPrimeraVezQueReciboLosNodos = false;
+		}
+	}
+}
+
+void agregarCargaNodoSegunLoPlanificado(int job, t_workerPlanificacion planificador[], int tamanioPlanificador){
+	int i, posicionObtenida;
+	for(i = 0; i < tamanioPlanificador ; i++){
+		bool condicion(void* cargaNodotraida){
+			return string_equals_ignore_case( ((t_cargaPorNodo *) cargaNodotraida)->nodo, planificador[i].nombreWorker );
+		}
+		posicionObtenida = mlist_index(listaCargaPorNodo, condicion);
+		void * cargaNodoObtenida = mlist_get(listaCargaPorNodo, posicionObtenida);
+		t_cargaPorNodo * cargaNodo = (t_cargaPorNodo *) cargaNodoObtenida;
+		cargaNodo->cargaActual += mlist_length(planificador[i].bloque);
+		cargaNodo->cargaHistorica += mlist_length(planificador[i].bloque);
+
+		t_cargaPorJob * cargaPorJob;
+		cargaPorJob->job = job;
+		cargaPorJob->cargaDelJob = mlist_length(planificador[i].bloque);
+		mlist_append(cargaNodo->cargaPorJob,cargaPorJob);
+		mlist_replace(listaCargaPorNodo, posicionObtenida, cargaNodo);
 	}
 }
 
@@ -282,7 +325,7 @@ bool verificoFinalizacionRl(int job, int master){
 void mandarEtapaReduccionGL(int master,int job){
 	mlist_t* listaRG = mlist_create();
 	mlist_t* NodosRL = BuscoNodos(master,job);
-	char* nodo = seleccionarEncargado(NodosRL);
+	char* nodo = seleccionarEncargado(NodosRL, job);
 	char* nombreRG = generarArchivoRG(master,job);
 	int i;
 	for(i=0; i< mlist_length(NodosRL); i++){
@@ -326,8 +369,20 @@ mlist_t* BuscoNodos(int master, int job){
 }
 
 
-char* seleccionarEncargado(mlist_t* NodosRL){
-	return "NODO1"; //hardcodeado por el momento
+char* seleccionarEncargado(mlist_t* NodosRL, int job){
+	bool condicionAComparar(void * nodo1, void * nodo2){
+		return cargaActual(((t_nodotemporal*) nodo1)->nodo) < cargaActual(((t_nodotemporal*) nodo1)->nodo);
+	}
+
+	mlist_sort(NodosRL, condicionAComparar);
+	void * nodoObtenido = mlist_first(NodosRL);
+	t_nodotemporal* nodoConMenorCarga = (t_nodotemporal*) nodoObtenido;
+	int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(nodoConMenorCarga->nodo);
+
+	int cantidadAAumentar = 1 + ((mlist_length(NodosRL) - 1) / 2);
+
+	actualizarCargaDelNodo(nodoConMenorCarga->nodo, job, posicionCargaNodoObtenida, 1, cantidadAAumentar);
+	return nodoConMenorCarga->nodo;
 
 }
 
