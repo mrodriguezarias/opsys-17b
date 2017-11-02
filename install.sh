@@ -2,8 +2,8 @@
 echo "utnso" | sudo -S su &> /dev/null
 
 [ -f "/usr/lib/libcommons.so" ]; libcommons_installed=$?
-dpkg-query -W -f='${Status}' libreadline6-dev 2>/dev/null | grep -q "ok installed"; libreadline_installed=$?
-dpkg-query -W -f='${Status}' libssl-dev 2>/dev/null | grep -q "ok installed"; libssl_installed=$?
+dpkg-query -W -f='${Status}' libreadline6-dev 2>/dev/null | grep -q "install ok"; libreadline_installed=$?
+dpkg-query -W -f='${Status}' libssl-dev 2>/dev/null | grep -q "install ok"; libssl_installed=$?
 
 if [ $libreadline_installed -ne 0 -o $libssl_installed -ne 0 ] ; then
 	echo "Updating packages…"
