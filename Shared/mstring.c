@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <number.h>
 
 static char *create_format_template(const char *format, va_list args);
 
@@ -181,7 +182,7 @@ char *mstring_bsize(size_t size) {
 	const char *x = size < mult ? "" : "i";
 	float s = size;
 	int i = 0;
-	while(s >= mult) {
+	while(s >= mult || number_round(s, 1) == mult) {
 		i++;
 		s /= mult;
 	}

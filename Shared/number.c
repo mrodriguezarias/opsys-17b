@@ -16,3 +16,8 @@ t_number number_min(t_number x, t_number y) {
 t_number number_max(t_number x, t_number y) {
 	return x > y ? x : y;
 }
+
+t_number number_round(t_number number, int precision) {
+	double factor = pow(10, precision);
+	return round(number * factor) / factor;
+}

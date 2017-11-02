@@ -36,4 +36,12 @@ t_number number_min(t_number x, t_number y);
  */
 t_number number_max(t_number x, t_number y);
 
+/**
+ * Redondea un número según una determinada precisión.
+ * @param number Número a redondear.
+ * @param precision Precisión deseada.
+ * @return Número redondeado.
+ */
+t_number number_round(t_number number, int precision);
+
 #endif /* NUMBER_H_ */
