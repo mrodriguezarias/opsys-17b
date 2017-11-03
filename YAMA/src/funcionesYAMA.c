@@ -57,7 +57,7 @@ int obtenerCargaMaxima(){
 
 void llenarArrayPlanificador(t_workerPlanificacion planificador[],int tamaniolistaNodos,int *posicion){
 	int i,MaximaDisponibilidad = 0, cargaMax = 0;
-	if(string_equals_ignore_case("WCLOCK",algoritmoBalanceo)){
+	if(!strcmp("WCLOCK",algoritmoBalanceo)){
 		cargaMax = obtenerCargaMaxima();
 	}
 	for(i=0;i<tamaniolistaNodos;i++){

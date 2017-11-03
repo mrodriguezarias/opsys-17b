@@ -93,7 +93,9 @@ void listen_to_master() {
 					completarPrimeraVez();
 					int tamaniolistaNodos = mlist_length(listaNodosActivos);
 					t_workerPlanificacion planificador[tamaniolistaNodos];
+					printf("Entre a planificar \n");
 					planificar(planificador, tamaniolistaNodos,Datosfile->blocks);
+					printf("Sali de planificar \n");
 					agregarCargaNodoSegunLoPlanificado(pedidoInicio->idJOB, planificador, tamaniolistaNodos);
 					enviarEtapa_transformacion_Master(pedidoInicio->idJOB,tamaniolistaNodos,planificador,Datosfile->blocks,sock);
 					}

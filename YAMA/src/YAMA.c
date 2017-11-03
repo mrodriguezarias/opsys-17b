@@ -40,7 +40,7 @@ pthread_mutex_t mutexPlanificacion = PTHREAD_MUTEX_INITIALIZER;
 int main() {
 	thread_signal_capture(SIGUSR1, trapper);
 	process_init();
-	thread_signal_capture(SIGUSR1, trapper);
+	inicializoVariablesGlobalesConfig();
 	if(connect_to_filesystem() == RESPONSE_ERROR) return EXIT_SUCCESS;;
 	listaEstados = mlist_create();
 	listen_to_master();
