@@ -37,8 +37,9 @@ void actualizarCargaDelNodo(char*, int, int, int, int);
 int existeElJobEnLaCopia(int, mlist_t *);
 bool nodoEstaEnLaCopia(t_block*, int, char*);
 void generarEtapaTransformacionAEnviarParaCopia(int , t_block* , int , int , mlist_t* );
-int reciboInformacionSolicitada(int , mlist_t* ,t_yfile* ,int );
+t_yfile* reciboInformacionSolicitada(int,int);
 void eliminarCargaJobDelNodo(int , mlist_t *);
 int cargaActual(char*);
+void replanificacion(char*, const char*,int,int);
 
 #endif

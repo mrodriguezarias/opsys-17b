@@ -8,9 +8,10 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
-
+#include <thread.h>
 #include "server.h"
 #include "client.h"
+#include <semaphore.h>
 
 #define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
 int SocketBuscado_GLOBAL = 0;
@@ -32,25 +33,32 @@ t_yama yama;
 int numeroJob = 1;
 mlist_t* listaNodosActivos;
 int retardoPlanificacion;
-//char* algoritmoBalanceo;
-//void trapper(int signum);
+char* algoritmoBalanceo;
+void trapper(int signum);
+pthread_mutex_t mutexPlanificacion = PTHREAD_MUTEX_INITIALIZER;
 
 int main() {
-	//signal(SIGUSR1,trapper);
+	thread_signal_capture(SIGUSR1, trapper);
 	process_init();
-	//retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));
-	//algoritmoBalanceo = malloc(sizeof(char)*8);
-	//strcpy(algoritmoBalanceo,config_get("ALGORITMO_BALANCEO"));
+	thread_signal_capture(SIGUSR1, trapper);
 	if(connect_to_filesystem() == RESPONSE_ERROR) return EXIT_SUCCESS;;
 	listaEstados = mlist_create();
 	listen_to_master();
-	//while(1);
-	//free(algoritmoBalanceo);
+	free(algoritmoBalanceo);
 	return EXIT_SUCCESS;
 }
 
-/*void trapper(int signum){
-	printf("\nRecibi la señal\n");
+void trapper(int signum){
+	printf("\nRecibi la señal\n"); //luego quitar probar
+	log_inform("Señal atrapada, modificacion del retardo a :%d || modificacion del algoritmo a:%s",retardoPlanificacion,algoritmoBalanceo);
+	pthread_mutex_lock(&mutexPlanificacion);
 	retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));
 	strcpy(algoritmoBalanceo,config_get("ALGORITMO_BALANCEO"));
-}*/
+	pthread_mutex_unlock(&mutexPlanificacion);
+}
+
+void inicializoVariablesGlobalesConfig(){
+	retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));
+	algoritmoBalanceo = malloc(sizeof(char)*8);
+	strcpy(algoritmoBalanceo,config_get("ALGORITMO_BALANCEO"));
+}

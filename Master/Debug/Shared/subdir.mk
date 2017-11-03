@@ -4,23 +4,23 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/bitmap.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/config.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/data.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/file.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/log.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/mlist.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/mstring.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/number.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/path.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/process.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/protocol.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/serial.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/socket.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/struct.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/system.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/thread.c \
-/home/utnso/git/tp-2017-2c-YATPOS/Shared/yfile.c 
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/bitmap.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/config.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/data.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/file.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/log.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/mlist.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/mstring.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/number.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/path.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/process.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/protocol.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/serial.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/socket.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/struct.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/system.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/thread.c \
+/home/utnso/workspace/tp-2017-2c-YATPOS/Shared/yfile.c 
 
 OBJS += \
 ./Shared/bitmap.o \
@@ -62,122 +62,122 @@ C_DEPS += \
 
 
 # Each subdirectory must supply rules for building sources it contributes
-Shared/bitmap.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/bitmap.c
+Shared/bitmap.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/bitmap.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/config.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/config.c
+Shared/config.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/config.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/data.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/data.c
+Shared/data.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/data.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/file.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/file.c
+Shared/file.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/file.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/log.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/log.c
+Shared/log.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/log.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/mlist.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/mlist.c
+Shared/mlist.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/mlist.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/mstring.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/mstring.c
+Shared/mstring.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/mstring.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/number.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/number.c
+Shared/number.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/number.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/path.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/path.c
+Shared/path.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/path.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/process.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/process.c
+Shared/process.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/process.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/protocol.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/protocol.c
+Shared/protocol.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/protocol.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/serial.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/serial.c
+Shared/serial.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/serial.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/socket.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/socket.c
+Shared/socket.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/socket.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/struct.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/struct.c
+Shared/struct.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/struct.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/system.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/system.c
+Shared/system.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/system.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/thread.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/thread.c
+Shared/thread.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/thread.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
-Shared/yfile.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/yfile.c
+Shared/yfile.o: /home/utnso/workspace/tp-2017-2c-YATPOS/Shared/yfile.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
-	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	gcc -std=gnu11 -I"/home/utnso/workspace/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

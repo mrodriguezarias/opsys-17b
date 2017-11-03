@@ -18,7 +18,7 @@ static bool esLaPrimeraVezQueReciboLosNodos;
 
 void listen_to_master() {
 	esLaPrimeraVezQueReciboLosNodos = true;
-	log_print("Escuchando puertos de master");
+	log_inform("Escuchando puertos de master");
 	t_socket sv_sock = socket_init(NULL, config_get("MASTER_PUERTO"));
 	t_fdset sockets = socket_set_create();
 	socket_set_add(sv_sock, &sockets);
@@ -44,6 +44,7 @@ void listen_to_master() {
 			} else {
 				t_packet packetOperacion = protocol_receive_packet(sock);
 				if(packetOperacion.operation == OP_UNDEFINED) {
+					log_report("Operacion indefinida recibida de socket :%d",sock);
 					socket_close(sock);
 					socket_set_remove(sock, &sockets);
 					continue;
@@ -52,14 +53,15 @@ void listen_to_master() {
 				switch(packetOperacion.operation) {
 				case OP_INIT_JOB:
 					{
+
 					t_pedidoTrans* pedidoInicio = serial_unpackPedido(packetOperacion.content);
-					t_yfile* Datosfile = malloc(sizeof(t_yfile));
+					log_inform("Inicio de job nuevo :%d",pedidoInicio->idJOB);
 					//listaNodosActivos = mlist_create(); //luego borrar es para el hardcodeo
 					//Datosfile->blocks = mlist_create(); //luego borrar es para el hardcodeo
-					log_print("OP_INIT_JOB");
 					t_serial* file_serial = serial_pack("s",pedidoInicio->file);
 					requerirInformacionFilesystem(file_serial);
-					if(reciboInformacionSolicitada(pedidoInicio->idJOB, Datosfile,sock)==0){
+					t_yfile* Datosfile = reciboInformacionSolicitada(pedidoInicio->idJOB,sock);
+					if(Datosfile->size>0){
 					/*///////////////////////////// hardcodeado
 					t_infoNodo* UnNodo = malloc(sizeof(t_infoNodo));
 					requerirInformacionFilesystem(packetOperacion.content);
@@ -99,11 +101,13 @@ void listen_to_master() {
 					break;
 				case OP_TRANSFORMACION_LISTA :
 					{respuestaOperacionTranf* finalizoOperacion = serial_unpackRespuestaOperacion(packetOperacion.content);
+
 					if(finalizoOperacion->response == -1){
-						//replanifacion(finalizoOperacion->nodo,finalizoOperacion->file,sock,finalizoOperacion->idJOB);
-						//esta no deberia estar, ya que se hace en repla - actualizoTablaEstado(finalizoOperacion.nodo,finalizoOperacion.bloque,"Transformacion");hay que agregar una entrada para el nuevo nodo que va a ejecutar
+						replanificacion(finalizoOperacion->nodo,finalizoOperacion->file,sock,finalizoOperacion->idJOB);
+
 					}
 					else{
+						log_inform("Transformacion terminada para :%d bloque: %d",finalizoOperacion->idJOB,finalizoOperacion->bloque);
 						actualizoTablaEstado(finalizoOperacion->nodo,finalizoOperacion->bloque,sock,finalizoOperacion->idJOB,"FinalizadoOK");
 						if(verificoFinalizacionTransformacion(finalizoOperacion->nodo,sock,finalizoOperacion->idJOB)){
 							t_infoNodo* IP_PUERTOnodo = BuscoIP_PUERTO(finalizoOperacion->nodo);
@@ -116,12 +120,14 @@ void listen_to_master() {
 				break;
 				case OP_REDUCCION_LOCAL_LISTA:
 					{respuestaOperacion* finalizoRL = serial_unpackrespuestaOperacion(packetOperacion.content);
+
 					if(finalizoRL->response == -1){
 						abortarJob(finalizoRL->idJOB, sock,ERROR_REDUCCION_LOCAL);
 						actualizoTablaEstado(finalizoRL->nodo,-1,sock,finalizoRL->idJOB,"Error");
 					}
 					else{
 						//DEBERIA VERIFICAR PARA LOS NODOS FINALIZADOS MENOS EL SELECCIONADO DE MANDARLOS A FINALIZAR UNO POR UNO
+						log_inform("Reduccion local terminada para :%d nodo: %s",finalizoRL->idJOB,finalizoRL->nodo);
 						actualizoTablaEstado(finalizoRL->nodo,-1,sock,finalizoRL->idJOB,"FinalizadoOK");
 						if(verificoFinalizacionRl(finalizoRL->idJOB,sock)){
 							mandarEtapaReduccionGL(sock,finalizoRL->idJOB);
@@ -131,11 +137,13 @@ void listen_to_master() {
 				break;
 				case OP_REDUCCION_GLOBAL_LISTA:
 					{respuestaOperacion* finalizoRG = serial_unpackrespuestaOperacion(packetOperacion.content);
+
 					if(finalizoRG->response == -1){
 						abortarJob(finalizoRG->idJOB, sock,ERROR_REDUCCION_GLOBAL);
 						actualizoTablaEstado(finalizoRG->nodo,-2,sock,finalizoRG->idJOB,"Error");
 					}
 					else{
+						log_inform("Etapa de reduccion global terminada para job: %d",finalizoRG->idJOB);
 						actualizoTablaEstado(finalizoRG->nodo,-2,sock,finalizoRG->idJOB,"FinalizadoOK");
 						mandarEtapaAlmacenadoFinal(finalizoRG->nodo,sock,finalizoRG->idJOB);
 
@@ -150,6 +158,7 @@ void listen_to_master() {
 					}
 					else{
 						//abortarJOBFINALIZANDOASI DESCUENTOCARGA
+						log_inform("Almacenamiento final terminada para :%d",finalizoAF->idJOB);
 						actualizoTablaEstado(finalizoAF->nodo,-3,sock,finalizoAF->idJOB,"FinalizadoOK");
 					}
 					}
@@ -203,12 +212,6 @@ void agregarCargaNodoSegunLoPlanificado(int job, t_workerPlanificacion planifica
 	}
 }
 
-void init_job(t_serial *content) {
-	char *file = mstring_empty(NULL);
-	serial_unpack(content, "s", &file);
-	log_print("Comenzando tarea para archivo %s", file);
-	free(file);
-}
 
 void enviarEtapa_transformacion_Master(int job, int tamaniolistaNodos,t_workerPlanificacion planificador[],mlist_t* listabloques,int sock){
 	mlist_t* lista = mlist_create();
@@ -240,6 +243,7 @@ void enviarEtapa_transformacion_Master(int job, int tamaniolistaNodos,t_workerPl
 		}
 	}
 	mandar_etapa_transformacion(lista,sock);
+	log_inform("Etapa de transformacion iniciada para job: %d",job);
 
 }
 
@@ -263,6 +267,7 @@ void mandarEtapaReduccionLocal(int job, int socket,char* nodo,t_infoNodo* nodo_w
 	tEtapaReduccionLocal* etapaRL = new_etapa_rl(nodo,nodo_worker->ip,nodo_worker->puerto,archivos_transf,archivoTemporal_local);
 	agregarAtablaEstado(job,nodo,socket,-1,"ReduccionLocal",archivoTemporal_local,"En proceso");
 	mandar_etapa_rl(etapaRL,socket);
+	log_inform("Etapa de reduccion local iniciada para job: %d|| nodo: %s",job, nodo);
 
 }
 
@@ -343,6 +348,7 @@ void mandarEtapaReduccionGL(int master,int job){
 	}
 	agregarAtablaEstado(job,nodo,master,-2,"ReduccionGlobal",nombreRG,"En proceso");
 	mandar_etapa_rg(listaRG,master);
+	log_inform("Etapa de reduccion global iniciada para job: %d",job);
 
 }
 
@@ -400,6 +406,7 @@ void mandarEtapaAlmacenadoFinal(char* nodo,int master,int idJOB){
 	tAlmacenadoFinal* af = new_etapa_af(nodo,nodo_send->ip,nodo_send->puerto,archivo_AF);
 	agregarAtablaEstado(idJOB,nodo,master,-3,"AlmacenamientoFinal",archivo_AF,"En proceso");
 	mandar_etapa_af(af,master);
+	log_inform("Etapa de almacenamiento final iniciado para job: %d",idJOB);
 
 }
 

@@ -12,7 +12,7 @@ int connect_to_filesystem() {
 	protocol_send_handshake(socket);
 	int response = protocol_receive_response(socket);
 	if (response == RESPONSE_ERROR){
-		log_print("Conexión rechazada. El FileSystem no se encuentra estable.");
+		log_report("Conexión rechazada. El FileSystem no se encuentra estable.");
 		socket_close(socket);
 	}else{
 		log_inform("Conectado a proceso FileSystem por socket %i", socket);

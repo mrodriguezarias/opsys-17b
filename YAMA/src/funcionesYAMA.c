@@ -1,11 +1,14 @@
 #include "funcionesYAMA.h"
 #include "YAMA.h"
 #include "server.h"
+#include <semaphore.h>
+mlist_t * listaCargaPorNodo;
 
 static int contadorBloquesSeguidosNoAsignados = 0;
 static bool asigneBloquesDeArchivo = false;
 
 void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mlist_t* listaBloque){
+	pthread_mutex_lock(&mutexPlanificacion);
 	int posicionArray;
 
 	llenarArrayPlanificador(planificador,tamaniolistaNodos,&posicionArray);
@@ -14,9 +17,10 @@ void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mli
 		if(posicionArray == tamaniolistaNodos){
 			posicionArray = 0;
 		}
-		//usleep(retardoPlanificacion);
+		usleep(retardoPlanificacion);
 		verificarCondicion(tamaniolistaNodos, &posicionArray,planificador, &bloque, listaBloque);
 	}
+	pthread_mutex_unlock(&mutexPlanificacion);
 }
 
 int availabilityClock(){
@@ -33,8 +37,8 @@ int cargaActual(char* nodo){
 }
 
 int Disponibilidad(int cargaMax, char* nodo){
-	//string_equals_ignore_case("CLOCK",algoritmoBalanceo)
-	if(!strcmp("CLOCK",config_get("ALGORITMO_BALANCEO"))){
+
+	if(string_equals_ignore_case("CLOCK",algoritmoBalanceo)){
 		return availabilityClock();
 	}
 	else{
@@ -76,7 +80,7 @@ void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificaci
 
 	if(planificador[*posicion].disponibilidad == 0){
 		printf("Disponibilidad1\n");
-		planificador[*posicion].disponibilidad = config_get("DISP_BASE");
+		planificador[*posicion].disponibilidad = atoi(config_get("DISP_BASE"));
 		posicion++;
 		contadorBloquesSeguidosNoAsignados++;
 	}else if(!strcmp(infoArchivo->copies[0].node, planificador[*posicion].nombreWorker) || !strcmp(infoArchivo->copies[1].node, planificador[*posicion].nombreWorker)){
@@ -132,13 +136,14 @@ void requerirInformacionFilesystem(t_serial *file){
 
 void abortarJob(int job, int socketMaster, int codigoError){
 	abortarJobEnTablaEstado(socketMaster, job);
-
+	log_report("Job: %d abortado",job);
 	t_packet packetError = protocol_packet(OP_ERROR_JOB, serial_pack("i",codigoError));
 	protocol_send_packet(packetError, socketMaster);
 	serial_destroy(packetError.content);
 }
 
-int reciboInformacionSolicitada(int job, mlist_t* listaNodosActivos,t_yfile* Datosfile,int master){ //listaNodosactivos y datos file luego borrarlo, no lo debe recibir, es para el hardcodeo
+t_yfile* reciboInformacionSolicitada(int job,int master){
+	t_yfile* Datosfile = malloc(sizeof(t_yfile));
 	t_packet packetNodosActivos = protocol_receive_packet(yama.fs_socket);
 	if(packetNodosActivos.operation == OP_NODES_ACTIVE_INFO){
 	listaNodosActivos = nodelist_unpack(packetNodosActivos.content);
@@ -146,14 +151,16 @@ int reciboInformacionSolicitada(int job, mlist_t* listaNodosActivos,t_yfile* Dat
 		t_packet packetArchivo = protocol_receive_packet(yama.fs_socket);
 		if(packetArchivo.operation == OP_ARCHIVO_INEXISTENTE){
 			abortarJob(job, master,ARCHIVO_INEXISTENTE);
-			return -1;
+			log_report("Aborto de job %d por archivo inexistente",job);
+			Datosfile->size = 0;
+			return Datosfile;
 		}
 
 		else if(packetArchivo.operation == OP_ARCHIVO_NODES){
 			Datosfile = yfile_unpack(packetArchivo.content);
-			return 0;
+			return Datosfile;
 		}
-		return 0;
+		return Datosfile; //nunca llega a esta instancia.
 }
 
 char* generarNombreArchivoTemporalTransf(int job,int master, int bloque){
@@ -172,6 +179,7 @@ void agregarAtablaEstado(int job, char* nodo,int Master,int bloque,char* etapa,c
 	nuevoEstado->archivoTemporal = archivo_temporal;
 	nuevoEstado->estado = estado;
 	mlist_append(listaEstados,nuevoEstado);
+	log_print("Nuevo ingreso de la tabla de estado: JOB:%d|MASTER:%d|NODO:%s|BLOQUE:%d|ETAPA:%s|ARCHIVOTEMPORAL:%s|ESTADO:%s",job,Master,nodo,bloque,etapa,archivo_temporal,estado);
 
 }
 
@@ -195,7 +203,9 @@ void abortarJobEnTablaEstado(int socketMaster,int job){
 		indiceEncontrado = mlist_index(listaEstados, condicionIndice);
 		estadoEncontrado->estado = "Error";
 		mlist_replace(listaEstados, indiceEncontrado, estadoEncontrado);
+		log_print("Actualizacion tabla de estado: aborto de job: %d || nodo: %s",job,estadoEncontrado->nodo);
 	}
+
 	mlist_destroy(listaFiltrada, destruirlista);
 }
 
@@ -216,6 +226,8 @@ void actualizoTablaEstado(char* nodo,int bloque,int socketMaster,int job,char* e
 	nuevoEstado->archivoTemporal = estadoActual->archivoTemporal;
 	nuevoEstado->estado = estado;
 	mlist_replace(listaEstados,posicion,nuevoEstado);
+	log_print("Actualizacion en la tabla de estado: JOB:%d|MASTER:%d|NODO:%s|BLOQUE:%d|ETAPA:%s|ARCHIVOTEMPORAL:%s|ESTADO:%s",job,socketMaster,nodo,bloque,estadoActual->etapa,estadoActual->archivoTemporal,estado);
+
 }
 
 void destruirlista(void* bloqueobtenido) {
@@ -223,13 +235,13 @@ void destruirlista(void* bloqueobtenido) {
 }
 
 
-void replanifacion(char* nodo, const char* pathArchivo,int master,int job){
+void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
+	pthread_mutex_lock(&mutexPlanificacion);
 	bool aborto = false;
 	t_serial* serial_send = serial_pack("s",pathArchivo);
-	t_yfile* Datosfile = malloc(sizeof(t_yfile));
 	requerirInformacionFilesystem(serial_send);
-	//reciboInformacionSolicitada(job, master);
-	Datosfile->blocks = mlist_create();
+	t_yfile* Datosfile = reciboInformacionSolicitada(job, master);
+	if(Datosfile->size > 0){
 
 	bool esNodoBuscado(void* estadoTarea){
 		return string_equals_ignore_case(((t_Estado *) estadoTarea)->nodo,nodo) && ((t_Estado *) estadoTarea)->master == master && ((t_Estado *) estadoTarea)->job == job && string_equals_ignore_case(((t_Estado *) estadoTarea)->etapa,"Transformacion");
@@ -284,7 +296,7 @@ void replanifacion(char* nodo, const char* pathArchivo,int master,int job){
 		}
 	}
 	if(!aborto){
-		//eliminarCargaJobDelNodo(job, cargaNodo->cargaPorJob);
+		eliminarCargaJobDelNodo(job, cargaNodo->cargaPorJob);
 		mlist_replace(listaCargaPorNodo, posicionCargaNodoObtenida, cargaNodo);
 
 		for(i=0; i< mlist_length(list_to_send);i++){
@@ -293,15 +305,17 @@ void replanifacion(char* nodo, const char* pathArchivo,int master,int job){
 			agregarAtablaEstado(job,etapa->nodo,master,etapa->bloque,"Transformacion",etapa->archivo_etapa,"En proceso");
 		}
 		mandar_etapa_transformacion(list_to_send,master);
+		log_inform("Envio etapa de transformacion por efecto de la replanificacion %d| bloque",job);
 	}
 	else{
 		abortarJob(job, master,ERROR_REPLANIFICACION);
 	}
-
+	pthread_mutex_unlock(&mutexPlanificacion);
 	free(Datosfile);
 	mlist_destroy(listaFiltradaEstadosBloquesDelNodo,destruirlista);
 	mlist_destroy(listaDeBloquesAReplanificar,destruirlista);
 	mlist_destroy(list_to_send,destruirlista);
+	}
 }
 
 void generarEtapaTransformacionAEnviarParaCopia(int copia, t_block* bloqueAReplanificar, int job, int master, mlist_t* list_to_send){
@@ -358,11 +372,11 @@ void actualizarCargaDelNodo(char* nodoCopia, int job, int posicionCargaNodoObten
 
 		if(posicionCargaJobObtenidoCopia != -1){
 			void * cargaJobObtenida = mlist_get(cargaNodoCopia->cargaPorJob, posicionCargaJobObtenidoCopia);
-			t_cargaPorJob * cargaJobCopia = (t_cargaPorNodo *) cargaJobObtenida;
+			t_cargaPorJob * cargaJobCopia = (t_cargaPorJob *) cargaJobObtenida;
 			cargaJobCopia->cargaDelJob += cantidadAAumentar;
 			mlist_replace(cargaNodoCopia->cargaPorJob, posicionCargaJobObtenidoCopia, cargaJobCopia);
 		}else{
-			t_cargaPorJob * cargaJobCopia;
+			t_cargaPorJob * cargaJobCopia = malloc(sizeof(t_cargaPorJob));
 			cargaJobCopia->job = job;
 			cargaJobCopia->cargaDelJob = cantidadAAumentar;
 			mlist_append(cargaNodoCopia->cargaPorJob, cargaJobCopia);

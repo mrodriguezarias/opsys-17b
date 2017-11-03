@@ -14,5 +14,6 @@ extern int numeroJob;
 extern mlist_t* listaNodosActivos;
 extern int retardoPlanificacion;
 extern char* algoritmoBalanceo;
+extern pthread_mutex_t mutexPlanificacion;
 
 #endif /* YAMA_H_ */
