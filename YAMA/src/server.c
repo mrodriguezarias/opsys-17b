@@ -180,7 +180,7 @@ void completarPrimeraVez(){
 		int i;
 		for(i = 0; i < mlist_length(listaNodosActivos); i++){
 			t_infoNodo* datosNodo = mlist_get(listaNodosActivos, i);
-			t_cargaPorNodo* cargaPorNodo;
+			t_cargaPorNodo* cargaPorNodo = malloc(sizeof(t_cargaPorNodo));
 			cargaPorNodo->nodo = malloc(sizeof(datosNodo->nodo) + 1);
 			cargaPorNodo->nodo = strcpy(cargaPorNodo->nodo, datosNodo->nodo);
 			cargaPorNodo->cargaActual = 0;
@@ -204,7 +204,7 @@ void agregarCargaNodoSegunLoPlanificado(int job, t_workerPlanificacion planifica
 		cargaNodo->cargaActual += mlist_length(planificador[i].bloque);
 		cargaNodo->cargaHistorica += mlist_length(planificador[i].bloque);
 
-		t_cargaPorJob * cargaPorJob;
+		t_cargaPorJob * cargaPorJob = malloc(sizeof(t_cargaPorJob));
 		cargaPorJob->job = job;
 		cargaPorJob->cargaDelJob = mlist_length(planificador[i].bloque);
 		mlist_append(cargaNodo->cargaPorJob,cargaPorJob);
