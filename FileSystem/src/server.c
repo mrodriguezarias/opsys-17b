@@ -176,15 +176,17 @@ static void datanode_handler(t_node *node) {
 			packet = protocol_packet(OP_SEND_BLOCK, op->block);
 			protocol_send_packet(packet, node->socket);
 			serial_destroy(op->block);
-		} else if(op->opcode == NODE_RECV) {
+		} else {
 			log_inform("Recibiendo bloque %d de nodo %s", op->blockno, node->name);
 			packet = protocol_receive_packet(node->socket);
 			if(packet.operation != OP_SEND_BLOCK) {
 				log_report("Se esperaba recibir un bloque pero se recibió otra cosa");
-			} else {
+			} else if(op->opcode == NODE_RECV) {
 				filetable_writeblock(op->blockno, packet.content->data);
-				serial_destroy(packet.content);
+			}  else if(op->opcode == NODE_RECV_BLOCK) {
+				thread_respond((void*)packet.content->data);
 			}
+			serial_destroy(packet.content);
 		}
 		free(op);
 	}

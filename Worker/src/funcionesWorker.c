@@ -167,7 +167,6 @@ void listen_to_master() {
 	t_file * archivoReduccion;
 	char * bufferArchivoReduccion;
 	const char * direccion = system_userdir();
-	bool esBin;
 	rutaDatabin = mstring_create("%s/%s", direccion,
 			config_get("RUTA_DATABIN"));
 	while (true) {
@@ -229,8 +228,12 @@ void listen_to_master() {
 					af = af_unpack(packet.content);
 					archivoReduccion = file_open(af->archivoReduccion);
 					bufferArchivoReduccion = file_map(archivoReduccion);
-					esBin = path_isbin(af->archivoReduccion);
-					t_serial *serialFileSystem = serial_pack("ssi",bufferArchivoReduccion,af->archivoFinal,esBin);
+					t_serial *serialFileSystem = serial_pack("ss",bufferArchivoReduccion,af->archivoFinal);
+					if (path_isbin(af->archivoReduccion)) {
+						serial_add(serialFileSystem, "i", FTYPE_BIN);
+					} else {
+						serial_add(serialFileSystem, "i", FTYPE_TXT);
+					}
 					t_packet paquete = protocol_packet(OP_INICIAR_ALMACENAMIENTO,serialFileSystem);
 					int response = connect_to_filesystem();
 					if(response < 0){
