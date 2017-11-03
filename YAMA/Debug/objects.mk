@@ -4,5 +4,5 @@
 
 USER_OBJS :=
 
-LIBS := -lpthread -lcommons -lssl -lcrypto -lm
+LIBS := -lm -lssl -lcrypto -lpthread -lcommons -lssl -lcrypto
 
