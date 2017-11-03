@@ -4,7 +4,7 @@
 #include <yfile.h>
 #include <socket.h>
 
-enum { NODE_PING, NODE_SEND, NODE_RECV };
+enum { NODE_PING, NODE_SEND,NODE_RECV_BLOCK, NODE_RECV };
 
 typedef struct {
 	int opcode;

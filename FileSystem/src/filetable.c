@@ -306,12 +306,39 @@ void filetable_term() {
 	thread_mutex_destroy(bfile.mut);
 }
 
-void rm_block(t_yfile *file, t_block* block, int copy) {
+void filetable_rm_block(t_yfile *file, t_block* block, int copy) {
 	t_node* node = nodelist_find(block->copies[copy].node);
 	bitmap_unset(node->bitmap, block->copies[copy].blockno);
 	node->free_blocks++;
 	block->copies[copy].node = NULL;
 	block->copies[copy].blockno = -1;
+	update_file(file);
+}
+
+void filetable_cpblock(t_yfile *file, off_t block_free, t_block* block, t_node* node) {
+	t_node* node_original;
+	if (block->copies[0].node != NULL) node_original = nodelist_find(block->copies[0].node);
+	else node_original = nodelist_find(block->copies[1].node);
+
+	t_nodeop* op = server_nodeop(NODE_RECV_BLOCK, block->index, serial_create(NULL, 0));
+	thread_send(node_original->handler, op);
+	op->block = serial_create((void*)thread_receive(), BLOCK_SIZE);
+	op = server_nodeop(NODE_SEND, block_free, op->block);
+
+	thread_send(node->handler, op);
+
+	if (block->copies[0].node != NULL){
+		block->copies[1].node = mstring_duplicate(node->name);
+		block->copies[1].blockno = block_free;
+	}else{
+		block->copies[0].node = mstring_duplicate(node->name);
+		block->copies[0].blockno = block_free;
+	}
+
+	bitmap_set(node->bitmap, block_free);
+	node->free_blocks--;
+	printf("Bloque %d copiado en %s\n", block->index, node->name);
+
 	update_file(file);
 }
 

@@ -192,7 +192,41 @@ static void cmd_clear() {
 }
 
 static void cmd_cpblock() {
-	puts("TODO");
+	int nargs = num_args();
+	if(nargs != 3) show_usage();
+	char *path = extract_arg(1);
+
+	if(!filetable_contains(path)) {
+		print_error("archivo inexistente");
+	}else{
+		t_yfile *yfile = filetable_find(path);
+		bool getBlock (t_block *bloque){
+			return mstring_toint(extract_arg(2)) == bloque->index;
+		}
+		t_block *block = mlist_find(yfile->blocks, getBlock);
+		if(block == NULL){
+			print_error("bloque inexistente");
+		}else if(block->copies[0].node != NULL && block->copies[1].node != NULL){
+			print_error("ya existen dos copias - máximo soportado");
+		}else{
+			t_node *node = nodelist_find(extract_arg(3));
+			if (node == NULL){
+				print_error("nodo inexistente");
+			}else if((block->copies[0].node != NULL && mstring_equali(node->name, block->copies[0].node)) ||
+				(block->copies[1].node != NULL && mstring_equali(node->name, block->copies[1].node))){
+				print_error("no pueden haber dos copias en el mismo nodo");
+			}else{
+				off_t block_free = bitmap_firstzero(node->bitmap);
+				if (block_free == -1){
+					print_error("no hay bloques libres en %s", node->name);
+				}else if(!nodelist_active(node)){
+					print_error("nodo inactivo");
+				}else{
+					filetable_cpblock(yfile, block_free, block, node);
+				}
+			}
+		}
+	}
 }
 
 static void cmd_cpfrom() {
@@ -444,7 +478,7 @@ static void cmd_rm() {
 					}else if(block->copies[0].node == NULL || block->copies[1].node == NULL){
 						print_error("última copia");
 					}else{
-						rm_block(yfile, block, mstring_toint(extract_arg(4)));
+						filetable_rm_block(yfile, block, mstring_toint(extract_arg(4)));
 						printf("copia %d del bloque %d del archivo %s eliminada.\n",
 								mstring_toint(extract_arg(4)),
 								mstring_toint(extract_arg(3)),

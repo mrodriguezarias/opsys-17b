@@ -3,6 +3,7 @@
 
 #include "yfile.h"
 #include "FileSystem.h"
+#include "nodelist.h"
 
 /**
  * Inicializa la tabla de archivos.
@@ -125,7 +126,7 @@ bool filetable_stable();
  * @param block Bloque del cual se eliminará la copia.
  * @param copy Copia a eliminar (0 ó 1).
  */
-void rm_block(t_yfile *file, t_block* block, int copy);
+void filetable_rm_block(t_yfile *file, t_block* block, int copy);
 
 /**
  * Escribe un bloque en el archivo de bloques.
@@ -133,6 +134,15 @@ void rm_block(t_yfile *file, t_block* block, int copy);
  * @param block Contenido del bloque.
  */
 void filetable_writeblock(int blockno, void *block);
+
+/**
+ * Copia un bloque dado en otro nodo.
+ * @param file Arcchivo yama que se va a actualizar.
+ * @param block_free Bloque donde se copiarán los datos.
+ * @param block Bloque de datos a copiar.
+ * @param node Nodo donde se almacenará la copia.
+ */
+void filetable_cpblock(t_yfile *file, off_t block_free, t_block* block, t_node* node);
 
 /**
  * Libera los recursos usados por la tabla de archivos.
