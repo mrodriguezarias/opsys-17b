@@ -41,5 +41,5 @@ t_yfile* reciboInformacionSolicitada(int,int);
 void eliminarCargaJobDelNodo(int , mlist_t *);
 int cargaActual(char*);
 void replanificacion(char*, const char*,int,int);
-
+t_pedidoTrans* serial_unpackPedido(t_serial*);
 #endif

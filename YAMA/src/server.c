@@ -13,6 +13,7 @@
 #include <struct.h>
 #include "funcionesYAMA.h"
 #include "YAMA.h"
+#include "mstring.h"
 
 static bool esLaPrimeraVezQueReciboLosNodos;
 
@@ -93,9 +94,9 @@ void listen_to_master() {
 					completarPrimeraVez();
 					int tamaniolistaNodos = mlist_length(listaNodosActivos);
 					t_workerPlanificacion planificador[tamaniolistaNodos];
-					printf("Entre a planificar \n");
+					//printf("Entre a planificar \n");
 					planificar(planificador, tamaniolistaNodos,Datosfile->blocks);
-					printf("Sali de planificar \n");
+					//printf("Sali de planificar \n");
 					agregarCargaNodoSegunLoPlanificado(pedidoInicio->idJOB, planificador, tamaniolistaNodos);
 					enviarEtapa_transformacion_Master(pedidoInicio->idJOB,tamaniolistaNodos,planificador,Datosfile->blocks,sock);
 					}
@@ -110,7 +111,7 @@ void listen_to_master() {
 					}
 					else{
 						log_inform("Transformacion terminada para :%d bloque: %d",finalizoOperacion->idJOB,finalizoOperacion->bloque);
-						actualizoTablaEstado(finalizoOperacion->nodo,finalizoOperacion->bloque,sock,finalizoOperacion->idJOB,"FinalizadoOK");
+						actualizoTablaEstado(finalizoOperacion->nodo,finalizoOperacion->bloque,sock,finalizoOperacion->idJOB,"FinalizadoOK");//ROMPE AQUI
 						if(verificoFinalizacionTransformacion(finalizoOperacion->nodo,sock,finalizoOperacion->idJOB)){
 							t_infoNodo* IP_PUERTOnodo = BuscoIP_PUERTO(finalizoOperacion->nodo);
 							mlist_t* archivosTemporales_Transf = BuscoArchivosTemporales(finalizoOperacion->nodo,sock,finalizoOperacion->idJOB);
@@ -257,7 +258,7 @@ bool verificoFinalizacionTransformacion(char* nodo,int socket,int job){
 	mlist_t* listaFiltradaDelNodo = mlist_filter(listaEstados, (void*)esNodoBuscado);
 
 	bool FinalizacionDeTransf_Nodo(void* estadoTarea){
-			  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->estado,"TerminadoOK");
+			  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->estado,"FinalizadoOK");
 	}
 
 
@@ -276,7 +277,7 @@ void mandarEtapaReduccionLocal(int job, int socket,char* nodo,t_infoNodo* nodo_w
 t_infoNodo* BuscoIP_PUERTO(char* nodo){
 	t_infoNodo* Nodo;
 	bool esNodoBuscado(void* unNodoConectado){
-			  	return !strcmp(((t_Estado *) unNodoConectado)->nodo,nodo);
+			  	return mstring_equali(((t_infoNodo *) unNodoConectado)->nodo,nodo);
 	}
 
 	 void* NodoObtenido = mlist_find(listaNodosActivos, (void*) esNodoBuscado);
@@ -321,7 +322,7 @@ bool verificoFinalizacionRl(int job, int master){
 	mlist_t* listaFiltradaDelNodo = mlist_filter(listaEstados, (void*)esJobBuscado);
 
 	bool FinalizacionDeRl_Job(void* estadoTarea){
-				  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->estado,"TerminadoOK");
+				  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->estado,"FinalizadoOK");
 		}
 
 

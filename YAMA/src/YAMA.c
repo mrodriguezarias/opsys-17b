@@ -51,10 +51,10 @@ int main() {
 void trapper(int signum){
 	printf("\nRecibi la señal\n"); //luego quitar probar
 	log_inform("Señal atrapada, modificacion del retardo a :%d || modificacion del algoritmo a:%s",retardoPlanificacion,algoritmoBalanceo);
-	pthread_mutex_lock(&mutexPlanificacion);
+	//pthread_mutex_lock(&mutexPlanificacion);
 	retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));
 	strcpy(algoritmoBalanceo,config_get("ALGORITMO_BALANCEO"));
-	pthread_mutex_unlock(&mutexPlanificacion);
+	//pthread_mutex_unlock(&mutexPlanificacion);
 }
 
 void inicializoVariablesGlobalesConfig(){

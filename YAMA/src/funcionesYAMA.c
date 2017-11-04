@@ -2,13 +2,14 @@
 #include "YAMA.h"
 #include "server.h"
 #include <semaphore.h>
+#include "mstring.h"
 mlist_t * listaCargaPorNodo;
 
 static int contadorBloquesSeguidosNoAsignados = 0;
 static bool asigneBloquesDeArchivo = false;
 
 void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mlist_t* listaBloque){
-	pthread_mutex_lock(&mutexPlanificacion);
+	//pthread_mutex_lock(&mutexPlanificacion);
 	int posicionArray;
 
 	llenarArrayPlanificador(planificador,tamaniolistaNodos,&posicionArray);
@@ -20,7 +21,7 @@ void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mli
 		usleep(retardoPlanificacion);
 		verificarCondicion(tamaniolistaNodos, &posicionArray,planificador, &bloque, listaBloque);
 	}
-	pthread_mutex_unlock(&mutexPlanificacion);
+	//pthread_mutex_unlock(&mutexPlanificacion);
 }
 
 int availabilityClock(){
@@ -173,11 +174,11 @@ void agregarAtablaEstado(int job, char* nodo,int Master,int bloque,char* etapa,c
 	t_Estado*  nuevoEstado = malloc(sizeof(t_Estado));
 	nuevoEstado->job = job;
 	nuevoEstado->master = Master;
-	nuevoEstado->nodo = nodo;
+	nuevoEstado->nodo = mstring_duplicate(nodo);
 	nuevoEstado->block = bloque;
-	nuevoEstado->etapa = etapa;
-	nuevoEstado->archivoTemporal = archivo_temporal;
-	nuevoEstado->estado = estado;
+	nuevoEstado->etapa = mstring_duplicate(etapa);
+	nuevoEstado->archivoTemporal = mstring_duplicate(archivo_temporal);
+	nuevoEstado->estado = mstring_duplicate(estado);
 	mlist_append(listaEstados,nuevoEstado);
 	log_print("Nuevo ingreso de la tabla de estado: JOB:%d|MASTER:%d|NODO:%s|BLOQUE:%d|ETAPA:%s|ARCHIVOTEMPORAL:%s|ESTADO:%s",job,Master,nodo,bloque,etapa,archivo_temporal,estado);
 
@@ -211,21 +212,14 @@ void abortarJobEnTablaEstado(int socketMaster,int job){
 
 void actualizoTablaEstado(char* nodo,int bloque,int socketMaster,int job,char* estado){
 	t_Estado* estadoActual;
-	t_Estado* nuevoEstado = malloc(sizeof(t_Estado));
 	bool condition(void* estadoTarea){
-	  	return ((t_Estado *) estadoTarea)->nodo == nodo && ((t_Estado *) estadoTarea)->block == bloque && ((t_Estado *) estadoTarea)->master == socketMaster && ((t_Estado *) estadoTarea)->job == job ? true : false;
+	  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->nodo,nodo) && ((t_Estado *) estadoTarea)->block == bloque && ((t_Estado *) estadoTarea)->master == socketMaster && ((t_Estado *) estadoTarea)->job == job ? true : false;
 	}
 	int posicion = mlist_index(listaEstados,(void*) condition);
 	void* estadoActualObtenido = mlist_get(listaEstados,posicion);
 	estadoActual = (t_Estado*) estadoActualObtenido;
-	nuevoEstado->job = estadoActual->job;
-	nuevoEstado->master = estadoActual->master;
-	nuevoEstado->nodo = estadoActual->nodo;
-	nuevoEstado->block = estadoActual->block;
-	nuevoEstado->etapa = estadoActual->etapa;
-	nuevoEstado->archivoTemporal = estadoActual->archivoTemporal;
-	nuevoEstado->estado = estado;
-	mlist_replace(listaEstados,posicion,nuevoEstado);
+	estadoActual->estado = mstring_duplicate(estado);
+	mlist_replace(listaEstados,posicion,estadoActual);
 	log_print("Actualizacion en la tabla de estado: JOB:%d|MASTER:%d|NODO:%s|BLOQUE:%d|ETAPA:%s|ARCHIVOTEMPORAL:%s|ESTADO:%s",job,socketMaster,nodo,bloque,estadoActual->etapa,estadoActual->archivoTemporal,estado);
 
 }
@@ -281,14 +275,12 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 		if(nodoEstaEnLaCopia(bloqueAReplanificar, 0, nodo) ){
 			cargaNodo->cargaActual -= 1;
 			actualizarCargaDelNodo(bloqueAReplanificar->copies[1].node, job, posicionCargaNodoObtenida, 1, 1);
-			//revisar si es necesario recibir la lista con el valor agregado del append o no
 			generarEtapaTransformacionAEnviarParaCopia(1, bloqueAReplanificar, job, master, list_to_send);
 
 		}
 		else if(nodoEstaEnLaCopia(bloqueAReplanificar, 1, nodo)){
 			cargaNodo->cargaActual -= 1;
 			actualizarCargaDelNodo(bloqueAReplanificar->copies[0].node, job, posicionCargaNodoObtenida, 1, 1);
-			//revisar si es necesario recibir la lista con el valor agregado del append o no
 			generarEtapaTransformacionAEnviarParaCopia(0, bloqueAReplanificar, job, master, list_to_send);
 		}
 		else{
@@ -406,7 +398,7 @@ int existeElJobEnLaCopia(int job, mlist_t * listaJobsCopia){
 
 bool NodoConCopia_is_active(char* nodo){
 	bool contieneNodo(void* unNodo){
-		return string_equals_ignore_case(((t_infoNodo*) nodo)->nodo, nodo);
+		return string_equals_ignore_case(((t_infoNodo*) unNodo)->nodo, nodo);
 	}
 
 	return mlist_any(listaNodosActivos, (void*) contieneNodo);
