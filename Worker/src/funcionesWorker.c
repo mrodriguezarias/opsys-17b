@@ -229,11 +229,6 @@ void listen_to_master() {
 					archivoReduccion = file_open(af->archivoReduccion);
 					bufferArchivoReduccion = file_map(archivoReduccion);
 					t_serial *serialFileSystem = serial_pack("ss",bufferArchivoReduccion,af->archivoFinal);
-					if (path_isbin(af->archivoReduccion)) {
-						serial_add(serialFileSystem, "i", FTYPE_BIN);
-					} else {
-						serial_add(serialFileSystem, "i", FTYPE_TXT);
-					}
 					t_packet paquete = protocol_packet(OP_INICIAR_ALMACENAMIENTO,serialFileSystem);
 					int response = connect_to_filesystem();
 					if(response < 0){

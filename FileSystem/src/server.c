@@ -22,6 +22,7 @@
 static t_node *receive_node_info(t_socket socket);
 static void node_listener(void);
 static void yama_listener(void);
+static void worker_handler(t_socket socket);
 static void datanode_handler(t_node *node);
 static void yama_handler(t_socket socket);
 
@@ -70,31 +71,61 @@ static void node_listener() {
 		t_socket cli_sock = socket_accept(sv_sock);
 
 		t_packet packet = protocol_receive_packet(cli_sock);
-		if(packet.operation != OP_HANDSHAKE || packet.sender != PROC_DATANODE) {
+		if(packet.operation != OP_HANDSHAKE || packet.sender != PROC_DATANODE || packet.sender != PROC_WORKER) {
 			socket_close(cli_sock);
 			break;
 		}
 
-		t_node *node = receive_node_info(cli_sock);
-		if(node == NULL) {
-			protocol_send_response(cli_sock, RESPONSE_ERROR);
-			socket_close(cli_sock);
-			continue;
-		}
-
-		protocol_send_response(cli_sock, RESPONSE_OK);
-
 		char *ip = socket_address(cli_sock);
 		char *port = socket_port(cli_sock);
-		log_inform("Nodo %s conectado desde %s:%s", node->name, ip, port);
+
+		if (packet.sender == PROC_DATANODE) {
+			t_node *node = receive_node_info(cli_sock);
+			if(node == NULL) {
+				protocol_send_response(cli_sock, RESPONSE_ERROR);
+				socket_close(cli_sock);
+				continue;
+			}
+
+			protocol_send_response(cli_sock, RESPONSE_OK);
+
+			log_inform("Nodo %s conectado desde %s:%s", node->name, ip, port);
+
+			node->socket = cli_sock;
+			node->handler = thread_create(datanode_handler, node);
+		} else if (packet.sender == PROC_WORKER) {
+			protocol_send_response(cli_sock, RESPONSE_OK);
+
+			log_inform("Worker conectado desde %s:%s", ip, port);
+			thread_create(worker_handler, &cli_sock);
+		}
 		free(ip);
 		free(port);
-
-		node->socket = cli_sock;
-		node->handler = thread_create(datanode_handler, node);
 	}
 
 	socket_close(sv_sock);
+}
+
+static void worker_handler(t_socket worker_socket) {
+	t_packet packet = protocol_receive_packet(worker_socket);
+	char *buffer, *path;
+
+	if (packet.content != NULL && packet.operation == OP_INICIAR_ALMACENAMIENTO) {
+		serial_unpack(packet.content, "ss", &buffer, &path);
+		t_file* file = file_create(mstring_create("%s%s", "temp",mstring_bsize(worker_socket)));
+
+		file_open(file_path(file));
+		fwrite(buffer, sizeof(char), 1, file_pointer(file));
+		filetable_cpfrom(file_path(file), path);
+
+		file_delete(file);
+		protocol_send_response(worker_socket, filetable_contains(path));
+	} else {
+		protocol_send_response(worker_socket, RESPONSE_ERROR);
+	}
+
+	socket_close(worker_socket);
+	thread_exit(0);
 }
 
 static void yama_listener() {
