@@ -41,7 +41,7 @@ void manejador_transformacion(tEtapaTransformacion* transformacion) {
 	if (socket == -1){
 		response = -1;
 		finalizar_manejador_transf(response, socket, transformacion);
-		thread_send(hilo_node_drop, transformacion->nodo);
+		thread_send(hilo_node_drop, (char*)transformacion->nodo);
 		thread_exit(0);
 	}else{
 		t_serial *serial_worker = serial_pack("ssii",
@@ -55,7 +55,7 @@ void manejador_transformacion(tEtapaTransformacion* transformacion) {
 		if(!enviar_operacion_worker(OP_INICIAR_TRANSFORMACION, socket, serial_worker)){
 			response = -1;
 			finalizar_manejador_transf(response, socket, transformacion);
-			thread_send(hilo_node_drop, transformacion->nodo);
+			thread_send(hilo_node_drop, (char*)transformacion->nodo);
 			thread_exit(0);
 		}else{
 			log_inform("Se recibe respuesta de ETAPA_TRANSFORMACION del worker en socket %d",
@@ -103,7 +103,7 @@ void manejador_rl(tEtapaReduccionLocal * etapa_rl) {
 	if (socket == -1){
 		response = -1;
 		finalizar_manejador_rl(response, socket, etapa_rl);
-		thread_send(hilo_node_drop, etapa_rl->nodo);
+		thread_send(hilo_node_drop, (char*)etapa_rl->nodo);
 		thread_exit(0);
 	}else{
 		t_serial *serial_worker = serial_create(NULL, 0);
@@ -123,7 +123,7 @@ void manejador_rl(tEtapaReduccionLocal * etapa_rl) {
 		if(!enviar_operacion_worker(OP_INICIAR_REDUCCION_LOCAL, socket, serial_worker)){
 			response = -1;
 			finalizar_manejador_rl(response, socket, etapa_rl);
-			thread_send(hilo_node_drop, etapa_rl->nodo);
+			thread_send(hilo_node_drop, (char*)etapa_rl->nodo);
 			thread_exit(0);
 		}else{
 			log_inform("Se recibe respuesta de ETAPA_REDUCCION_LOCAL del worker en socket %d",
@@ -178,7 +178,7 @@ void manejador_rg(mlist_t* list) {
 	if (socket == -1){
 		response = -1;
 		finalizar_manejador_rg(response, socket, list, worker_manager);
-		thread_send(hilo_node_drop, worker_manager->nodo);
+		thread_send(hilo_node_drop, (char*)worker_manager->nodo);
 		thread_exit(0);
 	}else{
 		t_serial *serial_worker = serial_create(NULL, 0);
@@ -204,7 +204,7 @@ void manejador_rg(mlist_t* list) {
 		if(!enviar_operacion_worker(OP_INICIAR_REDUCCION_GLOBAL, socket, serial_worker)){
 			response = -1;
 			finalizar_manejador_rg(response, socket, list, worker_manager);
-			thread_send(hilo_node_drop, worker_manager->nodo);
+			thread_send(hilo_node_drop, (char*)worker_manager->nodo);
 			thread_exit(0);
 		}else{
 			log_inform("Se recibe respuesta de ETAPA_REDUCCION_GLOBAL del worker en socket %d",
@@ -250,7 +250,7 @@ void manejador_af(tAlmacenadoFinal* af) {
 	if (socket == -1){
 		response = -1;
 		finalizar_manejador_af(response, socket, af);
-		thread_send(hilo_node_drop, af->nodo);
+		thread_send(hilo_node_drop, (char*)af->nodo);
 		thread_exit(0);
 	}else{
 		t_serial *serial_worker = serial_pack("ss",af->archivo_etapa, job.arch_result);
@@ -261,7 +261,7 @@ void manejador_af(tAlmacenadoFinal* af) {
 		if(!enviar_operacion_worker(OP_INICIAR_ALMACENAMIENTO, socket, serial_worker)){
 			response = -1;
 			finalizar_manejador_af(response, socket, af);
-			thread_send(hilo_node_drop, af->nodo);
+			thread_send(hilo_node_drop, (char*)af->nodo);
 			thread_exit(0);
 		}else{
 			log_inform("Se recibe respuesta de ETAPA_ALMACENAMIENTO_FINAL del worker en socket %d",

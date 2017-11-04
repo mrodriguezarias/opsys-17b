@@ -9,7 +9,7 @@ void kill_thread(t_hilos* hilo){
 
 void node_drop(){
 	while(job_active){
-		char* data = thread_receive();
+		char* data = (char*)thread_receive();
 		if(data != NULL){
 			bool getNodeDrop(t_hilos* hilo){
 				return string_equals_ignore_case(data, hilo->nodo);
