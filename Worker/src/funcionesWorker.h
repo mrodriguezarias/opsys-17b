@@ -89,7 +89,7 @@ t_socket connect_to_worker(const char *ip, const char *port);
 void mandarDatosAWorkerHomologo(tEtapaReduccionGlobal * rg,int);
 void asignarOffset(int * offset,int bloque,int bytesOcuapdos);
 void ejecutarComando(char * command, int socketAceptado);
-mlist_t * crearListaParaReducir(tEtapaReduccionGlobalWorker * rg);
+char*  crearListaParaReducir(tEtapaReduccionGlobalWorker * rg);
 tEtapaAlmacenamientoWorker * af_unpack(t_serial * serial);
 int connect_to_filesystem();
 

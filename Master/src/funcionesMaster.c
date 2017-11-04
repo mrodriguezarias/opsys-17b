@@ -78,7 +78,7 @@ void cargar_scripts(char* path_transf, char* path_reduc) {
 	 script.script_transf = file_map(script.fd_transf);
 
 	 script.fd_reduc = file_open(path_reduc);
-	 script.script_reduc = file_map(script.fd_transf);
+	 script.script_reduc = file_map(script.fd_reduc);
 
 }
 
