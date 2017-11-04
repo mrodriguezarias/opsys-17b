@@ -13,9 +13,7 @@
 #include <thread.h>
 
 static t_socket fs_socket = -1;
-static const char *node_name;
 
-static void load_name_from_args(int argc, char **argv);
 static void connect_to_filesystem(void);
 static void send_node_info(void);
 static void handle_request(t_packet request);
@@ -29,8 +27,6 @@ int main(int argc, char *argv[]) {
 
 	data_open(config_get("RUTA_DATABIN"), mstring_toint(config_get("DATABIN_SIZE")));
 	connect_to_filesystem();
-
-	load_name_from_args(argc, argv);
 	send_node_info();
 
 	while(true) {
@@ -49,14 +45,6 @@ int main(int argc, char *argv[]) {
 
 // ========== Funciones privadas ==========
 
-/**
- * Toma opcionalmente el nombre del nodo pasado como argumento.
- * Para facilitar las pruebas y evitar tener que estar cambiando el archivo config.
- */
-static void load_name_from_args(int argc, char **argv) {
-	node_name = argc == 2 ? mstring_duplicate(argv[1]) : config_get("NOMBRE_NODO");
-}
-
 static void connect_to_filesystem() {
 	t_socket socket = socket_connect(config_get("IP_FILESYSTEM"), config_get("PUERTO_FILESYSTEM"));
 	if(socket == -1) puts("Esperando conexión del FileSystem...");
@@ -71,7 +59,7 @@ static void connect_to_filesystem() {
 }
 
 static void send_node_info() {
-	t_serial *node_info = serial_pack("sis", node_name, data_blocks(), config_get("PUERTO_WORKER"));
+	t_serial *node_info = serial_pack("sis", config_get("NOMBRE_NODO"), data_blocks(), config_get("PUERTO_WORKER"));
 	t_packet packet = protocol_packet(OP_NODE_INFO, node_info);
 	protocol_send_packet(packet, fs_socket);
 	serial_destroy(node_info);
