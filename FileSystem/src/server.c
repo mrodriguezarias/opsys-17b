@@ -71,7 +71,7 @@ static void node_listener() {
 		t_socket cli_sock = socket_accept(sv_sock);
 
 		t_packet packet = protocol_receive_packet(cli_sock);
-		if(packet.operation != OP_HANDSHAKE || packet.sender != PROC_DATANODE || packet.sender != PROC_WORKER) {
+		if(packet.operation != OP_HANDSHAKE) {
 			socket_close(cli_sock);
 			break;
 		}
@@ -86,6 +86,8 @@ static void node_listener() {
 				socket_close(cli_sock);
 				continue;
 			}
+			char *ip = socket_address(cli_sock);
+			char *port = socket_port(cli_sock);
 
 			protocol_send_response(cli_sock, RESPONSE_OK);
 
