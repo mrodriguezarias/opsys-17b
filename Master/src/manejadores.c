@@ -18,7 +18,6 @@ void finalizar_manejador_transf(int response, t_socket socket,
 		log_print("Finalización del hilo %d etapa TRANSFORMACION por caída del nodo: %s",
 				thread_self(),
 				transformacion->nodo);
-		thread_send(hilo_node_drop, (void*)mstring_create("%s",transformacion->nodo));
 	}else{
 		log_print("Finalización hilo %d TRANSFORMACION realizada", thread_self());
 	}
@@ -401,7 +400,6 @@ void manejador_yama(t_packet paquete) {
 		etapa_almacenamiento(&paquete);
 		break;
 	case OP_ERROR_JOB:
-		pthread_kill((pthread_t)hilo_node_drop, -1);
 		thread_term();
 		serial_unpack(paquete.content, "i", &exit_code);
 		log_print("ERROR_JOB - Código de error: %d", exit_code);

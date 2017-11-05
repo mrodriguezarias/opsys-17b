@@ -18,7 +18,7 @@ void node_drop(){
 			}
 			pthread_mutex_lock(&mutex_hilos);
 			mlist_t* hilos_drop = mlist_filter(hilos, getNodeDrop);
-			mlist_traverse(hilos_drop, kill_thread);
+			if (mlist_empty(hilos_drop)) mlist_traverse(hilos_drop, kill_thread);
 			for(int i = 0; i < mlist_length(hilos_drop); i++){
 				t_hilos* hilo_drop_node = mlist_get(hilos_drop, i);
 				log_print("Finalización del hilo %d por caída del nodo: %s",
@@ -128,10 +128,10 @@ const char *timeprom(time_t t1, time_t t2, int etapa){
 		return string_from_format("%02u:%02u:%03u", 0, 0, 0);
 	}else{
 		unsigned duration = abs(((int) difftime(t1, t2)) / mlist_count(hilos, getEtapa));
+		unsigned mseconds = duration % 60;
 		unsigned seconds = duration % 60;
 		unsigned minutes = duration / 60;
-		unsigned hours = duration / 60;
-		return string_from_format("%02u:%02u:%03u", hours, minutes, seconds);
+		return string_from_format("%02u:%02u:%03u", minutes, seconds, mseconds);
 	}
 }
 
