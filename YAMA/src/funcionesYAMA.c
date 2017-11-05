@@ -59,6 +59,7 @@ int obtenerCargaMaxima(){
 
 void llenarArrayPlanificador(t_workerPlanificacion planificador[],int tamaniolistaNodos,int *posicion){
 	int i,MaximaDisponibilidad = 0, cargaMax = 0;
+	int historicoAnterior = 0;
 	if(!strcmp("WCLOCK",algoritmoBalanceo)){
 		cargaMax = obtenerCargaMaxima();
 	}
@@ -67,11 +68,18 @@ void llenarArrayPlanificador(t_workerPlanificacion planificador[],int tamaniolis
 		planificador[i].nombreWorker = malloc(sizeof(char)*6);
 		strcpy( planificador[i].nombreWorker, nodoObtenido->nodo);
 		planificador[i].bloque = mlist_create();
-
 		planificador[i].disponibilidad = Disponibilidad(cargaMax, planificador[i].nombreWorker);
+
+
 		if(planificador[i].disponibilidad > MaximaDisponibilidad){
 			MaximaDisponibilidad = planificador[i].disponibilidad;
 			*posicion = i;
+			historicoAnterior = obtenerHistorico(planificador[i].nombreWorker);
+		} else if(planificador[i].disponibilidad == MaximaDisponibilidad){
+			if(obtenerHistorico(planificador[i].nombreWorker) < historicoAnterior){
+				*posicion = i;
+				historicoAnterior = obtenerHistorico(planificador[i].nombreWorker);
+			}
 		}
 	}
 }
@@ -232,7 +240,7 @@ void destruirlista(void* bloqueobtenido) {
 
 
 void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
-	pthread_mutex_lock(&mutexPlanificacion);
+	//pthread_mutex_lock(&mutexPlanificacion);
 	bool aborto = false;
 	t_serial* serial_send = serial_pack("s",pathArchivo);
 	requerirInformacionFilesystem(serial_send);
@@ -252,7 +260,7 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 		t_Estado *  estadoActualBloque = (t_Estado*) estadoActualBloqueObtenido;
 		actualizoTablaEstado(estadoActualBloque->nodo,estadoActualBloque->block,master,job,"Error");
 		bool esBloqueBuscado(void* bloqueActual){
-		  	return ((t_block *) bloqueActual)->copies[0].blockno == estadoActualBloque->block || ((t_block *) bloqueActual)->copies[1].blockno == estadoActualBloque->block;
+		  	return ((t_block *) bloqueActual)->copies[0].blockno != estadoActualBloque->block || ((t_block *) bloqueActual)->copies[1].blockno != estadoActualBloque->block;
 		}
 		mlist_remove(Datosfile->blocks, esBloqueBuscado, destruirlista);
 
@@ -299,7 +307,7 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 	else{
 		abortarJob(job, master,ERROR_REPLANIFICACION);
 	}
-	pthread_mutex_unlock(&mutexPlanificacion);
+	//pthread_mutex_unlock(&mutexPlanificacion);
 	free(Datosfile);
 	mlist_destroy(listaFiltradaEstadosBloquesDelNodo,destruirlista);
 	mlist_destroy(Datosfile->blocks,destruirlista);
@@ -406,31 +414,63 @@ void finalizarJobGlobalEnTablaEstado(int socketMaster,int job, char* estadoNuevo
 	bool condicionFiltroGlobal(void* unEstado){
 		return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == socketMaster && string_equals_ignore_case( ((t_Estado*) unEstado)->estado, "En proceso" );
 	}
-	//esto me va a traer el unico nodo en etapa de reduccion global
-	int indiceReduGlobal = mlist_index(listaEstados, condicionFiltroGlobal);
 
-	void * estadoObtenido = mlist_get(listaEstados, indiceReduGlobal);
+	int indiceReduEncargado = mlist_index(listaEstados, condicionFiltroGlobal);
+
+	void * estadoObtenido = mlist_get(listaEstados, indiceReduEncargado);
 	t_Estado* estadoEncontrado = (t_Estado *) estadoObtenido;
 
 	int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(estadoEncontrado->nodo);
 	actualizarCargaDelNodo(estadoEncontrado->nodo, job, posicionCargaNodoObtenida, 0, 1);
 
 	estadoEncontrado->estado = mstring_duplicate(estadoNuevo);
-	mlist_replace(listaEstados, indiceReduGlobal, estadoEncontrado);
+	mlist_replace(listaEstados, indiceReduEncargado, estadoEncontrado);
 	log_print("Actualizacion tabla de estado: aborto de job: %d || nodo: %s",job,estadoEncontrado->nodo);
 
-	//ahora mato a los de reduccion local que estan como finalizadoOK
-	eliminarEstadosMultiples(socketMaster,job, estadoNuevo, "FinalizadoOK");
+	//ahora quito las cargas de los nodos de reduccion local que estan como finalizadoOK menos el encargado.
+	eliminarCargasReduccionesLocales(estadoEncontrado->nodo,socketMaster,job);
 
 }
 
 void finalizarJobGlobal(int job, int socketMaster, int codigoError, char* estadoNuevo){
-	if(string_equals_ignore_case(estadoNuevo, "Error")){
+	if(string_equals_ignore_case(estadoNuevo, "Error") && codigoError != ERROR_ALMACENAMIENTO_FINAL){
 		log_report("Job: %d abortado",job);
 		t_packet packetError = protocol_packet(OP_ERROR_JOB, serial_pack("i",codigoError));
 		protocol_send_packet(packetError, socketMaster);
 		serial_destroy(packetError.content);
 	}
 	finalizarJobGlobalEnTablaEstado(socketMaster, job, estadoNuevo);
-	//abortarJobEnTablaEstado(socketMaster, job);
+}
+
+
+void eliminarCargasReduccionesLocales(char* nodoGlobal,int master,int job){
+
+
+	bool condicionFiltro(void* unEstado){
+				return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == master && !string_equals_ignore_case( ((t_Estado*) unEstado)->nodo, nodoGlobal ) && string_equals_ignore_case( ((t_Estado*) unEstado)->etapa, "ReduccionLocal" );
+		}
+		mlist_t * listaNodosLocales_whitoutGlobalNode = mlist_filter(listaEstados, condicionFiltro);
+
+		int i;
+		for(i = 0; i < mlist_length(listaNodosLocales_whitoutGlobalNode); i++){
+			void * estadoObtenido = mlist_get(listaNodosLocales_whitoutGlobalNode, i);
+			t_Estado* estadoEncontrado = (t_Estado *) estadoObtenido;
+
+			int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(estadoEncontrado->nodo);
+			actualizarCargaDelNodo(estadoEncontrado->nodo, job, posicionCargaNodoObtenida, 0, 1);
+
+
+		}
+
+		mlist_destroy(listaNodosLocales_whitoutGlobalNode, destruirlista);
+
+}
+
+int obtenerHistorico(char * nodo){
+	bool condicionIndice(void* cargaNodotraida){
+		return string_equals_ignore_case( ((t_cargaPorNodo *) cargaNodotraida)->nodo, nodo);
+	}
+	void * cargaNodoObtenida = mlist_find(listaCargaPorNodo, condicionIndice);
+	t_cargaPorNodo * cargaNodo = (t_cargaPorNodo *) cargaNodoObtenida;
+	return cargaNodo->cargaHistorica;
 }

@@ -112,7 +112,7 @@ void listen_to_master() {
 					{respuestaOperacion* finalizoRG = serial_unpackrespuestaOperacion(packetOperacion.content);
 
 					if(finalizoRG->response == -1){
-					//	abortarJob(finalizoRG->idJOB, sock,ERROR_REDUCCION_GLOBAL); //realizar un nuevo abortar job
+						finalizarJobGlobal(finalizoRG->idJOB,sock,ERROR_REDUCCION_GLOBAL,"Error");
 
 					}
 					else{
@@ -126,13 +126,13 @@ void listen_to_master() {
 				case OP_ALMACENAMIENTO_LISTA:
 					{respuestaOperacion* finalizoAF = serial_unpackrespuestaOperacion(packetOperacion.content);
 					if(finalizoAF->response == -1){
-						//abortarJob(finalizoAF->idJOB, sock,); //nuevo abortar job MANDAMOS ERROR
+						finalizarJobGlobal(finalizoAF->idJOB,sock,ERROR_ALMACENAMIENTO_FINAL,"Error");
 
 					}
 					else{
-						//abortarJob(finalizoAF->idJOB, sock,); //nuevo abortar job LE MANDAMOS COMO ESTADO FINALIZADOOK
+						finalizarJobGlobal(finalizoAF->idJOB,sock,ERROR_ALMACENAMIENTO_FINAL,"FinalizadoOK");
 						log_inform("Almacenamiento final terminada para :%d",finalizoAF->idJOB);
-						//actualizoTablaEstado(finalizoAF->nodo,-3,sock,finalizoAF->idJOB,"FinalizadoOK"); NO IRIA, IRIA DENTRO DE FINALIZARJOB EL ACTUALIZADO
+
 					}
 					}
 				break;

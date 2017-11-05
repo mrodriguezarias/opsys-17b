@@ -44,6 +44,7 @@ t_pedidoTrans* serial_unpackPedido(t_serial*);
 void eliminarEstadosMultiples(int,int, char*, char*);
 void finalizarJobGlobalEnTablaEstado(int,int, char*);
 void finalizarJobGlobal(int, int, int, char*);
-
+void eliminarCargasReduccionesLocales(char*,int,int);
+int obtenerHistorico(char *);
 
 #endif
