@@ -57,46 +57,16 @@ void listen_to_master() {
 
 					t_pedidoTrans* pedidoInicio = serial_unpackPedido(packetOperacion.content);
 					log_inform("Inicio de job nuevo :%d",pedidoInicio->idJOB);
-					//listaNodosActivos = mlist_create(); //luego borrar es para el hardcodeo
-					//Datosfile->blocks = mlist_create(); //luego borrar es para el hardcodeo
 					t_serial* file_serial = serial_pack("s",pedidoInicio->file);
 					requerirInformacionFilesystem(file_serial);
 					t_yfile* Datosfile = reciboInformacionSolicitada(pedidoInicio->idJOB,sock);
 					if(Datosfile->size>0){
-					/*///////////////////////////// hardcodeado
-					t_infoNodo* UnNodo = malloc(sizeof(t_infoNodo));
-					requerirInformacionFilesystem(packetOperacion.content);
-					reciboInformacionSolicitada(pedidoInicio->idJOB, Datosfile,sock);
-					///////////////////////////// hardcodeado
-					t_infoNodo* UnNodo = malloc(sizeof(t_infoNodo));
-					t_infoNodo* UnNodo2 = malloc(sizeof(t_infoNodo));
-
-					UnNodo->nodo = "NODO1";
-					UnNodo->ip = "127.0.0.1";
-					UnNodo->puerto = "9262";
-					UnNodo2->nodo = "NODO2";
-					UnNodo2->ip = "127.0.0.1";
-					UnNodo2->puerto = "9263";
-
-					mlist_append(listaNodosActivos,UnNodo);
-					mlist_append(listaNodosActivos,UnNodo2);
-
-					t_block* bloque = malloc(sizeof(t_block));
-					bloque->index = 0;
-					bloque->size = 10180;
-					bloque->copies[0].blockno = 8;
-					bloque->copies[0].node = "NODO1";
-					bloque->copies[1].blockno = 11;
-					bloque->copies[1].node = "NODO2";
-					mlist_append(Datosfile->blocks,bloque);
-
-					///////////////////////////////// */
 					completarPrimeraVez();
 					int tamaniolistaNodos = mlist_length(listaNodosActivos);
 					t_workerPlanificacion planificador[tamaniolistaNodos];
-					//printf("Entre a planificar \n");
+					printf("Entre a planificar \n");
 					planificar(planificador, tamaniolistaNodos,Datosfile->blocks);
-					//printf("Sali de planificar \n");
+					printf("Sali de planificar \n");
 					agregarCargaNodoSegunLoPlanificado(pedidoInicio->idJOB, planificador, tamaniolistaNodos);
 					enviarEtapa_transformacion_Master(pedidoInicio->idJOB,tamaniolistaNodos,planificador,Datosfile->blocks,sock);
 					}
@@ -111,7 +81,7 @@ void listen_to_master() {
 					}
 					else{
 						log_inform("Transformacion terminada para :%d bloque: %d",finalizoOperacion->idJOB,finalizoOperacion->bloque);
-						actualizoTablaEstado(finalizoOperacion->nodo,finalizoOperacion->bloque,sock,finalizoOperacion->idJOB,"FinalizadoOK");//ROMPE AQUI
+						actualizoTablaEstado(finalizoOperacion->nodo,finalizoOperacion->bloque,sock,finalizoOperacion->idJOB,"FinalizadoOK");
 						if(verificoFinalizacionTransformacion(finalizoOperacion->nodo,sock,finalizoOperacion->idJOB)){
 							t_infoNodo* IP_PUERTOnodo = BuscoIP_PUERTO(finalizoOperacion->nodo);
 							mlist_t* archivosTemporales_Transf = BuscoArchivosTemporales(finalizoOperacion->nodo,sock,finalizoOperacion->idJOB);
@@ -126,10 +96,10 @@ void listen_to_master() {
 
 					if(finalizoRL->response == -1){
 						abortarJob(finalizoRL->idJOB, sock,ERROR_REDUCCION_LOCAL);
-						actualizoTablaEstado(finalizoRL->nodo,-1,sock,finalizoRL->idJOB,"Error");
+
 					}
 					else{
-						//DEBERIA VERIFICAR PARA LOS NODOS FINALIZADOS MENOS EL SELECCIONADO DE MANDARLOS A FINALIZAR UNO POR UNO
+
 						log_inform("Reduccion local terminada para :%d nodo: %s",finalizoRL->idJOB,finalizoRL->nodo);
 						actualizoTablaEstado(finalizoRL->nodo,-1,sock,finalizoRL->idJOB,"FinalizadoOK");
 						if(verificoFinalizacionRl(finalizoRL->idJOB,sock)){
@@ -142,8 +112,8 @@ void listen_to_master() {
 					{respuestaOperacion* finalizoRG = serial_unpackrespuestaOperacion(packetOperacion.content);
 
 					if(finalizoRG->response == -1){
-						abortarJob(finalizoRG->idJOB, sock,ERROR_REDUCCION_GLOBAL);
-						actualizoTablaEstado(finalizoRG->nodo,-2,sock,finalizoRG->idJOB,"Error");
+					//	abortarJob(finalizoRG->idJOB, sock,ERROR_REDUCCION_GLOBAL); //realizar un nuevo abortar job
+
 					}
 					else{
 						log_inform("Etapa de reduccion global terminada para job: %d",finalizoRG->idJOB);
@@ -156,13 +126,13 @@ void listen_to_master() {
 				case OP_ALMACENAMIENTO_LISTA:
 					{respuestaOperacion* finalizoAF = serial_unpackrespuestaOperacion(packetOperacion.content);
 					if(finalizoAF->response == -1){
-						//abortarJobASIDESCUENTOCARGA
-						actualizoTablaEstado(finalizoAF->nodo,-3,sock,finalizoAF->idJOB,"Error");
+						//abortarJob(finalizoAF->idJOB, sock,); //nuevo abortar job MANDAMOS ERROR
+
 					}
 					else{
-						//abortarJOBFINALIZANDOASI DESCUENTOCARGA
+						//abortarJob(finalizoAF->idJOB, sock,); //nuevo abortar job LE MANDAMOS COMO ESTADO FINALIZADOOK
 						log_inform("Almacenamiento final terminada para :%d",finalizoAF->idJOB);
-						actualizoTablaEstado(finalizoAF->nodo,-3,sock,finalizoAF->idJOB,"FinalizadoOK");
+						//actualizoTablaEstado(finalizoAF->nodo,-3,sock,finalizoAF->idJOB,"FinalizadoOK"); NO IRIA, IRIA DENTRO DE FINALIZARJOB EL ACTUALIZADO
 					}
 					}
 				break;

@@ -16,6 +16,7 @@ extern int retardoPlanificacion;
 extern char* algoritmoBalanceo;
 extern pthread_mutex_t mutexPlanificacion;
 
+
 void inicializoVariablesGlobalesConfig();
 
 #endif /* YAMA_H_ */
