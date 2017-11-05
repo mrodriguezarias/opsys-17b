@@ -15,7 +15,7 @@ void node_drop(){
 				return string_equals_ignore_case(data, hilo->nodo);
 			}
 			pthread_mutex_lock(&mutex_hilos);
-			mlist_t* hilos_drop = mlist_find(hilos, getNodeDrop);
+			mlist_t* hilos_drop = mlist_filter(hilos, getNodeDrop);
 			mlist_traverse(hilos_drop, kill_thread);
 			for(int i = 0; i < mlist_length(hilos_drop); i++){
 				t_hilos* hilo_drop_node = mlist_get(hilos_drop, i);
@@ -31,7 +31,7 @@ void node_drop(){
 
 void actualizar_hilo(int response){
 	bool getHilo(t_hilos* thread){
-		return (thread->hilo == thread_self());
+		return (thread->hilo == thread_self() && thread->active);
 	}
 	t_hilos* hilo = mlist_find(hilos,getHilo);
 	hilo->active = false;
