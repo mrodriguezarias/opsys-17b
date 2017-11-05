@@ -31,7 +31,6 @@ respuestaOperacion* serial_unpackrespuestaOperacion(t_serial *);
 bool NodoConCopia_is_active(char*);
 void destruirlista(void*);
 void abortarJob(int, int, int);
-void abortarJobEnTablaEstado(int,int);
 int obtenerPosicionCargaNodo(char *);
 void actualizarCargaDelNodo(char*, int, int, int, int);
 int existeElJobEnLaCopia(int, mlist_t *);
@@ -42,4 +41,9 @@ void eliminarCargaJobDelNodo(int , mlist_t *);
 int cargaActual(char*);
 void replanificacion(char*, const char*,int,int);
 t_pedidoTrans* serial_unpackPedido(t_serial*);
+void eliminarEstadosMultiples(int,int, char*, char*);
+void finalizarJobGlobalEnTablaEstado(int,int, char*);
+void finalizarJobGlobal(int, int, int, char*);
+
+
 #endif

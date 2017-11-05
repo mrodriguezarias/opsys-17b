@@ -22,6 +22,7 @@ void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mli
 		verificarCondicion(tamaniolistaNodos, &posicionArray,planificador, &bloque, listaBloque);
 	}
 	//pthread_mutex_unlock(&mutexPlanificacion);
+	asigneBloquesDeArchivo = false;
 }
 
 int availabilityClock(){
@@ -136,7 +137,7 @@ void requerirInformacionFilesystem(t_serial *file){
 }
 
 void abortarJob(int job, int socketMaster, int codigoError){
-	abortarJobEnTablaEstado(socketMaster, job);
+	eliminarEstadosMultiples(socketMaster,job, "Error", "En proceso");
 	log_report("Job: %d abortado",job);
 	t_packet packetError = protocol_packet(OP_ERROR_JOB, serial_pack("i",codigoError));
 	protocol_send_packet(packetError, socketMaster);
@@ -185,9 +186,9 @@ void agregarAtablaEstado(int job, char* nodo,int Master,int bloque,char* etapa,c
 }
 
 
-void abortarJobEnTablaEstado(int socketMaster,int job){
+void eliminarEstadosMultiples(int socketMaster,int job, char* estadoNuevo, char* estadoABuscar){
 	bool condicionFiltro(void* unEstado){
-		return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == socketMaster && string_equals_ignore_case( ((t_Estado*) unEstado)->estado, "En proceso" );
+			return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == socketMaster && string_equals_ignore_case( ((t_Estado*) unEstado)->estado, estadoABuscar );
 	}
 	mlist_t * listaFiltrada = mlist_filter(listaEstados, condicionFiltro);
 	int i, indiceEncontrado;
@@ -199,16 +200,17 @@ void abortarJobEnTablaEstado(int socketMaster,int job){
 		actualizarCargaDelNodo(estadoEncontrado->nodo, job, posicionCargaNodoObtenida, 0, 1);
 
 		bool condicionIndice(void * unEstado){
-			return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == socketMaster && string_equals_ignore_case( ((t_Estado*) unEstado)->estado, "En proceso" ) && string_equals_ignore_case( ((t_Estado*) unEstado)->nodo, estadoEncontrado->nodo ) && ((t_Estado*) unEstado)->block == estadoEncontrado->block;
+			return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == socketMaster && string_equals_ignore_case( ((t_Estado*) unEstado)->estado, estadoABuscar ) && string_equals_ignore_case( ((t_Estado*) unEstado)->nodo, estadoEncontrado->nodo ) && ((t_Estado*) unEstado)->block == estadoEncontrado->block;
 		}
 		indiceEncontrado = mlist_index(listaEstados, condicionIndice);
-		estadoEncontrado->estado = "Error";
+		estadoEncontrado->estado = mstring_duplicate(estadoNuevo);
 		mlist_replace(listaEstados, indiceEncontrado, estadoEncontrado);
 		log_print("Actualizacion tabla de estado: aborto de job: %d || nodo: %s",job,estadoEncontrado->nodo);
 	}
 
 	mlist_destroy(listaFiltrada, destruirlista);
 }
+
 
 void actualizoTablaEstado(char* nodo,int bloque,int socketMaster,int job,char* estado){
 	t_Estado* estadoActual;
@@ -245,8 +247,6 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 
 	int i;
 
-	mlist_t * listaDeBloquesAReplanificar = mlist_create();
-
 	for(i=0; i < mlist_length(listaFiltradaEstadosBloquesDelNodo); i++){
 		void* estadoActualBloqueObtenido = mlist_get(listaFiltradaEstadosBloquesDelNodo, i);
 		t_Estado *  estadoActualBloque = (t_Estado*) estadoActualBloqueObtenido;
@@ -254,12 +254,9 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 		bool esBloqueBuscado(void* bloqueActual){
 		  	return ((t_block *) bloqueActual)->copies[0].blockno == estadoActualBloque->block || ((t_block *) bloqueActual)->copies[1].blockno == estadoActualBloque->block;
 		}
-		void* bloqueDeListaObtenido = mlist_find(Datosfile->blocks, (void*)esBloqueBuscado);
-		t_block * bloqueDeLista = (t_block *) bloqueDeListaObtenido;
-		mlist_append(listaDeBloquesAReplanificar, bloqueDeLista);
-	}
+		mlist_remove(Datosfile->blocks, esBloqueBuscado, destruirlista);
 
-	mlist_destroy(Datosfile->blocks, destruirlista);
+	}
 
 	mlist_t* list_to_send = mlist_create();
 
@@ -267,9 +264,9 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 	void * cargaNodoObtenida = mlist_get(listaCargaPorNodo, posicionCargaNodoObtenida);
 	t_cargaPorNodo * cargaNodo = (t_cargaPorNodo *) cargaNodoObtenida;
 
-	for(i=0; i < mlist_length(listaDeBloquesAReplanificar); i++){
+	for(i=0; i < mlist_length(Datosfile->blocks); i++){
 		usleep(retardoPlanificacion);
-		void* bloqueDeListaObtenido = mlist_get(listaDeBloquesAReplanificar, i);
+		void* bloqueDeListaObtenido = mlist_get(Datosfile->blocks, i);
 		t_block* bloqueAReplanificar = (t_block *) bloqueDeListaObtenido;
 
 		if(nodoEstaEnLaCopia(bloqueAReplanificar, 0, nodo) ){
@@ -297,7 +294,7 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 			agregarAtablaEstado(job,etapa->nodo,master,etapa->bloque,"Transformacion",etapa->archivo_etapa,"En proceso");
 		}
 		mandar_etapa_transformacion(list_to_send,master);
-		log_inform("Envio etapa de transformacion por efecto de la replanificacion %d| bloque",job);
+		log_inform("Envio etapa de transformacion por efecto de la replanificacion %d",job);
 	}
 	else{
 		abortarJob(job, master,ERROR_REPLANIFICACION);
@@ -305,10 +302,11 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 	pthread_mutex_unlock(&mutexPlanificacion);
 	free(Datosfile);
 	mlist_destroy(listaFiltradaEstadosBloquesDelNodo,destruirlista);
-	mlist_destroy(listaDeBloquesAReplanificar,destruirlista);
+	mlist_destroy(Datosfile->blocks,destruirlista);
 	mlist_destroy(list_to_send,destruirlista);
 	}
 }
+
 
 void generarEtapaTransformacionAEnviarParaCopia(int copia, t_block* bloqueAReplanificar, int job, int master, mlist_t* list_to_send){
 	bool condicion(void* datosDeUnNodo){
@@ -339,12 +337,11 @@ int obtenerPosicionCargaNodo(char * nodoAReplanificar){
 
 void actualizarCargaDelNodo(char* nodoCopia, int job, int posicionCargaNodoObtenida, int aumentarOQuitar, int cantidadAAumentar){//1 para aumentar, 0 para quitar
 	int posicionCargaNodoObtenidaCopia, posicionCargaJobObtenidoCopia;
-
 	bool condicionIndiceCopia1(void* cargaNodotraida){
 			return string_equals_ignore_case( ((t_cargaPorNodo *) cargaNodotraida)->nodo, nodoCopia);
 	}
 	posicionCargaNodoObtenidaCopia = mlist_index(listaCargaPorNodo, condicionIndiceCopia1);
-	void * cargaNodoObtenida = mlist_get(listaCargaPorNodo, posicionCargaNodoObtenida);
+	void * cargaNodoObtenida = mlist_get(listaCargaPorNodo, posicionCargaNodoObtenidaCopia);
 	t_cargaPorNodo * cargaNodoCopia = (t_cargaPorNodo *) cargaNodoObtenida;
 
 	posicionCargaJobObtenidoCopia = existeElJobEnLaCopia(job, cargaNodoCopia->cargaPorJob);
@@ -403,4 +400,37 @@ bool NodoConCopia_is_active(char* nodo){
 
 	return mlist_any(listaNodosActivos, (void*) contieneNodo);
 
+}
+
+void finalizarJobGlobalEnTablaEstado(int socketMaster,int job, char* estadoNuevo){
+	bool condicionFiltroGlobal(void* unEstado){
+		return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == socketMaster && string_equals_ignore_case( ((t_Estado*) unEstado)->estado, "En proceso" );
+	}
+	//esto me va a traer el unico nodo en etapa de reduccion global
+	int indiceReduGlobal = mlist_index(listaEstados, condicionFiltroGlobal);
+
+	void * estadoObtenido = mlist_get(listaEstados, indiceReduGlobal);
+	t_Estado* estadoEncontrado = (t_Estado *) estadoObtenido;
+
+	int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(estadoEncontrado->nodo);
+	actualizarCargaDelNodo(estadoEncontrado->nodo, job, posicionCargaNodoObtenida, 0, 1);
+
+	estadoEncontrado->estado = mstring_duplicate(estadoNuevo);
+	mlist_replace(listaEstados, indiceReduGlobal, estadoEncontrado);
+	log_print("Actualizacion tabla de estado: aborto de job: %d || nodo: %s",job,estadoEncontrado->nodo);
+
+	//ahora mato a los de reduccion local que estan como finalizadoOK
+	eliminarEstadosMultiples(socketMaster,job, estadoNuevo, "FinalizadoOK");
+
+}
+
+void finalizarJobGlobal(int job, int socketMaster, int codigoError, char* estadoNuevo){
+	if(string_equals_ignore_case(estadoNuevo, "Error")){
+		log_report("Job: %d abortado",job);
+		t_packet packetError = protocol_packet(OP_ERROR_JOB, serial_pack("i",codigoError));
+		protocol_send_packet(packetError, socketMaster);
+		serial_destroy(packetError.content);
+	}
+	finalizarJobGlobalEnTablaEstado(socketMaster, job, estadoNuevo);
+	//abortarJobEnTablaEstado(socketMaster, job);
 }
