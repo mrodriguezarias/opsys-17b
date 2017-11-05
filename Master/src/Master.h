@@ -15,6 +15,7 @@ typedef struct{
 	int etapa;
 	bool active;
 	int result;
+	t_socket sock;
 } t_hilos;
 
 struct{

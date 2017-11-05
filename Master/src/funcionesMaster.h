@@ -20,6 +20,8 @@ void node_drop();
 
 void actualizar_hilo(int);
 
+void guardar_socket(t_socket socket);
+
 bool enviar_operacion_worker(int, t_socket, t_serial*);
 
 void response_worker(t_socket, int*);

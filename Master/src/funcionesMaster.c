@@ -1,18 +1,20 @@
 #include "funcionesMaster.h"
+#include "mstring.h"
 
 void kill_thread(t_hilos* hilo){
-	if(hilo->active){
 		hilo->active = false;
+		if (hilo->sock != -1) socket_close(hilo->sock);
 		pthread_kill((pthread_t)hilo->hilo, -1);
-	}
 }
 
 void node_drop(){
-	while(job_active){
-		char* data = (char*)thread_receive();
+	while(thread_active()){
+		char* data = thread_receive();
 		if(data != NULL){
 			bool getNodeDrop(t_hilos* hilo){
-				return string_equals_ignore_case(data, hilo->nodo);
+				return !thread_killed(hilo->hilo) &&
+						mstring_equali(data, hilo->nodo) &&
+						hilo->hilo != thread_sender();
 			}
 			pthread_mutex_lock(&mutex_hilos);
 			mlist_t* hilos_drop = mlist_filter(hilos, getNodeDrop);
@@ -31,11 +33,19 @@ void node_drop(){
 
 void actualizar_hilo(int response){
 	bool getHilo(t_hilos* thread){
-		return (thread->hilo == thread_self() && thread->active);
+		return (thread->active && thread->hilo == thread_self());
 	}
 	t_hilos* hilo = mlist_find(hilos,getHilo);
 	hilo->active = false;
 	hilo->result = response;
+}
+
+void guardar_socket(t_socket socket){
+	bool getHilo(t_hilos* thread){
+		return (thread->hilo == thread_self());
+	}
+	t_hilos* hilo = mlist_find(hilos,getHilo);
+	hilo->sock = socket;
 }
 
 bool enviar_operacion_worker(int operacion, t_socket socket, t_serial* serial_worker) {
@@ -69,6 +79,7 @@ t_hilos* set_hilo(int etapa, char* nodo) {
 	hilo->nodo = string_duplicate(nodo);
 	hilo->active = true;
 	hilo->result = -1;
+	hilo->sock = -1;
 	return hilo;
 }
 
@@ -86,7 +97,8 @@ void liberar_scripts() {
 
 	file_unmap(script.fd_transf, script.script_transf);
 	file_unmap(script.fd_reduc, script.script_reduc);
-
+	file_close(script.fd_transf);
+	file_close(script.fd_reduc);
 }
 
 inline time_t get_current_time(){
@@ -203,8 +215,8 @@ void init(char* argv[]){
 }
 
 void terminate() {
-	thread_term();
-	liberar_scripts();
+	pthread_mutex_destroy(&mutex_hilos);
+	//liberar_scripts();
 	socket_close(yama_socket);
 	log_print("Conexión a YAMA por el socket %i cerrada", yama_socket);
 	calcular_metricas();
