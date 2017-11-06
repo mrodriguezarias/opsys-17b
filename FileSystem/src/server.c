@@ -22,7 +22,7 @@
 static t_node *receive_node_info(t_socket socket);
 static void node_listener(void);
 static void yama_listener(void);
-static void worker_handler(t_socket socket);
+static void worker_handler(t_socket worker_socket);
 static void datanode_handler(t_node *node);
 static void yama_handler(t_socket socket);
 
@@ -86,8 +86,6 @@ static void node_listener() {
 				socket_close(cli_sock);
 				continue;
 			}
-			char *ip = socket_address(cli_sock);
-			char *port = socket_port(cli_sock);
 
 			protocol_send_response(cli_sock, RESPONSE_OK);
 
@@ -99,8 +97,11 @@ static void node_listener() {
 			protocol_send_response(cli_sock, RESPONSE_OK);
 
 			log_inform("Worker conectado desde %s:%s", ip, port);
-			thread_create(worker_handler, &cli_sock);
+
+			printf("cli_sock: %i\n", cli_sock);
+			thread_create(worker_handler, (void *) cli_sock);
 		}
+
 		free(ip);
 		free(port);
 	}
@@ -109,23 +110,40 @@ static void node_listener() {
 }
 
 static void worker_handler(t_socket worker_socket) {
+	printf("worker_socket: %i\n", worker_socket);
 	t_packet packet = protocol_receive_packet(worker_socket);
-	char *buffer, *path;
+	char *buffer, *ypath;
+	int size;
 
 	if (packet.content != NULL && packet.operation == OP_INICIAR_ALMACENAMIENTO) {
-		serial_unpack(packet.content, "ss", &buffer, &path);
-		t_file* file = file_create(mstring_create("%s%s", "temp",mstring_bsize(worker_socket)));
+		log_inform("OP_INICIAR_ALMACENAMIENTO");
+		serial_unpack(packet.content, "ssi", &buffer, &ypath, &size);
+		printf("path: %s\n", path_name(ypath));
+		printf("size: %i\n", size);
+		printf("buffer size: %i\n", mstring_length(buffer));
 
-		file_open(file_path(file));
-		fwrite(buffer, sizeof(char), 1, file_pointer(file));
-		filetable_cpfrom(file_path(file), path);
 
-		file_delete(file);
-		protocol_send_response(worker_socket, filetable_contains(path));
+		t_file* file = file_create(path_name(ypath));
+
+		size_t r = fwrite(buffer, sizeof(char), size, file_pointer(file));
+		printf("bytes copiados: %zd\n", r);
+
+		char *path = mstring_duplicate(file_path(file));
+		printf("path: %s\n", path);
+		file_close(file);
+
+		char *dir = path_dir(ypath);
+		printf("dir: %s\n", dir);
+		filetable_cpfrom(path, dir);
+		free(dir);
+		free(path);
+
+		protocol_send_response(worker_socket, filetable_contains(ypath));
 	} else {
 		protocol_send_response(worker_socket, RESPONSE_ERROR);
 	}
 
+	printf("1worker_socket: %i\n", worker_socket);
 	socket_close(worker_socket);
 	thread_exit(0);
 }
@@ -215,7 +233,7 @@ static void datanode_handler(t_node *node) {
 			if(packet.operation != OP_SEND_BLOCK) {
 				log_report("Se esperaba recibir un bloque pero se recibió otra cosa");
 			} else if(op->opcode == NODE_RECV) {
-				filetable_writeblock(op->blockno, packet.content->data);
+				filetable_writeblock(packet.content->data);
 			}  else if(op->opcode == NODE_RECV_BLOCK) {
 				thread_respond((void*)packet.content->data);
 			}

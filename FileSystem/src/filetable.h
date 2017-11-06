@@ -130,10 +130,9 @@ void filetable_rm_block(t_yfile *file, t_block* block, int copy);
 
 /**
  * Escribe un bloque en el archivo de bloques.
- * @param blockno Número de bloque.
  * @param block Contenido del bloque.
  */
-void filetable_writeblock(int blockno, void *block);
+void filetable_writeblock(void *block);
 
 /**
  * Copia un bloque dado en otro nodo.

@@ -25,7 +25,7 @@
 
 static struct {
 	mutex_t *mut;
-	int done;
+	int current;
 	int total;
 	t_file *fp;
 	void *map;
@@ -289,16 +289,20 @@ bool filetable_stable() {
 	return (fs.formatted && mlist_all(files, available_block));
 }
 
-void filetable_writeblock(int blockno, void *block) {
-	memcpy(bfile.map + blockno * BLOCK_SIZE, block, BLOCK_SIZE);
+void filetable_writeblock(void *block) {
+	printf("Pre memcpy\n");
+	memcpy(bfile.map + bfile.current * BLOCK_SIZE, block, BLOCK_SIZE);
+	printf("Post memcpy\n");
 
 	thread_mutex_lock(bfile.mut);
-	bfile.done++;
-	bool file_done = bfile.done == bfile.total;
+	bfile.current++;
+	bool file_done = bfile.current == bfile.total;
 	thread_mutex_unlock(bfile.mut);
 
-	if (file_done)
+	if (file_done) {
+		printf("File done\n");
 		thread_resume(thread_main());
+	}
 }
 
 void filetable_term() {
@@ -469,6 +473,9 @@ static char *real_file_path(const char *path) {
 static bool add_blocks_from_file(t_yfile *yfile, const char *path) {
 	char buffer[BLOCK_SIZE];
 	t_file *source = file_open(path);
+
+	printf("source: %s\n", file_path(source));
+
 	int count, recount;
 
 	if (yfile->type == FTYPE_TXT) {
@@ -563,7 +570,7 @@ static int add_and_send_block(t_yfile *yfile, char *buffer, size_t size,
 
 static void reset_block_file(size_t total_blocks) {
 	path_truncate("metadata/blocks", total_blocks * BLOCK_SIZE);
-	bfile.done = 0;
+	bfile.current = 0;
 	bfile.total = total_blocks;
 	bfile.fp = file_open("metadata/blocks");
 	bfile.map = file_map(bfile.fp);
