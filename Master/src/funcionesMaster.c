@@ -3,30 +3,35 @@
 
 void kill_thread(t_hilos* hilo){
 		hilo->active = false;
-		if (hilo->sock != -1) socket_close(hilo->sock);
-		pthread_kill((pthread_t)hilo->hilo, -1);
+		pthread_cancel((pthread_t)hilo->hilo);
 }
 
 void node_drop(){
 	while(thread_active()){
 		char* data = thread_receive();
-		if(data != NULL){
+		bool getSender(t_hilos* hilo){
+			return hilo->active && hilo->hilo != thread_sender();
+		}
+		pthread_mutex_lock(&mutex_hilos);
+		t_hilos* hilo_sender = mlist_find(hilos, getSender);
+		if(hilo_sender != NULL && hilo_sender->active && !mstring_isempty(data)){
 			bool getNodeDrop(t_hilos* hilo){
-				return !thread_killed(hilo->hilo) &&
+				return hilo->active &&
 						mstring_equali(data, hilo->nodo) &&
-						hilo->hilo != thread_sender();
+						hilo->hilo != hilo_sender->hilo;
 			}
-			pthread_mutex_lock(&mutex_hilos);
 			mlist_t* hilos_drop = mlist_filter(hilos, getNodeDrop);
-			if (mlist_empty(hilos_drop)) mlist_traverse(hilos_drop, kill_thread);
+			mlist_traverse(hilos_drop, kill_thread);
 			for(int i = 0; i < mlist_length(hilos_drop); i++){
 				t_hilos* hilo_drop_node = mlist_get(hilos_drop, i);
 				log_print("Finalización del hilo %d por caída del nodo: %s",
 						hilo_drop_node->hilo,
 						hilo_drop_node->nodo);
 			}
-			pthread_mutex_unlock(&mutex_hilos);
+
+			thread_resume(hilo_sender->hilo);
 		}
+		pthread_mutex_unlock(&mutex_hilos);
 	}
 	thread_exit(0);
 }
@@ -38,14 +43,6 @@ void actualizar_hilo(int response){
 	t_hilos* hilo = mlist_find(hilos,getHilo);
 	hilo->active = false;
 	hilo->result = response;
-}
-
-void guardar_socket(t_socket socket){
-	bool getHilo(t_hilos* thread){
-		return (thread->hilo == thread_self());
-	}
-	t_hilos* hilo = mlist_find(hilos,getHilo);
-	hilo->sock = socket;
 }
 
 bool enviar_operacion_worker(int operacion, t_socket socket, t_serial* serial_worker) {
@@ -76,10 +73,9 @@ bool enviar_resultado_yama(int operacion,t_serial* serial_yama) {
 t_hilos* set_hilo(int etapa, char* nodo) {
 	t_hilos* hilo = malloc(sizeof(t_hilos));
 	hilo->etapa = etapa;
-	hilo->nodo = string_duplicate(nodo);
+	hilo->nodo = mstring_duplicate(nodo);
 	hilo->active = true;
 	hilo->result = -1;
-	hilo->sock = -1;
 	return hilo;
 }
 
