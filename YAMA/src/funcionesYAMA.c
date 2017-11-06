@@ -273,31 +273,29 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 		void* estadoActualBloqueObtenido = mlist_get(listaFiltradaEstadosBloquesDelNodo, i);
 		t_Estado *  estadoActualBloque = (t_Estado*) estadoActualBloqueObtenido;
 		actualizoTablaEstado(estadoActualBloque->nodo,estadoActualBloque->block,master,job,"Error");
-		bool esBloqueBuscado(void* bloqueActual){
-		  	return ((t_block *) bloqueActual)->copies[0].blockno != estadoActualBloque->block && ((t_block *) bloqueActual)->copies[1].blockno != estadoActualBloque->block;
-		}
-		mlist_remove(Datosfile->blocks, esBloqueBuscado, destruirlista);
-
 	}
+	bool esBloqueBuscado(void* bloqueActual){
+	  return !string_equals_ignore_case( ((t_block*) bloqueActual)->copies[0].node, nodo ) && !string_equals_ignore_case( ((t_block*) bloqueActual)->copies[1].node, nodo );
+	 }
+	 mlist_remove(Datosfile->blocks, esBloqueBuscado, destruirlista);
 
 	mlist_t* list_to_send = mlist_create();
 
 	int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(nodo);
 	void * cargaNodoObtenida = mlist_get(listaCargaPorNodo, posicionCargaNodoObtenida);
 	t_cargaPorNodo * cargaNodo = (t_cargaPorNodo *) cargaNodoObtenida;
-
 	for(i=0; i < mlist_length(Datosfile->blocks); i++){
 		usleep(retardoPlanificacion);
 		void* bloqueDeListaObtenido = mlist_get(Datosfile->blocks, i);
 		t_block* bloqueAReplanificar = (t_block *) bloqueDeListaObtenido;
 
-		if(nodoEstaEnLaCopia(bloqueAReplanificar, 0, nodo) ){
+		if(nodoEstaEnLaCopia(bloqueAReplanificar, 0, nodo) && !aborto){
 			cargaNodo->cargaActual -= 1;
 			actualizarCargaDelNodo(bloqueAReplanificar->copies[1].node, job, posicionCargaNodoObtenida, 1, 1);
 			generarEtapaTransformacionAEnviarParaCopia(1, bloqueAReplanificar, job, master, list_to_send);
 
 		}
-		else if(nodoEstaEnLaCopia(bloqueAReplanificar, 1, nodo)){
+		else if(nodoEstaEnLaCopia(bloqueAReplanificar, 1, nodo) && !aborto){
 			cargaNodo->cargaActual -= 1;
 			actualizarCargaDelNodo(bloqueAReplanificar->copies[0].node, job, posicionCargaNodoObtenida, 1, 1);
 			generarEtapaTransformacionAEnviarParaCopia(0, bloqueAReplanificar, job, master, list_to_send);
