@@ -64,8 +64,11 @@ void listen_to_master() {
 					completarPrimeraVez();
 					int tamaniolistaNodos = mlist_length(listaNodosActivos);
 					t_workerPlanificacion planificador[tamaniolistaNodos];
+
+					//pthread_mutex_lock(&mutexPlanificacion);
 					printf("Entre a planificar \n");
 					planificar(planificador, tamaniolistaNodos,Datosfile->blocks);
+					//pthread_mutex_unlock(&mutexPlanificacion);
 					printf("Sali de planificar \n");
 					agregarCargaNodoSegunLoPlanificado(pedidoInicio->idJOB, planificador, tamaniolistaNodos);
 					enviarEtapa_transformacion_Master(pedidoInicio->idJOB,tamaniolistaNodos,planificador,Datosfile->blocks,sock);
@@ -76,8 +79,9 @@ void listen_to_master() {
 					{respuestaOperacionTranf* finalizoOperacion = serial_unpackRespuestaOperacion(packetOperacion.content);
 
 					if(finalizoOperacion->response == -1){
+						//pthread_mutex_lock(&mutexPlanificacion);
 						replanificacion(finalizoOperacion->nodo,finalizoOperacion->file,sock,finalizoOperacion->idJOB);
-
+						//pthread_mutex_unlock(&mutexPlanificacion);
 					}
 					else{
 						log_inform("Transformacion terminada para :%d bloque: %d",finalizoOperacion->idJOB,finalizoOperacion->bloque);
@@ -173,6 +177,7 @@ void agregarCargaNodoSegunLoPlanificado(int job, t_workerPlanificacion planifica
 		}
 		posicionObtenida = mlist_index(listaCargaPorNodo, condicion);
 		void * cargaNodoObtenida = mlist_get(listaCargaPorNodo, posicionObtenida);
+
 		t_cargaPorNodo * cargaNodo = (t_cargaPorNodo *) cargaNodoObtenida;
 		cargaNodo->cargaActual += mlist_length(planificador[i].bloque);
 		cargaNodo->cargaHistorica += mlist_length(planificador[i].bloque);
@@ -182,6 +187,7 @@ void agregarCargaNodoSegunLoPlanificado(int job, t_workerPlanificacion planifica
 		cargaPorJob->cargaDelJob = mlist_length(planificador[i].bloque);
 		mlist_append(cargaNodo->cargaPorJob,cargaPorJob);
 		mlist_replace(listaCargaPorNodo, posicionObtenida, cargaNodo);
+
 	}
 }
 

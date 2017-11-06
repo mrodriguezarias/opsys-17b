@@ -3,13 +3,14 @@
 #include "server.h"
 #include <semaphore.h>
 #include "mstring.h"
+
 mlist_t * listaCargaPorNodo;
 
 static int contadorBloquesSeguidosNoAsignados = 0;
 static bool asigneBloquesDeArchivo = false;
 
 void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mlist_t* listaBloque){
-	//pthread_mutex_lock(&mutexPlanificacion);
+
 	int posicionArray;
 
 	llenarArrayPlanificador(planificador,tamaniolistaNodos,&posicionArray);
@@ -21,7 +22,7 @@ void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mli
 		usleep(retardoPlanificacion);
 		verificarCondicion(tamaniolistaNodos, &posicionArray,planificador, &bloque, listaBloque);
 	}
-	//pthread_mutex_unlock(&mutexPlanificacion);
+
 	asigneBloquesDeArchivo = false;
 }
 
@@ -34,6 +35,7 @@ int cargaActual(char* nodo){
 		return string_equals_ignore_case(nodo, ((t_cargaPorNodo*) cargaNodoRecibida)->nodo);
 	}
 	void* cargaNodoObtenida = mlist_find(listaCargaPorNodo,condicion);
+
 	t_cargaPorNodo* cargaNodo = (t_cargaPorNodo*) cargaNodoObtenida;
 	return cargaNodo->cargaActual;
 }
@@ -49,19 +51,32 @@ int Disponibilidad(int cargaMax, char* nodo){
 }
 
 int obtenerCargaMaxima(){
-	bool mayor(void* carga1, void* carga2){
-		return ((t_cargaPorNodo*) carga1)->cargaActual > ((t_cargaPorNodo*) carga2)->cargaActual;
-	}
-	mlist_sort(listaCargaPorNodo, mayor);
-	t_cargaPorNodo* cargaMayor = mlist_first(listaCargaPorNodo);
-	return cargaMayor->cargaActual;
+
+ int carga(void* carga1){
+  return ((t_cargaPorNodo*) carga1)->cargaActual;
+
+ }
+ 	 mlist_t* listaDeCargas = mlist_map(listaCargaPorNodo, (void*) carga);
+ 	bool mayor(void* carga1,void* carga2){
+ 		return (int) carga1 >= (int)carga2;
+ 	 }
+
+ 	 mlist_sort(listaDeCargas, mayor);
+ 	void* cargaMayorObtenido = mlist_first(listaDeCargas);
+ 	int CargaMayor = (int) cargaMayorObtenido;
+ 	 int cargaActual = CargaMayor;
+ 	// mlist_destroy(listaDeCargas, destruirlista); //// ESTE DESTROY ME TIRA SEGFAULT LA SEGUNDA VEZ QUE SE EJECUTA,NO DEBERIA HACERLO YA QUE ES UNA LISTA NUEVA
+ 	return cargaActual;
 }
+
+
 
 void llenarArrayPlanificador(t_workerPlanificacion planificador[],int tamaniolistaNodos,int *posicion){
 	int i,MaximaDisponibilidad = 0, cargaMax = 0;
 	int historicoAnterior = 0;
 	if(!strcmp("WCLOCK",algoritmoBalanceo)){
 		cargaMax = obtenerCargaMaxima();
+		printf("me devolvio de carga maxima %d \n", cargaMax); //luego borrar
 	}
 	for(i=0;i<tamaniolistaNodos;i++){
 		t_infoNodo* nodoObtenido = mlist_get(listaNodosActivos,i);
@@ -89,9 +104,8 @@ void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificaci
 	t_block* infoArchivo = mlist_get(listaBloque, *bloque);
 
 	if(planificador[*posicion].disponibilidad == 0){
-		printf("Disponibilidad1\n");
 		planificador[*posicion].disponibilidad = atoi(config_get("DISP_BASE"));
-		posicion++;
+		*posicion = *posicion +1;
 		contadorBloquesSeguidosNoAsignados++;
 	}else if(!strcmp(infoArchivo->copies[0].node, planificador[*posicion].nombreWorker) || !strcmp(infoArchivo->copies[1].node, planificador[*posicion].nombreWorker)){
 		planificador[*posicion].disponibilidad--;
@@ -104,7 +118,7 @@ void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificaci
 		contadorBloquesSeguidosNoAsignados = 0;
 	}
 	else{
-		posicion++;
+		*posicion = *posicion + 1;
 		contadorBloquesSeguidosNoAsignados++;
 		if(contadorBloquesSeguidosNoAsignados == tamaniolistaNodos){
 			int i;
@@ -240,7 +254,7 @@ void destruirlista(void* bloqueobtenido) {
 
 
 void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
-	//pthread_mutex_lock(&mutexPlanificacion);
+
 	bool aborto = false;
 	t_serial* serial_send = serial_pack("s",pathArchivo);
 	requerirInformacionFilesystem(serial_send);
@@ -260,7 +274,7 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 		t_Estado *  estadoActualBloque = (t_Estado*) estadoActualBloqueObtenido;
 		actualizoTablaEstado(estadoActualBloque->nodo,estadoActualBloque->block,master,job,"Error");
 		bool esBloqueBuscado(void* bloqueActual){
-		  	return ((t_block *) bloqueActual)->copies[0].blockno != estadoActualBloque->block || ((t_block *) bloqueActual)->copies[1].blockno != estadoActualBloque->block;
+		  	return ((t_block *) bloqueActual)->copies[0].blockno != estadoActualBloque->block && ((t_block *) bloqueActual)->copies[1].blockno != estadoActualBloque->block;
 		}
 		mlist_remove(Datosfile->blocks, esBloqueBuscado, destruirlista);
 
@@ -307,7 +321,7 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 	else{
 		abortarJob(job, master,ERROR_REPLANIFICACION);
 	}
-	//pthread_mutex_unlock(&mutexPlanificacion);
+
 	free(Datosfile);
 	mlist_destroy(listaFiltradaEstadosBloquesDelNodo,destruirlista);
 	mlist_destroy(Datosfile->blocks,destruirlista);
@@ -366,6 +380,7 @@ void actualizarCargaDelNodo(char* nodoCopia, int job, int posicionCargaNodoObten
 	}
 	else{
 		cargaNodoCopia->cargaActual += cantidadAAumentar;
+		cargaNodoCopia->cargaHistorica += cantidadAAumentar;
 
 		if(posicionCargaJobObtenidoCopia != -1){
 			void * cargaJobObtenida = mlist_get(cargaNodoCopia->cargaPorJob, posicionCargaJobObtenidoCopia);

@@ -49,11 +49,11 @@ int main() {
 }
 
 void trapper(int signum){
+	//pthread_mutex_lock(&mutexPlanificacion); //NO ANDAN LOS SEMAFOROS.
 	printf("\nRecibi la señal\n"); //luego quitar probar
-	log_inform("Señal atrapada, modificacion del retardo a :%d || modificacion del algoritmo a:%s",retardoPlanificacion,algoritmoBalanceo);
-	//pthread_mutex_lock(&mutexPlanificacion);
 	retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));
 	strcpy(algoritmoBalanceo,config_get("ALGORITMO_BALANCEO"));
+	log_print("Señal atrapada, modificacion del retardo a :%d || modificacion del algoritmo a:%s",retardoPlanificacion,algoritmoBalanceo);
 	//pthread_mutex_unlock(&mutexPlanificacion);
 }
 
