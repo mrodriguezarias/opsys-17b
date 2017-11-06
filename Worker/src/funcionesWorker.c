@@ -264,10 +264,11 @@ void listen_to_master() {
 					char * bufferArchivoReduccion;
 					char * aux2 = mstring_create("%s%s",system_userdir(),af->archivoReduccion);
 					printf("Archivo reduccion:%s\n",aux2);
-					archivoReduccion = file_create(aux2);
+					archivoReduccion = file_open(aux2);
 					bufferArchivoReduccion = file_map(archivoReduccion);
-					t_serial *serialFileSystem = serial_pack("ss",
-							bufferArchivoReduccion, af->archivoFinal);
+					//t_serial *x = serial_create(bufferArchivoReduccion, file_size(archivoReduccion));
+					t_serial *serialFileSystem = serial_pack("ssi", bufferArchivoReduccion, af->archivoFinal, file_size(archivoReduccion));
+					printf("file_size: %d\n", file_size(archivoReduccion));
 					t_packet paquete = protocol_packet(
 							OP_INICIAR_ALMACENAMIENTO, serialFileSystem);
 					int response = connect_to_filesystem();

@@ -95,7 +95,7 @@ void serial_destroy(t_serial *serial) {
 // ========== Funciones privadas ==========
 
 static void add_variadic(t_serial *serial, const char *format, va_list ap) {
-	size_t cap = 1024;
+	size_t cap = 100000;
 	char *buffer = malloc(cap);
 	char *buf = buffer;
 
