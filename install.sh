@@ -5,11 +5,6 @@ echo "utnso" | sudo -S su &> /dev/null
 dpkg-query -W -f='${Status}' libreadline6-dev 2>/dev/null | grep -q "install ok"; libreadline_installed=$?
 dpkg-query -W -f='${Status}' libssl-dev 2>/dev/null | grep -q "install ok"; libssl_installed=$?
 
-if [ $libreadline_installed -ne 0 -o $libssl_installed -ne 0 ] ; then
-	echo "Updating packages…"
-	sudo apt-get update -qq
-fi
-
 if [ $libreadline_installed -ne 0 -o $libssl_installed -ne 0 -o $libcommons_installed -ne 0 ] ; then
 	echo "Installing dependencies…"
 fi
@@ -25,7 +20,8 @@ fi
 
 if [ $libreadline_installed -ne 0 ] ; then
 echo -n " • libreadline6-dev: downloading…"
-sudo apt-get download -qq libreadline6-dev libtinfo-dev
+curl -sO http://ubuntu.unc.edu.ar/ubuntu/pool/main/n/ncurses/libtinfo-dev_5.9+20140118-1ubuntu1_i386.deb
+curl -sO http://ubuntu.unc.edu.ar/ubuntu/pool/main/r/readline6/libreadline6-dev_6.3-4ubuntu2_i386.deb
 echo -ne "\r\e[0K • libreadline6-dev: installing…"
 sudo dpkg -i *.deb &> /dev/null
 rm -f *.deb
@@ -34,7 +30,8 @@ fi
 
 if [ $libssl_installed -ne 0 ] ; then
 echo -n " • libssl-dev: downloading…"
-sudo apt-get download -qq libssl-dev zlib1g-dev
+curl -sO http://ubuntu.unc.edu.ar/ubuntu/pool/main/z/zlib/zlib1g-dev_1.2.8.dfsg-1ubuntu1_i386.deb
+curl -sO http://ubuntu.unc.edu.ar/ubuntu/pool/main/o/openssl/libssl-dev_1.0.1f-1ubuntu2.23_i386.deb
 echo -ne "\r\e[0K • libssl-dev: installing…"
 sudo dpkg -i *.deb &> /dev/null
 rm -f *.deb
