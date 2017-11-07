@@ -10,7 +10,7 @@ void node_drop(){
 	while(thread_active()){
 		char* data = thread_receive();
 		bool getSender(t_hilos* hilo){
-			return hilo->active && hilo->hilo != thread_sender();
+			return hilo->active && hilo->hilo == thread_sender();
 		}
 		pthread_mutex_lock(&mutex_hilos);
 		t_hilos* hilo_sender = mlist_find(hilos, getSender);
