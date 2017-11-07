@@ -24,8 +24,9 @@ static void terminate(void);
 int main(int argc, char *argv[]) {
 	process_init();
 	thread_signal_capture(SIGINT, terminate);
-
 	data_open(config_get("RUTA_DATABIN"), mstring_toint(config_get("DATABIN_SIZE")));
+
+	start:
 	connect_to_filesystem();
 	send_node_info();
 
@@ -33,7 +34,8 @@ int main(int argc, char *argv[]) {
 		t_packet packet = protocol_receive_packet(fs_socket);
 		if(packet.operation == OP_UNDEFINED) {
 			fprintf(stderr, "\33[2K\rConexión con el FileSystem terminada\n");
-			break;
+			socket_close(fs_socket);
+			goto start;
 		}
 
 		handle_request(packet);

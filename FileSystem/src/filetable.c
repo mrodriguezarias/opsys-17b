@@ -267,7 +267,7 @@ void filetable_cat(const char *path) {
 	t_yfile *yfile = filetable_find(path);
 	t_file *file = receive_file(yfile);
 	bool line_handler(const char *line) {
-		printf("%s\n", line);
+		printf("%s", line);
 		return true;
 	}
 	file_ltraverse(file, line_handler);
@@ -290,19 +290,14 @@ bool filetable_stable() {
 }
 
 void filetable_writeblock(void *block) {
-	printf("Pre memcpy\n");
 	memcpy(bfile.map + bfile.current * BLOCK_SIZE, block, BLOCK_SIZE);
-	printf("Post memcpy\n");
 
 	thread_mutex_lock(bfile.mut);
 	bfile.current++;
 	bool file_done = bfile.current == bfile.total;
 	thread_mutex_unlock(bfile.mut);
 
-	if (file_done) {
-		printf("File done\n");
-		thread_resume(thread_main());
-	}
+	if(file_done) thread_resume(thread_main());
 }
 
 void filetable_term() {
@@ -341,7 +336,6 @@ void filetable_cpblock(t_yfile *file, off_t block_free, t_block* block, t_node* 
 
 	bitmap_set(node->bitmap, block_free);
 	node->free_blocks--;
-	printf("Bloque %d copiado en %s\n", block->index, node->name);
 
 	update_file(file);
 }
@@ -455,7 +449,7 @@ static void update_file(t_yfile *file) {
 }
 
 static char *real_file_path(const char *path) {
-	if (mstring_hasprefix(path, system_userdir())) {
+	if(mstring_hasprefix(path, system_userdir())) {
 		return mstring_duplicate(path);
 	}
 
@@ -473,9 +467,6 @@ static char *real_file_path(const char *path) {
 static bool add_blocks_from_file(t_yfile *yfile, const char *path) {
 	char buffer[BLOCK_SIZE];
 	t_file *source = file_open(path);
-
-	printf("source: %s\n", file_path(source));
-
 	int count, recount;
 
 	if (yfile->type == FTYPE_TXT) {
@@ -542,7 +533,7 @@ static int copy_from_text_file(t_file *source, char *buffer, t_yfile *target,
 			count += add_and_send_block(target, buffer, size, onode);
 			size = 0;
 		}
-		size += sprintf(buffer + size, "%s\n", line);
+		size += sprintf(buffer + size, "%s", line);
 		return true;
 	}
 	file_ltraverse(source, line_handler);

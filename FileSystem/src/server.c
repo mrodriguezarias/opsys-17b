@@ -98,7 +98,6 @@ static void node_listener() {
 
 			log_inform("Worker conectado desde %s:%s", ip, port);
 
-			printf("cli_sock: %i\n", cli_sock);
 			thread_create(worker_handler, (void *) cli_sock);
 		}
 
@@ -110,7 +109,6 @@ static void node_listener() {
 }
 
 static void worker_handler(t_socket worker_socket) {
-	printf("worker_socket: %i\n", worker_socket);
 	t_packet packet = protocol_receive_packet(worker_socket);
 	char *buffer, *ypath;
 	int size;
@@ -118,24 +116,18 @@ static void worker_handler(t_socket worker_socket) {
 	if (packet.content != NULL && packet.operation == OP_INICIAR_ALMACENAMIENTO) {
 		log_inform("OP_INICIAR_ALMACENAMIENTO");
 		serial_unpack(packet.content, "ssi", &buffer, &ypath, &size);
-		printf("path: %s\n", path_name(ypath));
-		printf("size: %i\n", size);
-		printf("buffer size: %i\n", mstring_length(buffer));
-
 
 		t_file* file = file_create(path_name(ypath));
-
-		size_t r = fwrite(buffer, sizeof(char), size, file_pointer(file));
-		printf("bytes copiados: %zd\n", r);
+		fwrite(buffer, sizeof(char), size, file_pointer(file));
 
 		char *path = mstring_duplicate(file_path(file));
-		printf("path: %s\n", path);
 		file_close(file);
 
 		char *dir = path_dir(ypath);
-		printf("dir: %s\n", dir);
 		filetable_cpfrom(path, dir);
 		free(dir);
+
+		path_remove(path);
 		free(path);
 
 		protocol_send_response(worker_socket, filetable_contains(ypath));
@@ -143,7 +135,6 @@ static void worker_handler(t_socket worker_socket) {
 		protocol_send_response(worker_socket, RESPONSE_ERROR);
 	}
 
-	printf("1worker_socket: %i\n", worker_socket);
 	socket_close(worker_socket);
 	thread_exit(0);
 }
