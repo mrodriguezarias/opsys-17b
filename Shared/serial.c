@@ -121,11 +121,10 @@ static void add_variadic(t_serial *serial, const char *format, va_list ap) {
 
 	void resize_buffer() {
 		size_t size = buf - buffer;
-		while(size + len > cap) {
-			cap *= 2;
-			buffer = realloc(buffer, cap);
-			buf = buffer + size;
-		}
+		if(size + len <= cap) return;
+		while(size + len > cap) cap *= 2;
+		buffer = realloc(buffer, cap);
+		buf = buffer + size;
 	}
 
 	for(; *format != '\0'; format++) {
