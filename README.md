@@ -31,3 +31,9 @@ Para instalar, ejecutar `sudo apt install libssl-dev`. Para enlazar, agregar `-l
 Ejecutar la siguiente línea en una terminal:
 
 `curl -sL bit.ly/2hzgEGg | bash`
+
+## Desinstalación
+
+Ejecutar la siguiente línea en una terminal:
+
+`curl -sL bit.ly/2hzgEGg | bash -s uninstall`
