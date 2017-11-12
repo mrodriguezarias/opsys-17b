@@ -1,0 +1,27 @@
+#!/bin/bash
+##################################################################################
+# Modo de uso:                                                                   #
+# Copiar este archivo a /usr/local/bin, darle permisos de ejecución (chmod +x) y #
+# ejecutar el comando `sync` desde la consola para sincronizar todas las VMs.    #
+##################################################################################
+fs=(192.168.56.101)
+yama=(192.168.56.102)
+master=(192.168.56.103)
+nodes=(192.168.56.104 192.168.56.105 192.168.56.106)
+
+base="/home/utnso/git/tp-2017-2c-YATPOS"
+declare -A procs=([FileSystem]=fs [YAMA]=yama [Master]=master [DataNode]=nodes [Worker]=nodes)
+
+for proc in "${!procs[@]}"; do
+	echo "Syncing $proc…"
+	ips=${procs[$proc]}[@]
+	for ip in "${!ips}"; do
+		echo -n " • $ip…"
+		path="$base/$proc/Debug/$proc"
+		sshpass -p "utnso" rsync -azuRq -e ssh $path utnso@$ip:/ 2> /dev/null; ret=$?
+		echo -ne "\r\e[0K • $ip "
+		[ $ret -eq 0 ] && echo "OK." || echo "ERROR."
+	done
+done
+
+echo "Sync complete."
