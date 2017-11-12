@@ -90,17 +90,17 @@ for kcur in "${!procs[@]}"; do
 	case "$vcur" in
 	"Node")
 		ip_fs_key="IP_FILESYSTEM"
-		printf "$ip_fs_key="; read ip_fs_val
+		printf "$ip_fs_key="; read ip_fs_val < /dev/tty
 		sed -i "s/^\($ip_fs_key=\).*/\1$ip_fs_val/" $file
 		;;
 	"Master")
 		ip_master_key="YAMA_IP"
-		printf "$ip_master_key="; read ip_master_val
+		printf "$ip_master_key="; read ip_master_val < /dev/tty
 		sed -i "s/^\($ip_master_key=\).*/\1$ip_master_val/" $file
 		;;
 	"YAMA")
 		ip_fs_key="FS_IP"
-		printf "$ip_fs_key="; read ip_fs_val
+		printf "$ip_fs_key="; read ip_fs_val < /dev/tty
 		sed -i "s/^\($ip_fs_key=\).*/\1$ip_fs_val/" $file
 		;;
 	esac
