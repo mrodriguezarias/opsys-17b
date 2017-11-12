@@ -13,6 +13,6 @@ if [ "$#" -ne 1 ] || ! [[ "${!procs[@]}" =~ "$1" ]]; then
 fi
 proc="${procs[$1]}"
 logfile="${logdir}/${proc}.log"
-mkdir -p "${logidr}"
+mkdir -p "${logdir}"
 touch "${logfile}"
 tail -F "${logfile}"
