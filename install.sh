@@ -92,6 +92,13 @@ for kcur in "${!procs[@]}"; do
 		ip_fs_key="IP_FILESYSTEM"
 		printf "$ip_fs_key="; read ip_fs_val < /dev/tty
 		sed -i "s/^\($ip_fs_key=\).*/\1$ip_fs_val/" $file
+		node_name_key="NOMBRE_NODO"
+		printf "$node_name_key="; read node_name_val < /dev/tty
+		sed -i "s/^\($node_name_key=\).*/\1$node_name_val/" $file
+		data_size_key="DATABIN_SIZE"
+		printf "$data_size_key="; read size < /dev/tty
+		data_size_val=$(echo "$size" | bc)
+		sed -i "s/^\($data_size_key=\).*/\1$data_size_val/" $file
 		;;
 	"Master")
 		ip_master_key="YAMA_IP"
