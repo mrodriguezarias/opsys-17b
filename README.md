@@ -30,7 +30,7 @@ Para instalar, ejecutar `sudo apt install libssl-dev`. Para enlazar, agregar `-l
 
 Ejecutar la siguiente línea en una terminal:
 
-`curl -sL bit.ly/2hzgEGg | bash -s {argumento}`
+`curl -sL j.mp/yatpos | bash -s {argumento}`
 
 El argumento puede ser alguno de los siguientes, según el caso:
 
