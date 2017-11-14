@@ -117,13 +117,18 @@ static void worker_handler(t_socket worker_socket) {
 		log_inform("OP_INICIAR_ALMACENAMIENTO");
 		serial_unpack(packet.content, "ssi", &buffer, &ypath, &size);
 
+		mstring_format(&ypath, "%s", path_create(PTYPE_YAMA, ypath));
+
 		t_file* file = file_create(path_name(ypath));
 		fwrite(buffer, sizeof(char), size, file_pointer(file));
+		free(buffer);
 
 		char *path = mstring_duplicate(file_path(file));
 		file_close(file);
 
 		char *dir = path_dir(ypath);
+		free(ypath);
+
 		filetable_cpfrom(path, dir);
 		free(dir);
 
@@ -172,26 +177,34 @@ static void yama_handler(t_socket yama_socket) {
 
 		t_packet packet = protocol_receive_packet(yama_socket);
 		if (packet.operation == OP_REQUEST_FILE_INFO) {
-				log_inform("Receive OP_REQUEST_FILE_INFO");
+			log_inform("Receive OP_REQUEST_FILE_INFO");
 
-				char* file_request;
-				serial_unpack(packet.content, "s", &file_request);
-				packet = protocol_packet(OP_NODES_ACTIVE_INFO, nodelist_active_pack());
+			char *file_request;
+			serial_unpack(packet.content, "s", &file_request);
+
+			t_serial *active_nodes = nodelist_active_pack();
+			packet = protocol_packet(OP_NODES_ACTIVE_INFO, active_nodes);
+			protocol_send_packet(packet, yama_socket);
+			serial_destroy(active_nodes);
+			log_inform("Send OP_NODES_ACTIVE_INFO");
+
+			t_yfile * yfile = filetable_find(file_request);
+			if(yfile == NULL) {
+				t_serial *pfreq = serial_pack("s", file_request);
+				packet = protocol_packet(OP_ARCHIVO_INEXISTENTE, pfreq);
 				protocol_send_packet(packet, yama_socket);
-				log_inform("Send OP_NODES_ACTIVE_INFO");
+				serial_destroy(pfreq);
+				log_inform("Send OP_ARCHIVO_INEXISTENTE %s", file_request);
+			} else {
+				t_serial *packed_file = yfile_pack(yfile);
+				packet = protocol_packet(OP_ARCHIVO_NODES, packed_file);
+				protocol_send_packet(packet, yama_socket);
+				serial_destroy(packed_file);
+				log_inform("Send OP_ARCHIVO_NODES");
+			}
 
-				t_yfile * yfile = filetable_find(file_request);
-				if(yfile == NULL){
-					packet = protocol_packet(OP_ARCHIVO_INEXISTENTE, serial_pack("s", file_request));
-					protocol_send_packet(packet, yama_socket);
-					log_inform("Send OP_ARCHIVO_INEXISTENTE %s", file_request);
-				}else{
-					packet = protocol_packet(OP_ARCHIVO_NODES, yfile_pack(yfile));
-					protocol_send_packet(packet, yama_socket);
-					log_inform("Send OP_ARCHIVO_NODES");
-				}
+			free(file_request);
 		}
-		serial_destroy(packet.content);
 	}
 }
 

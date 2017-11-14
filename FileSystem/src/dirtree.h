@@ -112,6 +112,13 @@ char *dirtree_rpath(const char *ypath);
 char *dirtree_ypath(const char *rpath);
 
 /**
+ * Devuelve la ruta completa de un directorio yamafs.
+ * @param dir Directorio yamafs.
+ * @return Ruta yama del directorio, a liberar con free().
+ */
+char *dirtree_path(t_directory *dir);
+
+/**
  * Cierra el árbol de directorios, guardando los cambios en el archivo.
  */
 void dirtree_term(void);

@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
+#include <mstring.h>
 #include "serial.h"
 
 // macros for packing floats and doubles:
@@ -18,6 +19,8 @@
 #define unpack754_16(i) (unpack754((i), 16, 5))
 #define unpack754_32(i) (unpack754((i), 32, 8))
 #define unpack754_64(i) (unpack754((i), 64, 11))
+
+static char *null_string = "__NULL__";
 
 static void add_variadic(t_serial *serial, const char *format, va_list ap);
 static void remove_variadic(t_serial *serial, const char *format, va_list ap);
@@ -116,13 +119,15 @@ static void add_variadic(t_serial *serial, const char *format, va_list ap) {
 	double g;
 	unsigned long long fhold;
 
-	char *s;
+	char *s, *ps;
 	t_serial *x;
 
 	void resize_buffer() {
 		size_t size = buf - buffer;
 		if(size + len <= cap) return;
-		while(size + len > cap) cap *= 2;
+		while(size + len > cap) {
+			cap *= 2;
+		}
 		buffer = realloc(buffer, cap);
 		buf = buffer + size;
 	}
@@ -203,9 +208,10 @@ static void add_variadic(t_serial *serial, const char *format, va_list ap) {
 
 		case 's': // string
 			s = va_arg(ap, char*);
-			len = strlen(s) + 1;
+			ps = s == NULL ? null_string : s;
+			len = strlen(ps) + 1;
 			resize_buffer();
-			strncpy(buf, s, len);
+			strncpy(buf, ps, len);
 			break;
 
 		case 'x': // binary
@@ -316,9 +322,13 @@ static void remove_variadic(t_serial *serial, const char *format, va_list ap) {
 
 		case 's': // string
 			s = va_arg(ap, char**);
-			char *str = strdup(buf);
+			char *str = mstring_duplicate(buf);
 			len = strlen(str) + 1;
 			*s = str;
+			if(mstring_equal(str, null_string)) {
+				*s = NULL;
+				free(str);
+			}
 			buf += len;
 			break;
 

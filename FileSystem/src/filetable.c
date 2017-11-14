@@ -368,7 +368,9 @@ static void file_traverser(const char *path) {
 }
 
 static void dir_traverser(t_directory *dir) {
-	char *dpath = dirtree_rpath(dir->name);
+	char *ypath = dirtree_path(dir);
+	char *dpath = dirtree_rpath(ypath);
+	free(ypath);
 	path_files(dpath, file_traverser);
 	free(dpath);
 }
