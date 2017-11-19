@@ -5,7 +5,6 @@ t_file* crearScript(char * bufferScript, int etapa) {
 	char mode[] = "0777";
 	t_file*script;
 	aux = string_length(bufferScript);
-	printf("size archivo:%d\n", aux);
 	if (etapa == OP_INICIAR_TRANSFORMACION)
 		script = file_create("transformador.sh");
 	else if (etapa == OP_INICIAR_REDUCCION_LOCAL)
@@ -207,20 +206,35 @@ void listen_to_master() {
 				case OP_INICIAR_TRANSFORMACION:
 					log_print("OP_INICIAR_TRANSFORMACION");
 					int offset = 0;
+					printf("offset: %d\n",offset);
 					t_file*scriptTransformacion;
 					serial_unpack(packet.content, "ssii", &bufferScript,
 							&archivoEtapa, &trans->bloque,
 							&trans->bytesOcupados);
 					scriptTransformacion = crearScript(bufferScript,
 							OP_INICIAR_TRANSFORMACION);
+					printf("bloque: %d, bytes: %d \n",trans->bloque,trans->bytesOcupados);
 					free(bufferScript);
-					asignarOffset(&offset, trans->bloque, trans->bytesOcupados);
+					//asignarOffset(&offset, trans->bloque, trans->bytesOcupados);
+					if(trans->bloque == 0){
+						offset = trans->bytesOcupados;
+						command =
+								mstring_create(
+										"head -c %d < %s | sh %s | sort > %s%s",
+										offset, rutaDatabin,
+										file_path(scriptTransformacion),
+										system_userdir(), archivoEtapa);
+					}else{
+						offset = trans->bloque * BLOCK_SIZE + trans->bytesOcupados;
 					command =
 							mstring_create(
 									"head -c %d < %s | tail -c %d | sh %s | sort > %s%s",
 									offset, rutaDatabin, trans->bytesOcupados,
 									file_path(scriptTransformacion),
 									system_userdir(), archivoEtapa);
+					}
+					printf("offset: %d\n",offset);
+					log_print("COMMAND: %s",command);
 					ejecutarComando(command, socketAceptado);
 					exit(1);
 					break;
