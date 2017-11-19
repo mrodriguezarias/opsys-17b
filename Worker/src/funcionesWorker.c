@@ -215,7 +215,6 @@ void listen_to_master() {
 							OP_INICIAR_TRANSFORMACION);
 					printf("bloque: %d, bytes: %d \n",trans->bloque,trans->bytesOcupados);
 					free(bufferScript);
-					//asignarOffset(&offset, trans->bloque, trans->bytesOcupados);
 					if(trans->bloque == 0){
 						offset = trans->bytesOcupados;
 						command =
@@ -280,7 +279,6 @@ void listen_to_master() {
 					printf("Archivo reduccion:%s\n",aux2);
 					archivoReduccion = file_open(aux2);
 					bufferArchivoReduccion = file_map(archivoReduccion);
-					//t_serial *x = serial_create(bufferArchivoReduccion, file_size(archivoReduccion));
 					t_serial *serialFileSystem = serial_pack("ssi", bufferArchivoReduccion, af->archivoFinal, file_size(archivoReduccion));
 					printf("file_size: %d\n", file_size(archivoReduccion));
 					t_packet paquete = protocol_packet(
@@ -293,7 +291,7 @@ void listen_to_master() {
 						protocol_send_packet(paquete, socketFileSystem);
 						int estado = protocol_receive_response(
 								socketFileSystem);
-						if (estado > 0) {
+						if (estado == RESPONSE_OK) {
 							log_print("Se informa a Master el termino del job");
 							protocol_send_response(socketAceptado, 1);
 						} else {
