@@ -110,7 +110,7 @@ const char *datetime(time_t time){
 
 const char *timediff(time_t t1, time_t t2){
 	unsigned duration = abs((int) difftime(t1, t2));
-	unsigned mseconds = duration % 60;
+	unsigned mseconds = duration % 1000;
 	unsigned seconds = duration % 60;
 	unsigned minutes = duration / 60;
 	return string_from_format("%02u:%02u:%03u", minutes, seconds, mseconds);
