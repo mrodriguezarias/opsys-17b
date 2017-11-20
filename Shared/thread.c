@@ -66,8 +66,8 @@ void thread_exit(void *retvalue) {
 
 void thread_sleep(unsigned time) {
 	struct timespec req;
-	req.tv_sec = 0;
-	req.tv_nsec = 1000000 * time;
+	req.tv_sec = time / 1000;
+	req.tv_nsec = (time % 1000) * 1.0e6;
 	nanosleep(&req, NULL);
 }
 
