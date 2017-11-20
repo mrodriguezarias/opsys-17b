@@ -44,10 +44,13 @@ char *_path_create(t_ptype type, const char *scount, ...) {
 		mstring_format(&path, "%s", path + 2);
 	}
 
-	char *rpath = realpath(path, NULL);
-	if(rpath != NULL) {
-		free(path);
-		path = rpath;
+	if(type != PTYPE_YAMA) {
+		mstring_replace(&path, "~", system_homedir());
+		char *rpath = realpath(path, NULL);
+		if(rpath != NULL) {
+			free(path);
+			path = rpath;
+		}
 	}
 
 	if(*path != '/') {
@@ -345,7 +348,7 @@ void path_sort(const char *path) {
 
 	mlist_t *lines = mlist_create();
 	bool reader(const char *line) {
-		mlist_append(lines, mstring_create("%s\n", line));
+		mlist_append(lines, mstring_create("%s", line));
 		return true;
 	}
 	file_ltraverse(file, reader);

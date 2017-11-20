@@ -60,7 +60,12 @@ void file_rewind(t_file *file) {
 
 char *file_readline(t_file *file) {
 	if(file == NULL) return NULL;
-	return get_line(file->fp, NULL);
+	char *line = get_line(file->fp, NULL);
+	if(line != NULL) {
+		char *end = mstring_end(line);
+		if(*end == '\n') *end = '\0';
+	}
+	return line;
 }
 
 void file_writeline(t_file *file, const char *line) {
@@ -163,10 +168,6 @@ static char *get_line(FILE *fp, char *line) {
 		line = NULL;
 		if(!feof(fp) && errno != 0)
 			show_error_and_exit(fpath(fileno(fp)), "leer línea de");
-	}
-	if(line != NULL) {
-		char *end = mstring_end(line);
-		if(*end == '\n') *end = '\0';
 	}
 	return line;
 }

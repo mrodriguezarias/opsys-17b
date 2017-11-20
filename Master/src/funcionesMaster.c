@@ -10,7 +10,7 @@ void node_drop(){
 	while(thread_active()){
 		char* data = thread_receive();
 		bool getSender(t_hilos* hilo){
-			return hilo->active && hilo->hilo != thread_sender();
+			return hilo->active && hilo->hilo == thread_sender();
 		}
 		pthread_mutex_lock(&mutex_hilos);
 		t_hilos* hilo_sender = mlist_find(hilos, getSender);
@@ -97,37 +97,15 @@ void liberar_scripts() {
 	file_close(script.fd_reduc);
 }
 
-inline time_t get_current_time(){
-	return time(NULL);
-}
-
-const char *datetime(time_t time){
-	struct tm lt;
-	localtime_r(&time, &lt);
-	return string_from_format("%d-%02d-%02d %02d:%02d:%02d", lt.tm_year + 1900, lt.tm_mon + 1,
-			lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec);
-}
-
-const char *timediff(time_t t1, time_t t2){
-	unsigned duration = abs((int) difftime(t1, t2));
-	unsigned mseconds = duration % 60;
-	unsigned seconds = duration % 60;
-	unsigned minutes = duration / 60;
-	return string_from_format("%02u:%02u:%03u", minutes, seconds, mseconds);
-}
-
-const char *timeprom(time_t t1, time_t t2, int etapa){
+const char *timeprom(mtime_t t1, mtime_t t2, int etapa){
 	bool getEtapa(t_hilos* hilo){
 		return (hilo->etapa == etapa);
 	}
 	if(mlist_count(hilos, getEtapa) == 0){
-		return string_from_format("%02u:%02u:%03u", 0, 0, 0);
+		return string_from_format("%02u:%02u:%02u:%03u", 0, 0, 0, 0);
 	}else{
-		unsigned duration = abs(((int) difftime(t1, t2)) / mlist_count(hilos, getEtapa));
-		unsigned mseconds = duration % 60;
-		unsigned seconds = duration % 60;
-		unsigned minutes = duration / 60;
-		return string_from_format("%02u:%02u:%03u", minutes, seconds, mseconds);
+		mtime_t duration = abs(((int) mtime_diff(t1, t2)) / mlist_count(hilos, getEtapa));
+		return mtime_formatted(duration, MTIME_DIFF | MTIME_PRECISE);
 	}
 }
 
@@ -160,7 +138,8 @@ void calcular_metricas(){
 		return (hilo->etapa == REDUCCION_GLOBAL);
 	}
 
-	printf("Tiempo total de ejecución del Job: %s\n", timediff(times.job_init, times.job_end));
+	printf("Tiempo total de ejecución del Job: %s\n",
+			mtime_formatted(mtime_diff(times.job_init, times.job_end), MTIME_DIFF | MTIME_PRECISE));
 	printf("Tiempo promedio de ejecución de cada etapa principal:\n"
 			"Transformaciones: %s\n"
 			"Reducciones Locales: %s\n"
@@ -188,7 +167,7 @@ void calcular_metricas(){
 }
 
 void init(char* argv[]){
-	times.job_init = get_current_time();
+	times.job_init = mtime_now();
 
 	job.path_transf = string_duplicate(argv[1]);
 	job.path_reduc = string_duplicate(argv[2]);

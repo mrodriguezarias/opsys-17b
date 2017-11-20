@@ -22,7 +22,7 @@
 static t_node *receive_node_info(t_socket socket);
 static void node_listener(void);
 static void yama_listener(void);
-static void worker_handler(t_socket socket);
+static void worker_handler(t_socket worker_socket);
 static void datanode_handler(t_node *node);
 static void yama_handler(t_socket socket);
 
@@ -86,8 +86,6 @@ static void node_listener() {
 				socket_close(cli_sock);
 				continue;
 			}
-			char *ip = socket_address(cli_sock);
-			char *port = socket_port(cli_sock);
 
 			protocol_send_response(cli_sock, RESPONSE_OK);
 
@@ -99,8 +97,10 @@ static void node_listener() {
 			protocol_send_response(cli_sock, RESPONSE_OK);
 
 			log_inform("Worker conectado desde %s:%s", ip, port);
-			thread_create(worker_handler, &cli_sock);
+
+			thread_create(worker_handler, (void *) cli_sock);
 		}
+
 		free(ip);
 		free(port);
 	}
@@ -110,19 +110,47 @@ static void node_listener() {
 
 static void worker_handler(t_socket worker_socket) {
 	t_packet packet = protocol_receive_packet(worker_socket);
-	char *buffer, *path;
+	char *buffer, *ypath;
+	int size;
 
 	if (packet.content != NULL && packet.operation == OP_INICIAR_ALMACENAMIENTO) {
-		serial_unpack(packet.content, "ss", &buffer, &path);
-		t_file* file = file_create(mstring_create("%s%s", "temp",mstring_bsize(worker_socket)));
+		log_inform("OP_INICIAR_ALMACENAMIENTO");
+		serial_unpack(packet.content, "ssi", &buffer, &ypath, &size);
 
-		file_open(file_path(file));
-		fwrite(buffer, sizeof(char), 1, file_pointer(file));
-		filetable_cpfrom(file_path(file), path);
+		if(filetable_contains(ypath)) {
+			log_report("El archivo ya existe");
+			protocol_send_response(worker_socket, RESPONSE_ERROR);
+			free(buffer);
+			free(ypath);
+		} else {
+			mstring_format(&ypath, "%s", path_create(PTYPE_YAMA, ypath));
 
-		file_delete(file);
-		protocol_send_response(worker_socket, filetable_contains(path));
+			t_file* file = file_create(path_name(ypath));
+			fwrite(buffer, sizeof(char), size, file_pointer(file));
+			free(buffer);
+
+			char *path = mstring_duplicate(file_path(file));
+			file_close(file);
+
+			char *dir = path_dir(ypath);
+
+			filetable_cpfrom(path, dir);
+			free(dir);
+
+			path_remove(path);
+			free(path);
+
+			if(filetable_contains(ypath)) {
+				log_inform("Archivo almacenado");
+				protocol_send_response(worker_socket, RESPONSE_OK);
+			} else {
+				log_report("Espacio insuficiente para almacenar archivo");
+				protocol_send_response(worker_socket, RESPONSE_ERROR);
+			}
+			free(ypath);
+		}
 	} else {
+		log_report("OP_UNDEFINED");
 		protocol_send_response(worker_socket, RESPONSE_ERROR);
 	}
 
@@ -143,7 +171,7 @@ static void yama_listener() {
 		}
 
 		if(!filetable_stable()){
-			log_inform("Filesystem no estable. Se rechaza conexión de YAMA");
+			log_report("Filesystem no estable. Se rechaza conexión de YAMA");
 			protocol_send_response(yama_socket, RESPONSE_ERROR);
 			socket_close(yama_socket);
 			continue;
@@ -163,26 +191,34 @@ static void yama_handler(t_socket yama_socket) {
 
 		t_packet packet = protocol_receive_packet(yama_socket);
 		if (packet.operation == OP_REQUEST_FILE_INFO) {
-				log_inform("Receive OP_REQUEST_FILE_INFO");
+			log_inform("Receive OP_REQUEST_FILE_INFO");
 
-				char* file_request;
-				serial_unpack(packet.content, "s", &file_request);
-				packet = protocol_packet(OP_NODES_ACTIVE_INFO, nodelist_active_pack());
+			char *file_request;
+			serial_unpack(packet.content, "s", &file_request);
+
+			t_serial *active_nodes = nodelist_active_pack();
+			packet = protocol_packet(OP_NODES_ACTIVE_INFO, active_nodes);
+			protocol_send_packet(packet, yama_socket);
+			serial_destroy(active_nodes);
+			log_inform("Send OP_NODES_ACTIVE_INFO");
+
+			t_yfile * yfile = filetable_find(file_request);
+			if(yfile == NULL) {
+				t_serial *pfreq = serial_pack("s", file_request);
+				packet = protocol_packet(OP_ARCHIVO_INEXISTENTE, pfreq);
 				protocol_send_packet(packet, yama_socket);
-				log_inform("Send OP_NODES_ACTIVE_INFO");
+				serial_destroy(pfreq);
+				log_report("Send OP_ARCHIVO_INEXISTENTE %s", file_request);
+			} else {
+				t_serial *packed_file = yfile_pack(yfile);
+				packet = protocol_packet(OP_ARCHIVO_NODES, packed_file);
+				protocol_send_packet(packet, yama_socket);
+				serial_destroy(packed_file);
+				log_inform("Send OP_ARCHIVO_NODES");
+			}
 
-				t_yfile * yfile = filetable_find(file_request);
-				if(yfile == NULL){
-					packet = protocol_packet(OP_ARCHIVO_INEXISTENTE, serial_pack("s", file_request));
-					protocol_send_packet(packet, yama_socket);
-					log_inform("Send OP_ARCHIVO_INEXISTENTE %s", file_request);
-				}else{
-					packet = protocol_packet(OP_ARCHIVO_NODES, yfile_pack(yfile));
-					protocol_send_packet(packet, yama_socket);
-					log_inform("Send OP_ARCHIVO_NODES");
-				}
+			free(file_request);
 		}
-		serial_destroy(packet.content);
 	}
 }
 
@@ -215,7 +251,7 @@ static void datanode_handler(t_node *node) {
 			if(packet.operation != OP_SEND_BLOCK) {
 				log_report("Se esperaba recibir un bloque pero se recibió otra cosa");
 			} else if(op->opcode == NODE_RECV) {
-				filetable_writeblock(op->blockno, packet.content->data);
+				filetable_writeblock(packet.content->data);
 			}  else if(op->opcode == NODE_RECV_BLOCK) {
 				thread_respond((void*)packet.content->data);
 			}

@@ -11,6 +11,7 @@ C_SRCS += \
 /home/utnso/git/tp-2017-2c-YATPOS/Shared/log.c \
 /home/utnso/git/tp-2017-2c-YATPOS/Shared/mlist.c \
 /home/utnso/git/tp-2017-2c-YATPOS/Shared/mstring.c \
+/home/utnso/git/tp-2017-2c-YATPOS/Shared/mtime.c \
 /home/utnso/git/tp-2017-2c-YATPOS/Shared/number.c \
 /home/utnso/git/tp-2017-2c-YATPOS/Shared/path.c \
 /home/utnso/git/tp-2017-2c-YATPOS/Shared/process.c \
@@ -30,6 +31,7 @@ OBJS += \
 ./Shared/log.o \
 ./Shared/mlist.o \
 ./Shared/mstring.o \
+./Shared/mtime.o \
 ./Shared/number.o \
 ./Shared/path.o \
 ./Shared/process.o \
@@ -49,6 +51,7 @@ C_DEPS += \
 ./Shared/log.d \
 ./Shared/mlist.d \
 ./Shared/mstring.d \
+./Shared/mtime.d \
 ./Shared/number.d \
 ./Shared/path.d \
 ./Shared/process.d \
@@ -105,6 +108,13 @@ Shared/mlist.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/mlist.c
 	@echo ' '
 
 Shared/mstring.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/mstring.c
+	@echo 'Building file: $<'
+	@echo 'Invoking: GCC C Compiler'
+	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	@echo 'Finished building: $<'
+	@echo ' '
+
+Shared/mtime.o: /home/utnso/git/tp-2017-2c-YATPOS/Shared/mtime.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C Compiler'
 	gcc -std=gnu11 -I"/home/utnso/git/tp-2017-2c-YATPOS/Shared" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"

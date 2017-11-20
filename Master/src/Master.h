@@ -6,6 +6,7 @@
 #include <file.h>
 #include <mlist.h>
 #include <thread.h>
+#include <mtime.h>
 
 enum {TRANSFORMACION, REDUCCION_LOCAL, REDUCCION_GLOBAL, ALMACENAMIENTO};
 
@@ -46,14 +47,14 @@ struct{
 t_socket yama_socket;
 
 struct{
-	time_t job_init;
-	time_t job_end;
-	time_t transf_init;
-	time_t transf_end;
-	time_t rl_init;
-	time_t rl_end;
-	time_t rg_init;
-	time_t rg_end;
+	mtime_t job_init;
+	mtime_t job_end;
+	mtime_t transf_init;
+	mtime_t transf_end;
+	mtime_t rl_init;
+	mtime_t rl_end;
+	mtime_t rg_init;
+	mtime_t rg_end;
 }times;
 
 #endif /* MASTER_H_ */

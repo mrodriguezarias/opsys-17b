@@ -316,6 +316,17 @@ char *dirtree_ypath(const char *rpath) {
 	return ypath;
 }
 
+char *dirtree_path(t_directory *dir) {
+	if(dir == NULL) return NULL;
+	if(dir == root) return mstring_duplicate("yamafs:/");
+	char *path = mstring_duplicate(dir->name);
+	while(dir = find_dir_by_index(dir->parent), dir != root) {
+		mstring_format(&path, "%s/%s", dir->name, path);
+	}
+	mstring_format(&path, "yamafs:/%s", path);
+	return path;
+}
+
 void dirtree_term() {
 	save_to_file();
 	if(map) file_unmap(file, map);

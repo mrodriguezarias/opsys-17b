@@ -30,4 +30,17 @@ Para instalar, ejecutar `sudo apt install libssl-dev`. Para enlazar, agregar `-l
 
 Ejecutar la siguiente línea en una terminal:
 
-`curl -sL bit.ly/2hzgEGg | bash`
+`curl -sL j.mp/yatpos | bash -s {argumento}`
+
+El argumento puede ser alguno de los siguientes, según el caso:
+
+- **all**: instala todo
+- **node**: instala solo DataNode y Worker
+- **fs**: instala solo FileSystem
+- **yama**: instala solo YAMA
+- **master**: instala solo Master
+- **dnode**: instala solo DataNode
+- **worker**: instala solo Worker
+- **uninstall**: desinstala todo
+
+Luego de instalar, ejecutar `fs`/`yama`/`master`/`dnode`/`worker` para correr cada proceso.

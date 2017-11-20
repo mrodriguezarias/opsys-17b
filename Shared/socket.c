@@ -120,7 +120,7 @@ int socket_set_contains(t_socket fd, t_fdset *fds) {
 char *socket_address(t_socket sock) {
 	struct sockaddr_in addr;
 	socklen_t len = sizeof addr;
-	getsockname(sock, (struct sockaddr*) &addr, &len);
+	getpeername(sock, (struct sockaddr*) &addr, &len);
 
 	char ip[INET_ADDRSTRLEN];
 	inet_ntop(AF_INET, &addr.sin_addr, ip, sizeof ip);

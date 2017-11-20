@@ -459,7 +459,7 @@ static void cmd_rm() {
 		break;
 	case 'b':
 		if(nargs != 4) show_usage();
-		if (mstring_toint(extract_arg(4)) > 1){
+		if (mstring_toint(extract_arg(4)) > 1 || mstring_toint(extract_arg(4)) < 0){
 			print_error("copia inválida - 0 ó 1");
 		}else{
 			mstring_format(&path, "%s", extract_arg(2));

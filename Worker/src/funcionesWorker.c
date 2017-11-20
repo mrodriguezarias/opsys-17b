@@ -5,7 +5,6 @@ t_file* crearScript(char * bufferScript, int etapa) {
 	char mode[] = "0777";
 	t_file*script;
 	aux = string_length(bufferScript);
-	printf("size archivo:%d\n", aux);
 	if (etapa == OP_INICIAR_TRANSFORMACION)
 		script = file_create("transformador.sh");
 	else if (etapa == OP_INICIAR_REDUCCION_LOCAL)
@@ -207,20 +206,34 @@ void listen_to_master() {
 				case OP_INICIAR_TRANSFORMACION:
 					log_print("OP_INICIAR_TRANSFORMACION");
 					int offset = 0;
+					printf("offset: %d\n",offset);
 					t_file*scriptTransformacion;
 					serial_unpack(packet.content, "ssii", &bufferScript,
 							&archivoEtapa, &trans->bloque,
 							&trans->bytesOcupados);
 					scriptTransformacion = crearScript(bufferScript,
 							OP_INICIAR_TRANSFORMACION);
+					printf("bloque: %d, bytes: %d \n",trans->bloque,trans->bytesOcupados);
 					free(bufferScript);
-					asignarOffset(&offset, trans->bloque, trans->bytesOcupados);
+					if(trans->bloque == 0){
+						offset = trans->bytesOcupados;
+						command =
+								mstring_create(
+										"head -c %d < %s | sh %s | sort > %s%s",
+										offset, rutaDatabin,
+										file_path(scriptTransformacion),
+										system_userdir(), archivoEtapa);
+					}else{
+						offset = trans->bloque * BLOCK_SIZE + trans->bytesOcupados;
 					command =
 							mstring_create(
 									"head -c %d < %s | tail -c %d | sh %s | sort > %s%s",
 									offset, rutaDatabin, trans->bytesOcupados,
 									file_path(scriptTransformacion),
 									system_userdir(), archivoEtapa);
+					}
+					printf("offset: %d\n",offset);
+					log_print("COMMAND: %s",command);
 					ejecutarComando(command, socketAceptado);
 					exit(1);
 					break;
@@ -264,10 +277,10 @@ void listen_to_master() {
 					char * bufferArchivoReduccion;
 					char * aux2 = mstring_create("%s%s",system_userdir(),af->archivoReduccion);
 					printf("Archivo reduccion:%s\n",aux2);
-					archivoReduccion = file_create(aux2);
+					archivoReduccion = file_open(aux2);
 					bufferArchivoReduccion = file_map(archivoReduccion);
-					t_serial *serialFileSystem = serial_pack("ss",
-							bufferArchivoReduccion, af->archivoFinal);
+					t_serial *serialFileSystem = serial_pack("ssi", bufferArchivoReduccion, af->archivoFinal, file_size(archivoReduccion));
+					printf("file_size: %d\n", file_size(archivoReduccion));
 					t_packet paquete = protocol_packet(
 							OP_INICIAR_ALMACENAMIENTO, serialFileSystem);
 					int response = connect_to_filesystem();
@@ -278,12 +291,12 @@ void listen_to_master() {
 						protocol_send_packet(paquete, socketFileSystem);
 						int estado = protocol_receive_response(
 								socketFileSystem);
-						if (estado > 0) {
+						if (estado == RESPONSE_OK) {
 							log_print("Se informa a Master el termino del job");
-							protocol_send_response(socketAceptado, 1);
+							protocol_send_response(socketAceptado, RESPONSE_OK);
 						} else {
 							log_print("Se informa a Master la falla del job");
-							protocol_send_response(socketAceptado, -1);
+							protocol_send_response(socketAceptado, -2);
 						}
 					}
 					exit(1);

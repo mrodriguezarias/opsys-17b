@@ -25,7 +25,7 @@
 
 static struct {
 	mutex_t *mut;
-	int done;
+	int current;
 	int total;
 	t_file *fp;
 	void *map;
@@ -267,7 +267,7 @@ void filetable_cat(const char *path) {
 	t_yfile *yfile = filetable_find(path);
 	t_file *file = receive_file(yfile);
 	bool line_handler(const char *line) {
-		printf("%s\n", line);
+		printf("%s", line);
 		return true;
 	}
 	file_ltraverse(file, line_handler);
@@ -289,16 +289,15 @@ bool filetable_stable() {
 	return (fs.formatted && mlist_all(files, available_block));
 }
 
-void filetable_writeblock(int blockno, void *block) {
-	memcpy(bfile.map + blockno * BLOCK_SIZE, block, BLOCK_SIZE);
+void filetable_writeblock(void *block) {
+	memcpy(bfile.map + bfile.current * BLOCK_SIZE, block, BLOCK_SIZE);
 
 	thread_mutex_lock(bfile.mut);
-	bfile.done++;
-	bool file_done = bfile.done == bfile.total;
+	bfile.current++;
+	bool file_done = bfile.current == bfile.total;
 	thread_mutex_unlock(bfile.mut);
 
-	if (file_done)
-		thread_resume(thread_main());
+	if(file_done) thread_resume(thread_main());
 }
 
 void filetable_term() {
@@ -337,7 +336,6 @@ void filetable_cpblock(t_yfile *file, off_t block_free, t_block* block, t_node* 
 
 	bitmap_set(node->bitmap, block_free);
 	node->free_blocks--;
-	printf("Bloque %d copiado en %s\n", block->index, node->name);
 
 	update_file(file);
 }
@@ -370,7 +368,9 @@ static void file_traverser(const char *path) {
 }
 
 static void dir_traverser(t_directory *dir) {
-	char *dpath = dirtree_rpath(dir->name);
+	char *ypath = dirtree_path(dir);
+	char *dpath = dirtree_rpath(ypath);
+	free(ypath);
 	path_files(dpath, file_traverser);
 	free(dpath);
 }
@@ -451,7 +451,7 @@ static void update_file(t_yfile *file) {
 }
 
 static char *real_file_path(const char *path) {
-	if (mstring_hasprefix(path, system_userdir())) {
+	if(mstring_hasprefix(path, system_userdir())) {
 		return mstring_duplicate(path);
 	}
 
@@ -535,7 +535,7 @@ static int copy_from_text_file(t_file *source, char *buffer, t_yfile *target,
 			count += add_and_send_block(target, buffer, size, onode);
 			size = 0;
 		}
-		size += sprintf(buffer + size, "%s\n", line);
+		size += sprintf(buffer + size, "%s", line);
 		return true;
 	}
 	file_ltraverse(source, line_handler);
@@ -563,7 +563,7 @@ static int add_and_send_block(t_yfile *yfile, char *buffer, size_t size,
 
 static void reset_block_file(size_t total_blocks) {
 	path_truncate("metadata/blocks", total_blocks * BLOCK_SIZE);
-	bfile.done = 0;
+	bfile.current = 0;
 	bfile.total = total_blocks;
 	bfile.fp = file_open("metadata/blocks");
 	bfile.map = file_map(bfile.fp);

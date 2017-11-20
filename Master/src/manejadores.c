@@ -31,7 +31,7 @@ void finalizar_manejador_transf(int response, t_socket socket,
 	log_inform("Envío a YAMA socket %d OP_TRANSFORMACION_LISTA",
 			yama_socket);
 	free(transformacion);
-	times.transf_end = get_current_time();
+	times.transf_end = mtime_now();
 	thread_exit(0);
 }
 
@@ -92,7 +92,7 @@ void finalizar_manejador_rl(int response, t_socket socket,
 	log_inform("Envío a YAMA socket %d OP_REDUCCION_LOCAL_LISTA",
 			yama_socket);
 	free(etapa_rl);
-	times.rl_end = get_current_time();
+	times.rl_end = mtime_now();
 	thread_exit(0);
 }
 
@@ -158,7 +158,7 @@ void finalizar_manejador_rg(int response, t_socket socket, mlist_t* list,
 	}
 	mlist_destroy(list, etapa_rg_destroy);
 
-	times.rg_end = get_current_time();
+	times.rg_end = mtime_now();
 	thread_exit(0);
 }
 
@@ -213,20 +213,30 @@ void manejador_rg(mlist_t* list) {
 void finalizar_manejador_af(int response, t_socket socket, tAlmacenadoFinal* af) {
 	t_serial *serial_yama = serial_pack("isi", IDJOB, af->nodo, response);
 
-	if(response == -1){
+	switch (response) {
+	case RESPONSE_ERROR:
 		log_print("Finalización del hilo %d etapa ALMACENAMIENTO_FINAL por caída del nodo: %s",
 				thread_self(),
 				af->nodo);
-	}else{
+		break;
+	case RESPONSE_OK:
 		log_print("Finalización hilo %d ALMACENAMIENTO_FINAL realizada", thread_self());
 		socket_close(socket);
 		log_print("Conexión a Worker en %s:%s por el socket %i cerrada",
 				af->ip, af->puerto, socket);
+		break;
+	default:
+		log_print("Finalización hilo %d ALMACENAMIENTO_FINAL no realizada", thread_self());
+		socket_close(socket);
+		log_print("Conexión a Worker en %s:%s por el socket %i cerrada",
+				af->ip, af->puerto, socket);
+		response = -1;
+		break;
 	}
 
 	actualizar_hilo(response);
 
-	times.job_end = get_current_time();
+	times.job_end = mtime_now();
 
 	enviar_resultado_yama(OP_ALMACENAMIENTO_LISTA, serial_yama);
 	log_inform("Envío a YAMA socket %d OP_ALMACENAMIENTO_LISTA",
@@ -271,8 +281,8 @@ void etapa_transformacion(const t_packet* paquete) {
 		return (hilo->etapa == TRANSFORMACION);
 	}
 	if(mlist_count(hilos, getTransformacion) == 0){
-		times.transf_init = get_current_time();
-		times.transf_end = get_current_time();
+		times.transf_init = mtime_now();
+		times.transf_end = mtime_now();
 	}
 
 	for (int i = 0; i < mlist_length(listTranformacion); i++) {
@@ -299,8 +309,8 @@ void etapa_reduccion_local(const t_packet* paquete) {
 		return (hilo->etapa == REDUCCION_LOCAL);
 	}
 	if(mlist_count(hilos, getReduccionLocal) == 0){
-		times.rl_init = get_current_time();
-		times.rl_end = get_current_time();
+		times.rl_init = mtime_now();
+		times.rl_end = mtime_now();
 	}
 
 	t_hilos* hilo_rl = set_hilo(REDUCCION_LOCAL, etapa_rl->nodo);
@@ -325,8 +335,8 @@ void etapa_reduccion_global(const t_packet* paquete) {
 		return (hilo->etapa == REDUCCION_GLOBAL);
 	}
 	if(mlist_count(hilos, getReduccionGlobal) == 0){
-		times.rg_init = get_current_time();
-		times.rg_end = get_current_time();
+		times.rg_init = mtime_now();
+		times.rg_end = mtime_now();
 	}
 
 	bool getManager(tEtapaReduccionGlobal* etapa){
@@ -386,7 +396,7 @@ void manejador_yama(t_packet paquete) {
 		serial_unpack(paquete.content, "i", &exit_code);
 		log_print("ERROR_JOB - Código de error: %d", exit_code);
 		job_active = false;
-		times.job_end = get_current_time();
+		times.job_end = mtime_now();
 		break;
 	default:
 		break;

@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
+#include <mstring.h>
 #include "serial.h"
 
 // macros for packing floats and doubles:
@@ -18,6 +19,8 @@
 #define unpack754_16(i) (unpack754((i), 16, 5))
 #define unpack754_32(i) (unpack754((i), 32, 8))
 #define unpack754_64(i) (unpack754((i), 64, 11))
+
+static char *null_string = "__NULL__";
 
 static void add_variadic(t_serial *serial, const char *format, va_list ap);
 static void remove_variadic(t_serial *serial, const char *format, va_list ap);
@@ -95,7 +98,8 @@ void serial_destroy(t_serial *serial) {
 // ========== Funciones privadas ==========
 
 static void add_variadic(t_serial *serial, const char *format, va_list ap) {
-	size_t cap = 1024;
+	size_t len = 0;
+	size_t cap = 256;
 	char *buffer = malloc(cap);
 	char *buf = buffer;
 
@@ -115,90 +119,110 @@ static void add_variadic(t_serial *serial, const char *format, va_list ap) {
 	double g;
 	unsigned long long fhold;
 
-	char *s;
-	unsigned len;
+	char *s, *ps;
 	t_serial *x;
 
-	for(; *format != '\0'; format++) {
-		if(buf - buffer > cap) {
+	void resize_buffer() {
+		size_t size = buf - buffer;
+		if(size + len <= cap) return;
+		while(size + len > cap) {
 			cap *= 2;
-			buffer = realloc(buffer, cap);
 		}
+		buffer = realloc(buffer, cap);
+		buf = buffer + size;
+	}
 
+	for(; *format != '\0'; format++) {
 		switch(*format) {
 		case 'c': // 8-bit
 			c = (signed char)va_arg(ap, int); // promoted
-			*buf++ = c;
+			len = sizeof c;
+			resize_buffer();
+			*buf = c;
 			break;
 
 		case 'C': // 8-bit unsigned
 			C = (unsigned char)va_arg(ap, unsigned int); // promoted
-			*buf++ = C;
+			len = sizeof c;
+			resize_buffer();
+			*buf = C;
 			break;
 
 		case 'h': // 16-bit
 			h = (short)va_arg(ap, int);
+			len = sizeof h;
+			resize_buffer();
 			packi16((unsigned char *)buf, h);
-			buf += 2;
 			break;
 
 		case 'H': // 16-bit unsigned
 			H = (unsigned short)va_arg(ap, unsigned int);
+			len = sizeof H;
+			resize_buffer();
 			packi16((unsigned char *)buf, H);
-			buf += 2;
 			break;
 
 		case 'i': // 32-bit
 			l = va_arg(ap, int);
+			len = sizeof l;
+			resize_buffer();
 			packi32((unsigned char *)buf, l);
-			buf += 4;
 			break;
 
 		case 'I': // 32-bit unsigned
 			L = va_arg(ap, unsigned);
+			len = sizeof L;
+			resize_buffer();
 			packi32((unsigned char *)buf, L);
-			buf += 4;
 			break;
 
 		case 'l': // 64-bit
 			q = va_arg(ap, long long);
+			len = sizeof q;
+			resize_buffer();
 			packi64((unsigned char *)buf, q);
-			buf += 8;
 			break;
 
 		case 'L': // 64-bit unsigned
 			Q = va_arg(ap, unsigned long long);
+			len = sizeof Q;
+			resize_buffer();
 			packi64((unsigned char *)buf, Q);
-			buf += 8;
 			break;
 
 		case 'f': // float-32
 			d = (float)va_arg(ap, double);
+			len = sizeof d;
+			resize_buffer();
 			fhold = pack754_32(d); // convert to IEEE 754
 			packi32((unsigned char *)buf, fhold);
-			buf += 4;
 			break;
 
 		case 'd': // float-64
 			g = va_arg(ap, double);
+			len = sizeof g;
+			resize_buffer();
 			fhold = pack754_64(g); // convert to IEEE 754
 			packi64((unsigned char *)buf, fhold);
-			buf += 8;
 			break;
 
 		case 's': // string
 			s = va_arg(ap, char*);
-			len = sprintf(buf, "%s", s) + 1;
-			buf += len;
+			ps = s == NULL ? null_string : s;
+			len = strlen(ps) + 1;
+			resize_buffer();
+			strncpy(buf, ps, len);
 			break;
 
 		case 'x': // binary
 			x = va_arg(ap, t_serial*);
+			len = 4 + x->size;
+			resize_buffer();
 			packi32((unsigned char *)buf, x->size);
-			buf += 4;
-			memcpy(buf, x->data, x->size);
-			buf += x->size;
+			memcpy(buf + 4, x->data, x->size);
 		}
+
+		buf += len;
 	}
 
 	size_t added_size = buf - buffer;
@@ -298,9 +322,13 @@ static void remove_variadic(t_serial *serial, const char *format, va_list ap) {
 
 		case 's': // string
 			s = va_arg(ap, char**);
-			char *str = strdup(buf);
+			char *str = mstring_duplicate(buf);
 			len = strlen(str) + 1;
 			*s = str;
+			if(mstring_equal(str, null_string)) {
+				*s = NULL;
+				free(str);
+			}
 			buf += len;
 			break;
 

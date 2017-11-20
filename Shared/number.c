@@ -1,6 +1,10 @@
 #include "number.h"
 #include <math.h>
 
+t_number number_abs(t_number x) {
+	return x < 0 ? -x : x;
+}
+
 t_number number_ceiling(t_number x) {
 	return ceil(x);
 }

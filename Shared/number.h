@@ -6,6 +6,13 @@ typedef double t_number;
 #include <stdbool.h>
 
 /**
+ * Devuelve el valor absoluto de un número.
+ * @param x Un número.
+ * @return Valor absoluto.
+ */
+t_number number_abs(t_number x);
+
+/**
  * Redondea un número hacia el entero superior más cercano.
  * @param x Número a redondear hacia arriba.
  * @return Número redondeado.
