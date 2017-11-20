@@ -438,7 +438,12 @@ void finalizarJobGlobalEnTablaEstado(int socketMaster,int job, char* estadoNuevo
 
 	estadoEncontrado->estado = mstring_duplicate(estadoNuevo);
 	mlist_replace(listaEstados, indiceReduEncargado, estadoEncontrado);
-	log_print("Actualizacion tabla de estado: aborto de job: %d || nodo: %s",job,estadoEncontrado->nodo);
+	if(string_equals_ignore_case(estadoNuevo, "Error")){
+		log_report("Actualizacion tabla de estado: aborto de job: %d || nodo: %s",job,estadoEncontrado->nodo);
+	} else
+	{
+		log_print("Actualizacion tabla de estado: finalizacion de job: %d || nodo: %s",job,estadoEncontrado->nodo);
+	}
 
 	//ahora quito las cargas de los nodos de reduccion local que estan como finalizadoOK menos el encargado.
 	eliminarCargasReduccionesLocales(estadoEncontrado->nodo,socketMaster,job);
@@ -447,7 +452,6 @@ void finalizarJobGlobalEnTablaEstado(int socketMaster,int job, char* estadoNuevo
 
 void finalizarJobGlobal(int job, int socketMaster, int codigoError, char* estadoNuevo){
 	if(string_equals_ignore_case(estadoNuevo, "Error") && codigoError != ERROR_ALMACENAMIENTO_FINAL){
-		log_report("Job: %d abortado",job);
 		t_packet packetError = protocol_packet(OP_ERROR_JOB, serial_pack("i",codigoError));
 		protocol_send_packet(packetError, socketMaster);
 		serial_destroy(packetError.content);

@@ -141,7 +141,7 @@ void listen_to_master() {
 					}
 				break;
 				default:
-					log_report("Operación desconocida: %s", packetOperacion.operation);
+					log_report("Desconexion del master: %s", sock);
 				break;
 
 				}
@@ -297,13 +297,13 @@ bool verificoFinalizacionRl(int job, int master){
 							&& ( string_equals_ignore_case(((t_Estado *) estadoTarea)->etapa, "ReduccionLocal")
 							|| string_equals_ignore_case(((t_Estado *) estadoTarea)->etapa, "Transformacion"))
 							&& !string_equals_ignore_case(((t_Estado *) estadoTarea)->estado,"Error");
-			}
+		}
 
 		mlist_t* listaFiltradaDelNodo = mlist_filter(listaEstados, (void*)esJobBuscado);
 
 		bool FinalizacionDeRl_Job(void* estadoTarea){
 					  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->estado,"FinalizadoOK");
-			}
+		}
 
 			return mlist_all(listaFiltradaDelNodo, (void*) FinalizacionDeRl_Job);
 
