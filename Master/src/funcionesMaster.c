@@ -24,7 +24,7 @@ void node_drop(){
 			mlist_traverse(hilos_drop, kill_thread);
 			for(int i = 0; i < mlist_length(hilos_drop); i++){
 				t_hilos* hilo_drop_node = mlist_get(hilos_drop, i);
-				log_print("Finalización del hilo %d por caída del nodo: %s",
+				log_report("Finalización del hilo %d por caída del nodo: %s",
 						hilo_drop_node->hilo,
 						hilo_drop_node->nodo);
 			}
@@ -191,7 +191,7 @@ void init(char* argv[]){
 
 void terminate() {
 	pthread_mutex_destroy(&mutex_hilos);
-	//liberar_scripts();
+	liberar_scripts();
 	socket_close(yama_socket);
 	log_print("Conexión a YAMA por el socket %i cerrada", yama_socket);
 	calcular_metricas();

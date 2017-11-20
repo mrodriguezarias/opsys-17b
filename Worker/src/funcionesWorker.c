@@ -310,7 +310,7 @@ void listen_to_master() {
 				log_report("NO SE PUDO HACER EL FORK");
 			}
 
-		} else if (protocol_receive_handshake(socketAceptado, PROC_WORKER)) {
+		} else {
 			log_print("Handshake de Worker Homologo");
 			if ((pid = fork()) == 0) {
 				log_print("Proceso hijo de worker homologo de pid: #%d", pid);

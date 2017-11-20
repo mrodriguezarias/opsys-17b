@@ -7,7 +7,7 @@ void finalizar_manejador_transf(int response, t_socket socket,
 	if(response == -1){
 		thread_send(hilo_node_drop, (void*)mstring_duplicate(transformacion->nodo));
 		thread_suspend();
-		log_print("Finalización del hilo %d etapa TRANSFORMACION por caída del nodo: %s",
+		log_report("Finalización del hilo %d etapa TRANSFORMACION por caída del nodo: %s",
 				thread_self(),
 				transformacion->nodo);
 	}else{
@@ -74,7 +74,7 @@ void finalizar_manejador_rl(int response, t_socket socket,
 	if(response == -1){
 		thread_send(hilo_node_drop, (void*)mstring_duplicate(etapa_rl->nodo));
 		thread_suspend();
-		log_print("Finalización del hilo %d etapa REDUCCION_LOCAL por caída del nodo: %s",
+		log_report("Finalización del hilo %d etapa REDUCCION_LOCAL por caída del nodo: %s",
 				thread_self(),
 				etapa_rl->nodo);
 	}else{
@@ -138,7 +138,7 @@ void finalizar_manejador_rg(int response, t_socket socket, mlist_t* list,
 	t_serial *serial_yama = serial_pack("isi", IDJOB, worker->nodo, response);
 
 	if(response == -1){
-		log_print("Finalización del hilo %d etapa REDUCCION_GLOBAL por caída del nodo: %s",
+		log_report("Finalización del hilo %d etapa REDUCCION_GLOBAL por caída del nodo: %s",
 				thread_self(),
 				worker->nodo);
 	}else{
@@ -215,7 +215,7 @@ void finalizar_manejador_af(int response, t_socket socket, tAlmacenadoFinal* af)
 
 	switch (response) {
 	case RESPONSE_ERROR:
-		log_print("Finalización del hilo %d etapa ALMACENAMIENTO_FINAL por caída del nodo: %s",
+		log_report("Finalización del hilo %d etapa ALMACENAMIENTO_FINAL por caída del nodo: %s",
 				thread_self(),
 				af->nodo);
 		break;
@@ -226,7 +226,7 @@ void finalizar_manejador_af(int response, t_socket socket, tAlmacenadoFinal* af)
 				af->ip, af->puerto, socket);
 		break;
 	default:
-		log_print("Finalización hilo %d ALMACENAMIENTO_FINAL no realizada", thread_self());
+		log_report("Finalización hilo %d ALMACENAMIENTO_FINAL no realizada", thread_self());
 		socket_close(socket);
 		log_print("Conexión a Worker en %s:%s por el socket %i cerrada",
 				af->ip, af->puerto, socket);
@@ -394,7 +394,7 @@ void manejador_yama(t_packet paquete) {
 	case OP_ERROR_JOB:
 		thread_term();
 		serial_unpack(paquete.content, "i", &exit_code);
-		log_print("ERROR_JOB - Código de error: %d", exit_code);
+		log_report("ERROR_JOB - Código de error: %d", exit_code);
 		job_active = false;
 		times.job_end = mtime_now();
 		break;

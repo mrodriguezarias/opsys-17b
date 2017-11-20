@@ -13,7 +13,7 @@ void connect_to_yama() {
 
 	t_socket socket = socket_connect(ip, port);
 	if(socket == -1) {
-		log_print("YAMA no está corriendo en %s:%s", ip, port);
+		log_report("YAMA no está corriendo en %s:%s", ip, port);
 		exit(EXIT_FAILURE);
 	}
 
@@ -38,7 +38,7 @@ void request_job_for_file(const char *file) {
 t_socket connect_to_worker(const char *ip, const char *port) { // La ip y el puerto son obtenidos mediante YAMA
 	t_socket socket = socket_connect(ip, port);
 	if(socket == -1) {
-		log_print("Worker no está corriendo en %s:%s", ip, port);
+		log_report("Worker no está corriendo en %s:%s", ip, port);
 	}else{
 		protocol_send_handshake(socket);
 		log_print("Conectado a Worker en %s:%s por el socket %i", ip, port, socket);
