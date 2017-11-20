@@ -293,7 +293,7 @@ void listen_to_master() {
 								socketFileSystem);
 						if (estado == RESPONSE_OK) {
 							log_print("Se informa a Master el termino del job");
-							protocol_send_response(socketAceptado, 1);
+							protocol_send_response(socketAceptado, RESPONSE_OK);
 						} else {
 							log_print("Se informa a Master la falla del job");
 							protocol_send_response(socketAceptado, -2);
