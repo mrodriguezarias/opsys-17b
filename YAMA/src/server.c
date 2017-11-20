@@ -291,18 +291,21 @@ char* generarNombreTemporal_local(char* nodo,int master,int job){
 
 
 bool verificoFinalizacionRl(int job, int master){
-	bool esJobBuscado(void* estadoTarea){
-			  	return ((t_Estado *) estadoTarea)->master == master && ((t_Estado *) estadoTarea)->job == job && string_equals_ignore_case(((t_Estado *) estadoTarea)->etapa, "ReduccionLocal");
-		}
+		bool esJobBuscado(void* estadoTarea){
+				  	return ((t_Estado *) estadoTarea)->master == master &&
+				  			((t_Estado *) estadoTarea)->job == job
+							&& ( string_equals_ignore_case(((t_Estado *) estadoTarea)->etapa, "ReduccionLocal")
+							|| string_equals_ignore_case(((t_Estado *) estadoTarea)->etapa, "Transformacion"))
+							&& !string_equals_ignore_case(((t_Estado *) estadoTarea)->estado,"Error");
+			}
 
-	mlist_t* listaFiltradaDelNodo = mlist_filter(listaEstados, (void*)esJobBuscado);
+		mlist_t* listaFiltradaDelNodo = mlist_filter(listaEstados, (void*)esJobBuscado);
 
-	bool FinalizacionDeRl_Job(void* estadoTarea){
-				  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->estado,"FinalizadoOK");
-		}
+		bool FinalizacionDeRl_Job(void* estadoTarea){
+					  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->estado,"FinalizadoOK");
+			}
 
-
-		return mlist_all(listaFiltradaDelNodo, (void*) FinalizacionDeRl_Job);
+			return mlist_all(listaFiltradaDelNodo, (void*) FinalizacionDeRl_Job);
 
 }
 
