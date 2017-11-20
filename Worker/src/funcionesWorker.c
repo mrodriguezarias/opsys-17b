@@ -296,7 +296,7 @@ void listen_to_master() {
 							protocol_send_response(socketAceptado, 1);
 						} else {
 							log_print("Se informa a Master la falla del job");
-							protocol_send_response(socketAceptado, -1);
+							protocol_send_response(socketAceptado, -2);
 						}
 					}
 					exit(1);

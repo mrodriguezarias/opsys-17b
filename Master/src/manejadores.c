@@ -213,15 +213,25 @@ void manejador_rg(mlist_t* list) {
 void finalizar_manejador_af(int response, t_socket socket, tAlmacenadoFinal* af) {
 	t_serial *serial_yama = serial_pack("isi", IDJOB, af->nodo, response);
 
-	if(response == -1){
+	switch (response) {
+	case RESPONSE_ERROR:
 		log_print("Finalización del hilo %d etapa ALMACENAMIENTO_FINAL por caída del nodo: %s",
 				thread_self(),
 				af->nodo);
-	}else{
+		break;
+	case RESPONSE_OK:
 		log_print("Finalización hilo %d ALMACENAMIENTO_FINAL realizada", thread_self());
 		socket_close(socket);
 		log_print("Conexión a Worker en %s:%s por el socket %i cerrada",
 				af->ip, af->puerto, socket);
+		break;
+	default:
+		log_print("Finalización hilo %d ALMACENAMIENTO_FINAL no realizada", thread_self());
+		socket_close(socket);
+		log_print("Conexión a Worker en %s:%s por el socket %i cerrada",
+				af->ip, af->puerto, socket);
+		response = -1;
+		break;
 	}
 
 	actualizar_hilo(response);
