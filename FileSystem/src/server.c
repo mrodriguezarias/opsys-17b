@@ -117,25 +117,35 @@ static void worker_handler(t_socket worker_socket) {
 		log_inform("OP_INICIAR_ALMACENAMIENTO");
 		serial_unpack(packet.content, "ssi", &buffer, &ypath, &size);
 
-		mstring_format(&ypath, "%s", path_create(PTYPE_YAMA, ypath));
+		if(filetable_contains(ypath)){
+			protocol_send_response(worker_socket, RESPONSE_ERROR);
+			free(buffer);
+			free(ypath);
+		} else {
+			mstring_format(&ypath, "%s", path_create(PTYPE_YAMA, ypath));
 
-		t_file* file = file_create(path_name(ypath));
-		fwrite(buffer, sizeof(char), size, file_pointer(file));
-		free(buffer);
+			t_file* file = file_create(path_name(ypath));
+			fwrite(buffer, sizeof(char), size, file_pointer(file));
+			free(buffer);
 
-		char *path = mstring_duplicate(file_path(file));
-		file_close(file);
+			char *path = mstring_duplicate(file_path(file));
+			file_close(file);
 
-		char *dir = path_dir(ypath);
-		free(ypath);
+			char *dir = path_dir(ypath);
+			free(ypath);
 
-		filetable_cpfrom(path, dir);
-		free(dir);
+			filetable_cpfrom(path, dir);
+			free(dir);
 
-		path_remove(path);
-		free(path);
+			path_remove(path);
+			free(path);
 
-		protocol_send_response(worker_socket, filetable_contains(ypath));
+			if(filetable_contains(ypath)){
+				protocol_send_response(worker_socket, RESPONSE_OK);
+			} else {
+				protocol_send_response(worker_socket, RESPONSE_ERROR);
+			}
+		}
 	} else {
 		protocol_send_response(worker_socket, RESPONSE_ERROR);
 	}
