@@ -118,7 +118,7 @@ static void worker_handler(t_socket worker_socket) {
 		serial_unpack(packet.content, "ssi", &buffer, &ypath, &size);
 
 		if(filetable_contains(ypath)) {
-			log_report("El archivo ya existe");
+			log_inform("El archivo ya existe");
 			protocol_send_response(worker_socket, RESPONSE_ERROR);
 			free(buffer);
 			free(ypath);
@@ -144,13 +144,13 @@ static void worker_handler(t_socket worker_socket) {
 				log_inform("Archivo almacenado");
 				protocol_send_response(worker_socket, RESPONSE_OK);
 			} else {
-				log_report("Espacio insuficiente para almacenar archivo");
+				log_inform("Espacio insuficiente para almacenar archivo");
 				protocol_send_response(worker_socket, RESPONSE_ERROR);
 			}
 			free(ypath);
 		}
 	} else {
-		log_report("OP_UNDEFINED");
+		log_inform("OP_UNDEFINED");
 		protocol_send_response(worker_socket, RESPONSE_ERROR);
 	}
 
@@ -171,7 +171,7 @@ static void yama_listener() {
 		}
 
 		if(!filetable_stable()){
-			log_report("Filesystem no estable. Se rechaza conexión de YAMA");
+			log_inform("Filesystem no estable. Se rechaza conexión de YAMA");
 			protocol_send_response(yama_socket, RESPONSE_ERROR);
 			socket_close(yama_socket);
 			continue;
@@ -208,7 +208,7 @@ static void yama_handler(t_socket yama_socket) {
 				packet = protocol_packet(OP_ARCHIVO_INEXISTENTE, pfreq);
 				protocol_send_packet(packet, yama_socket);
 				serial_destroy(pfreq);
-				log_report("Send OP_ARCHIVO_INEXISTENTE %s", file_request);
+				log_inform("Send OP_ARCHIVO_INEXISTENTE %s", file_request);
 			} else {
 				t_serial *packed_file = yfile_pack(yfile);
 				packet = protocol_packet(OP_ARCHIVO_NODES, packed_file);
