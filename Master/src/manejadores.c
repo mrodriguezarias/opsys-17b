@@ -183,11 +183,12 @@ void manejador_rg(mlist_t* list) {
 		serial_add(serial_worker, "i", mlist_length(list));
 
 		void routine(tEtapaReduccionGlobal* rg_worker){
-			serial_add(serial_worker, "ssss",
+			serial_add(serial_worker, "sssss",
 					rg_worker->nodo,
 					rg_worker->ip,
 					rg_worker->puerto,
-					rg_worker->archivo_temporal_de_rl);
+					rg_worker->archivo_temporal_de_rl,
+					rg_worker->encargado);
 		}
 
 		mlist_traverse(list, routine);

@@ -59,8 +59,8 @@ tEtapaReduccionGlobalWorker * rg_unpack(t_serial * serial) {
 
 	for (int i = 0; i < rg_w->lenLista; i++) {
 		tEtapaReduccionGlobal *rg = malloc(sizeof(tEtapaReduccionGlobal));
-		serial_remove(serial, "ssss", &rg->nodo, &rg->ip, &rg->puerto,
-				&rg->archivo_temporal_de_rl);
+		serial_remove(serial, "sssss", &rg->nodo, &rg->ip, &rg->puerto,
+				&rg->archivo_temporal_de_rl, &rg->encargado);
 		printf("Archivo temporal_de_rl: %s\n",rg->archivo_temporal_de_rl);
 		mlist_append(rg_w->datosWorker, rg);
 	}
@@ -118,9 +118,7 @@ char * crearListaParaReducir(tEtapaReduccionGlobalWorker * rg) {
 		archivoAReducir = mstring_create("%s/%s",system_userdir(),"archivo");
 		for (int i = 0; i < rg->lenLista; i++) {
 			rg->rg = mlist_get(rg->datosWorker, i);
-			if (!mstring_equal(rg->rg->ip, config_get("IP"))
-					&& !mstring_equal(rg->rg->puerto,
-							config_get("PUERTO_WORKER"))) {
+			if (!string_equals_ignore_case(rg->rg->encargado, SI)) {
 				t_socket socketWorker = connect_to_worker(rg->rg->ip,
 						rg->rg->puerto);
 				socket = socketWorker;
@@ -317,11 +315,12 @@ void listen_to_master() {
 				t_packet paquete = protocol_receive_packet(socketAceptado);
 				t_file * archivo;
 				char * nombreDelArchivo;
-				void *bufferArchivo;
+				char *bufferArchivo;
 				switch (paquete.operation) {
 				case (OP_MANDAR_ARCHIVO): //OP_MANDAR_ARCHIVO
 					serial_unpack(paquete.content, "s", &nombreDelArchivo);
-					archivo = file_open(nombreDelArchivo);
+					char * aux2 = mstring_create("%s%s",system_userdir(),nombreDelArchivo);
+					archivo = file_open(aux2);
 					bufferArchivo = file_map(archivo);
 					paquete.content = serial_pack("s", bufferArchivo);
 					paquete.operation = OP_MANDAR_ARCHIVO;
