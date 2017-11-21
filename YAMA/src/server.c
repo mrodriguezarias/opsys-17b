@@ -45,7 +45,7 @@ void listen_to_master() {
 			} else {
 				t_packet packetOperacion = protocol_receive_packet(sock);
 				if(packetOperacion.operation == OP_UNDEFINED) {
-					log_report("Desconexion del master: %s", sock);
+					log_report("Desconexion del master: %d", sock);
 					socket_close(sock);
 					socket_set_remove(sock, &sockets);
 					continue;
@@ -141,7 +141,7 @@ void listen_to_master() {
 					}
 				break;
 				default:
-					log_report("Operación desconocida: %s de master: %d", packetOperacion.operation,sock);
+					log_report("Operación desconocida: %d de master: %d", packetOperacion.operation,sock);
 				break;
 
 				}
