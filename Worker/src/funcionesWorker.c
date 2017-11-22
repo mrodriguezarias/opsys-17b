@@ -181,7 +181,6 @@ void listen_to_master() {
 	char * bufferScript, *archivoEtapa, *archivoPreReduccion = "preReduccion";
 
 	char * command;
-	char * rutaDatabin;
 	tEtapaTransformacionWorker * trans = malloc(sizeof(tEtapaTransformacionWorker));
 	tEtapaReduccionLocalWorker* rl;
 	tEtapaReduccionGlobalWorker * rg;
@@ -189,8 +188,6 @@ void listen_to_master() {
 
 
 	const char * direccion = system_userdir();
-	rutaDatabin = mstring_create("%s/%s", direccion,
-			config_get("RUTA_DATABIN"));
 	while (true) {
 		pid_t pid;
 		socketAceptado = socket_accept(socketEscuchaMaster);
@@ -213,7 +210,7 @@ void listen_to_master() {
 							OP_INICIAR_TRANSFORMACION);
 					printf("bloque: %d, bytes: %d \n",trans->bloque,trans->bytesOcupados);
 					free(bufferScript);
-					if(trans->bloque == 0){
+					/*if(trans->bloque == 0){
 						offset = trans->bytesOcupados;
 						command =
 								mstring_create(
@@ -229,7 +226,12 @@ void listen_to_master() {
 									offset, rutaDatabin, trans->bytesOcupados,
 									file_path(scriptTransformacion),
 									system_userdir(), archivoEtapa);
-					}
+					}*/
+					char* data = data_get(trans->bloque);
+					command = mstring_create("%s | sh %s | sort > %s%s",
+							data,
+							file_path(scriptTransformacion),
+							system_userdir(), archivoEtapa);
 					printf("offset: %d\n",offset);
 					log_print("COMMAND: %s",command);
 					ejecutarComando(command, socketAceptado);

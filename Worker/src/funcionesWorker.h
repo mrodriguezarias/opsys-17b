@@ -27,6 +27,7 @@
 #include <socket.h>
 #include <struct.h>
 #include <system.h>
+#include <data.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
