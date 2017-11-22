@@ -182,7 +182,7 @@ void listen_to_master() {
 
 	char * command;
 	char * rutaDatabin;
-	tEtapaTransformacionWorker * trans;
+	tEtapaTransformacionWorker * trans = malloc(sizeof(tEtapaTransformacionWorker));
 	tEtapaReduccionLocalWorker* rl;
 	tEtapaReduccionGlobalWorker * rg;
 	tEtapaAlmacenamientoWorker * af;
@@ -325,6 +325,7 @@ void listen_to_master() {
 					paquete.content = serial_pack("s", bufferArchivo);
 					paquete.operation = OP_MANDAR_ARCHIVO;
 					protocol_send_packet(paquete, socketAceptado);
+					file_unmap(archivo, bufferArchivo);
 					exit(1);
 					break;
 				default:
