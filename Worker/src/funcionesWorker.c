@@ -186,8 +186,6 @@ void listen_to_master() {
 	tEtapaReduccionGlobalWorker * rg;
 	tEtapaAlmacenamientoWorker * af;
 
-
-	const char * direccion = system_userdir();
 	while (true) {
 		pid_t pid;
 		socketAceptado = socket_accept(socketEscuchaMaster);
@@ -228,7 +226,7 @@ void listen_to_master() {
 									system_userdir(), archivoEtapa);
 					}*/
 					char* data = data_get(trans->bloque);
-					command = mstring_create("%s | sh %s | sort > %s%s",
+					command = mstring_create("cat %s | sh %s | sort > %s%s",
 							data,
 							file_path(scriptTransformacion),
 							system_userdir(), archivoEtapa);
