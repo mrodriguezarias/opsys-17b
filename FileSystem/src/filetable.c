@@ -189,10 +189,10 @@ void filetable_info(const char *path) {
 	printf("(%s):\n", size);
 	free(size);
 
-	printf("Bloque     Tamaño     Copia 1     Copia 2  \n");
+	printf("Bloque      Tamaño     Copia 1     Copia 2  \n");
 	void block_printer(t_block *block) {
 		char *size = mstring_bsize(block->size);
-		printf("%6i  %9s  ", block->index, size);
+		printf("%6i  %10s  ", block->index, size);
 		free(size);
 
 		for (int i = 0; i < 2; i++) {

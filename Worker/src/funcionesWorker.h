@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <unistd.h>
 #include <string.h>
@@ -93,6 +94,7 @@ void ejecutarComando(char * command, int socketAceptado);
 char*  crearListaParaReducir(tEtapaReduccionGlobalWorker * rg);
 tEtapaAlmacenamientoWorker * af_unpack(t_serial * serial);
 int connect_to_filesystem();
+bool block_transform(int blockno, size_t size, const char *script, const char *output);
 
 
 #endif

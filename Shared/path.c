@@ -414,25 +414,24 @@ void path_merge(mlist_t *sources, const char *target) {
 	file_close(output);
 }
 
-void path_apply(void *block, const char *script, const char *output) {
+bool path_reduce(const char *input, const char *script, const char *output) {
 	char *scrpath = path_create(PTYPE_USER, script);
-	if(!path_exists(scrpath)) show_error_and_exit(scrpath, "leer");
+	if(!path_exists(scrpath)) {
+		free(scrpath);
+		return false;
+	}
 
+	char *inpath = path_create(PTYPE_YATPOS, input);
 	char *outpath = path_create(PTYPE_YATPOS, output);
 
-	char *blockstr = alloca(BLOCK_SIZE + 1);
-	char *p;
-	for(p = blockstr; p - blockstr < BLOCK_SIZE; p++) {
-		*p = *((char*)block + (p - blockstr));
-		if(*p == '\0') break;
-	}
-	*p = '\0';
-	char *command = mstring_create("echo \"%s\" | %s > %s", blockstr, scrpath, outpath);
+	char *command = mstring_create("cat %s | %s > %s", inpath, scrpath, outpath);
 	int r = system(command);
+
+	free(inpath);
 	free(outpath);
 	free(command);
-	if(r != 0) show_error_and_exit(scrpath, "ejecutar script en");
 	free(scrpath);
+	return r == 0;
 }
 
 // ========== Funciones privadas ==========

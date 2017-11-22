@@ -185,12 +185,13 @@ void path_sort(const char *path);
 void path_merge(mlist_t *sources, const char *target);
 
 /**
- * Aplica un script de transformación sobre un bloque de un archivo.
+ * Aplica un script de reducción sobre un archivo.
  * Guarda el resultado en un archivo temporal.
- * @param block Bloque de datos a transformar.
+ * @param input Ruta al archivo a reducir.
  * @param script Ruta al script de tranformación (relativa al usuario).
- * @param output Ruta al archivo temporal resultante (relativa a ~/yatpos).
+ * @param output Ruta al archivo resultante (relativa a ~/yatpos).
+ * @return Valor booleano indicando si se pudo hacer la tranformación.
  */
-void path_apply(void *block, const char *script, const char *output);
+bool path_reduce(const char *input, const char *script, const char *output);
 
 #endif /* PATH_H_ */

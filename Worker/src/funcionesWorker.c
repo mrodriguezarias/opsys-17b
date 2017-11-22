@@ -6,11 +6,11 @@ t_file* crearScript(char * bufferScript, int etapa) {
 	t_file*script;
 	aux = string_length(bufferScript);
 	if (etapa == OP_INICIAR_TRANSFORMACION)
-		script = file_create("transformador.sh");
+		script = file_create("transformador");
 	else if (etapa == OP_INICIAR_REDUCCION_LOCAL)
-		script = file_create("reductor.pl");
+		script = file_create("reductor");
 	else
-		script = file_create("reductorGlobal.pl");
+		script = file_create("reductorGlobal");
 	file_open(file_path(script));
 	fwrite(bufferScript, sizeof(char), aux, file_pointer(script));
 	auxChmod = strtol(mode, 0, 8);
@@ -37,7 +37,7 @@ tEtapaReduccionLocalWorker * etapa_rl_unpack_bis(t_serial * serial) {
 			sizeof(tEtapaReduccionLocalWorker));
 	char * elemento;
 	rl->archivosTemporales = mlist_create();
-	serial_remove(serial, "s", &rl->script); //En realidad no es nodo, pero como nodo es (char*) aprobecho para almacenar el script
+	serial_remove(serial, "s", &rl->script); //En realidad no es nodo, pero como nodo es (char*) aprovecho para almacenar el script
 	serial_remove(serial, "i", &rl->lenLista);
 	for (int i = 0; i < rl->lenLista; i++) {
 		serial_remove(serial, "s", &elemento);
@@ -212,26 +212,28 @@ void listen_to_master() {
 							OP_INICIAR_TRANSFORMACION);
 					printf("bloque: %d, bytes: %d \n",trans->bloque,trans->bytesOcupados);
 					free(bufferScript);
-					if(trans->bloque == 0){
-						offset = trans->bytesOcupados;
-						command =
-								mstring_create(
-										"head -c %d < %s | sh %s | sort > %s%s",
-										offset, rutaDatabin,
-										file_path(scriptTransformacion),
-										system_userdir(), archivoEtapa);
-					}else{
-						offset = trans->bloque * BLOCK_SIZE + trans->bytesOcupados;
-					command =
-							mstring_create(
-									"head -c %d < %s | tail -c %d | sh %s | sort > %s%s",
-									offset, rutaDatabin, trans->bytesOcupados,
-									file_path(scriptTransformacion),
-									system_userdir(), archivoEtapa);
-					}
+//					if(trans->bloque == 0){
+//						offset = trans->bytesOcupados;
+//						command =
+//								mstring_create(
+//										"head -c %d < %s | sh %s | sort > %s%s",
+//										offset, rutaDatabin,
+//										file_path(scriptTransformacion),
+//										system_userdir(), archivoEtapa);
+//					}else{
+//						offset = trans->bloque * BLOCK_SIZE + trans->bytesOcupados;
+//					command =
+//							mstring_create(
+//									"head -c %d < %s | tail -c %d | sh %s | sort > %s%s",
+//									offset, rutaDatabin, trans->bytesOcupados,
+//									file_path(scriptTransformacion),
+//									system_userdir(), archivoEtapa);
+//					}
 					printf("offset: %d\n",offset);
-					log_print("COMMAND: %s",command);
-					ejecutarComando(command, socketAceptado);
+//					log_print("COMMAND: %s",command);
+//					ejecutarComando(command, socketAceptado);
+					bool tt_ok = block_transform(trans->bloque, trans->bytesOcupados, file_path(scriptTransformacion), archivoEtapa);
+					protocol_send_response(socketAceptado, tt_ok ? RESPONSE_OK : RESPONSE_ERROR);
 					exit(1);
 					break;
 				case OP_INICIAR_REDUCCION_LOCAL:
@@ -245,11 +247,13 @@ void listen_to_master() {
 					archivo = file_open(aux);
 					path_merge(rl->archivosTemporales, file_path(archivo));
 //					t_file *archivoTemporalDeReduccionLocal = file_create(rl->archivoTemporal);
-					command = mstring_create(" cat %s | perl %s > %s%s ",
-							file_path(archivo), file_path(scriptReduccion),
-							system_userdir(), rl->archivoTemporal);
-					ejecutarComando(command, socketAceptado);
-					free(command);
+//					command = mstring_create(" cat %s | perl %s > %s%s ",
+//							file_path(archivo), file_path(scriptReduccion),
+//							system_userdir(), rl->archivoTemporal);
+//					ejecutarComando(command, socketAceptado);
+//					free(command);
+					bool lr_ok = path_reduce(file_path(archivo), file_path(scriptReduccion), rl->archivoTemporal);
+					protocol_send_response(socketAceptado, lr_ok ? RESPONSE_OK : RESPONSE_ERROR);
 					exit(1);
 					break;
 				case OP_INICIAR_REDUCCION_GLOBAL:
@@ -260,11 +264,13 @@ void listen_to_master() {
 					scriptReduccionGlobal = crearScript(rg->scriptReduccion,
 							OP_INICIAR_REDUCCION_GLOBAL);
 					archivoAReducir = crearListaParaReducir(rg);
-					command = mstring_create("cat %s | perl %s > %s%s",
-							archivoAReducir, file_path(scriptReduccionGlobal),system_userdir(),
-							rg->archivoEtapa);
-					ejecutarComando(command, socketAceptado);
-					free(command);
+//					command = mstring_create("cat %s | perl %s > %s%s",
+//							archivoAReducir, file_path(scriptReduccionGlobal),system_userdir(),
+//							rg->archivoEtapa);
+//					ejecutarComando(command, socketAceptado);
+//					free(command);
+					bool gr_ok = path_reduce(archivoAReducir, file_path(scriptReduccionGlobal), rg->archivoEtapa);
+					protocol_send_response(socketAceptado, gr_ok ? RESPONSE_OK : RESPONSE_ERROR);
 					exit(1);
 					break;
 				case OP_INICIAR_ALMACENAMIENTO:
@@ -339,5 +345,25 @@ void listen_to_master() {
 			}
 		}
 	}
+}
+
+bool block_transform(int blockno, size_t size, const char *script, const char *output) {
+	char *scrpath = path_create(PTYPE_USER, script);
+	if(!path_exists(scrpath)) {
+		free(scrpath);
+		return false;
+	}
+
+	size_t start = blockno * BLOCK_SIZE + 1;
+	char *datapath = path_create(PTYPE_YATPOS, config_get("RUTA_DATABIN"));
+	char *outpath = path_create(PTYPE_YATPOS, output);
+	char *command = mstring_create("cat %s | tail -c+%zi | head -c%zi | %s | sort > %s", datapath, start, size, scrpath, outpath);
+	free(datapath);
+	free(scrpath);
+	free(outpath);
+
+	int r = system(command);
+	free(command);
+	return r == 0;
 }
 
