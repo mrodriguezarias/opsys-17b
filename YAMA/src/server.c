@@ -314,19 +314,19 @@ void mandarEtapaReduccionGL(int master,int job){
 	mlist_t* NodosRL = BuscoNodos(master,job);
 	char* nodo = seleccionarEncargado(NodosRL, job);
 	char* nombreRG = generarArchivoRG(master,job);
-	int i;
-	for(i=0; i< mlist_length(NodosRL); i++){
-	void* unNodo_sendObtenido	= mlist_get(NodosRL,i);
-	t_nodotemporal* unNodo_send = (t_nodotemporal*) unNodo_sendObtenido;
-	t_infoNodo* infoNodo = BuscoIP_PUERTO(unNodo_send->nodo);
-	if(string_equals_ignore_case(unNodo_send->nodo,nodo)){
-	tEtapaReduccionGlobal* etapaRG = new_etapa_rg(unNodo_send->nodo,infoNodo->ip,infoNodo->puerto,unNodo_send->archivoTemporal,nombreRG,"SI");
-	mlist_append(listaRG,etapaRG);
-	}
-	else{
-		tEtapaReduccionGlobal* etapaRG = new_etapa_rg(unNodo_send->nodo,infoNodo->ip,infoNodo->puerto,unNodo_send->archivoTemporal,"-1","NO");
-		mlist_append(listaRG,etapaRG);
-	}
+	int i = 0;
+	for(i=0; i < mlist_length(NodosRL); i++){
+		void* unNodo_sendObtenido	= mlist_get(NodosRL,i);
+		t_nodotemporal* unNodo_send = (t_nodotemporal*) unNodo_sendObtenido;
+		t_infoNodo* infoNodo = BuscoIP_PUERTO(unNodo_send->nodo);
+		if(string_equals_ignore_case(unNodo_send->nodo,nodo)){
+			tEtapaReduccionGlobal* etapaRG = new_etapa_rg(unNodo_send->nodo,infoNodo->ip,infoNodo->puerto,unNodo_send->archivoTemporal,nombreRG,"SI");
+			mlist_append(listaRG,etapaRG);
+		}
+		else{
+			tEtapaReduccionGlobal* etapaRG = new_etapa_rg(unNodo_send->nodo,infoNodo->ip,infoNodo->puerto,unNodo_send->archivoTemporal,"-1","NO");
+			mlist_append(listaRG,etapaRG);
+		}
 	}
 	agregarAtablaEstado(job,nodo,master,-2,"ReduccionGlobal",nombreRG,"En proceso");
 	mandar_etapa_rg(listaRG,master);
@@ -358,19 +358,26 @@ mlist_t* BuscoNodos(int master, int job){
 
 
 char* seleccionarEncargado(mlist_t* NodosRL, int job){
-	bool condicionAComparar(void * nodo1, void * nodo2){
-		return cargaActual(((t_nodotemporal*) nodo1)->nodo) < cargaActual(((t_nodotemporal*) nodo1)->nodo);
+
+	char* nombreNodo(void* nodoRL){
+		return ((t_nodotemporal*) nodoRL)->nodo;
 	}
 
-	mlist_sort(NodosRL, condicionAComparar);
-	void * nodoObtenido = mlist_first(NodosRL);
-	t_nodotemporal* nodoConMenorCarga = (t_nodotemporal*) nodoObtenido;
-	int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(nodoConMenorCarga->nodo);
+	mlist_t* listaDeNombreNodos = mlist_map(NodosRL, (void*) nombreNodo);
+
+	bool condicionAComparar(void * nodo1, void * nodo2){
+		return cargaActual((char*) nodo1) <= cargaActual((char*) nodo2);
+	}
+
+	mlist_sort(listaDeNombreNodos, condicionAComparar);
+	void * nodoObtenido = mlist_first(listaDeNombreNodos);
+	char* nodoConMenorCarga = (char*) nodoObtenido;
+	int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(nodoConMenorCarga);
 
 	int cantidadAAumentar = 1 + ((mlist_length(NodosRL) - 1) / 2);
 
-	actualizarCargaDelNodo(nodoConMenorCarga->nodo, job, posicionCargaNodoObtenida, 1, cantidadAAumentar);
-	return nodoConMenorCarga->nodo;
+	actualizarCargaDelNodo(nodoConMenorCarga, job, posicionCargaNodoObtenida, 1, cantidadAAumentar);
+	return nodoConMenorCarga;
 
 }
 
