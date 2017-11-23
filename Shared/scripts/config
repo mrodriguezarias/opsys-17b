@@ -6,6 +6,7 @@
 # procesos, o `config {proceso}` para configurar algún proceso en particular.    #
 ##################################################################################
 base="/home/utnso/git/tp-2017-2c-YATPOS"
+yatpos="/home/utnso/yatpos"
 declare -A procs=([dnode]="DataNode" [fs]="FileSystem" [master]="Master" [worker]="Worker" [yama]="YAMA")
 [[ "$#" -eq 1 && ("$1" == "node" || -n "${procs[$1]}") ]] && proc="$1" || proc="all"
 [ -n "${procs[$proc]}" ] && n=1 || n=0
