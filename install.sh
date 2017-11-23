@@ -61,6 +61,10 @@ done
 
 echo "Installing helper script…"
 sudo ln -sf $base/Shared/scripts/yatpos /usr/local/bin/yatpos
+
+LC_ALL=C
+LANG=C
+export LC_ALL LANG
 fi
 
 echo "Ready. Run:"
