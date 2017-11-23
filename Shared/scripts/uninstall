@@ -1,0 +1,9 @@
+#!/bin/bash
+echo "utnso" | sudo -S su &> /dev/null
+echo -n "Uninstalling…"
+symlinks=("dnode" "fs" "master" "worker" "yama" "yatpos")
+for symlink in "${symlinks[@]}"; do
+	sudo rm /usr/local/bin/$symlink &> /dev/null
+done
+sudo rm -rf ~/yatpos ~/git/tp-2017-2c-YATPOS &> /dev/null
+echo " done."

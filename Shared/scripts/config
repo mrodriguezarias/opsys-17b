@@ -1,0 +1,46 @@
+#!/bin/bash
+##################################################################################
+# Modo de uso:                                                                   #
+# Copiar este archivo a /usr/local/bin, darle permisos de ejecución (chmod +x) y #
+# ejecutar el comando `config` desde la consola para configurar todos los        #
+# procesos, o `config {proceso}` para configurar algún proceso en particular.    #
+##################################################################################
+base="/home/utnso/git/tp-2017-2c-YATPOS"
+declare -A procs=([dnode]="DataNode" [fs]="FileSystem" [master]="Master" [worker]="Worker" [yama]="YAMA")
+[[ "$#" -eq 1 && ("$1" == "node" || -n "${procs[$1]}") ]] && proc="$1" || proc="all"
+[ -n "${procs[$proc]}" ] && n=1 || n=0
+
+printf "Creating configuration file%.*s…\n" $((n != 1)) "s"
+mkdir -p $yatpos/config
+
+for kcur in "${!procs[@]}"; do
+	[[ "$proc" != "all" ]] && [[ "$kcur" != "$proc" ]] && [[ "$proc" != "node" || "$kcur" != "dnode" ]] && continue
+	[[ "$kcur" == "dnode" || "$kcur" == "worker" ]] && vcur="Node" || vcur="${procs[$kcur]}"
+	file="$yatpos/config/$vcur.cnf"
+	[ -f $file ] && continue
+	cp $base/Shared/rsc/config/$vcur.cnf $file
+	case "$vcur" in
+	"Node")
+		ip_fs_key="IP_FILESYSTEM"
+		printf "$ip_fs_key="; read ip_fs_val < /dev/tty
+		sed -i "s/^\($ip_fs_key=\).*/\1$ip_fs_val/" $file
+		node_name_key="NOMBRE_NODO"
+		printf "$node_name_key="; read node_name_val < /dev/tty
+		sed -i "s/^\($node_name_key=\).*/\1$node_name_val/" $file
+		data_size_key="DATABIN_SIZE"
+		printf "$data_size_key="; read size < /dev/tty
+		data_size_val=$(echo "$size" | bc)
+		sed -i "s/^\($data_size_key=\).*/\1$data_size_val/" $file
+		;;
+	"Master")
+		ip_master_key="YAMA_IP"
+		printf "$ip_master_key="; read ip_master_val < /dev/tty
+		sed -i "s/^\($ip_master_key=\).*/\1$ip_master_val/" $file
+		;;
+	"YAMA")
+		ip_fs_key="FS_IP"
+		printf "$ip_fs_key="; read ip_fs_val < /dev/tty
+		sed -i "s/^\($ip_fs_key=\).*/\1$ip_fs_val/" $file
+		;;
+	esac
+done

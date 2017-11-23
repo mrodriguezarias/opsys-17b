@@ -6,15 +6,16 @@
 # o `build {proceso}` para compilar algún proceso en particular.                 #
 ##################################################################################
 base="/home/utnso/git/tp-2017-2c-YATPOS"
-cwd=$(pwd)
 declare -A procs=([dnode]="DataNode" [fs]="FileSystem" [master]="Master" [worker]="Worker" [yama]="YAMA")
-[ "$#" -ne 1 ] && proc="" || proc="${procs[$1]}"
-for cur in "${procs[@]}"; do
-	[ ! -z "$proc" ] && [[ "$cur" != "$proc" ]] && continue
-	dir="$base/$cur/Debug"
-	[ ! -d "$dir" ] && continue
-	cd "$dir"
-	echo -e "\033[1;33m[$cur]\033[0m"
-	make all
+[[ "$#" -eq 1 && ("$1" == "node" || -n "${procs[$1]}") ]] && proc="$1" || proc="all"
+[ -n "${procs[$proc]}" ] && n=1 || n=0
+
+printf "Building module%.*s…\n" $((n != 1)) "s"
+
+for kcur in "${!procs[@]}"; do
+	[[ "$proc" != "all" ]] && [[ "$kcur" != "$proc" ]] && [[ "$proc" != "node" || "$kcur" != "dnode" && "$kcur" != "worker" ]] && continue
+	vcur="${procs[$kcur]}"
+	echo -n " • $vcur: building…"
+	make all -s -B -C $base/$vcur/Debug &> /dev/null
+	echo -e "\r\e[0K • $vcur: done."
 done
-cd "$cwd"
