@@ -114,4 +114,8 @@ for kcur in "${!procs[@]}"; do
 done
 fi
 
+LC_ALL=C
+LANG=C
+export LC_ALL LANG
+
 echo "Ready to run."
