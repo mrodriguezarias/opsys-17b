@@ -5,18 +5,16 @@ t_file* crearScript(char * bufferScript, int etapa,int nroSocket) {
 	char mode[] = "0777";
 	t_file*script;
 	aux = string_length(bufferScript);
+	const char * nombreScript = path_temp();
 	if (etapa == OP_INICIAR_TRANSFORMACION){
-		const char * nombreScript = mstring_create("transformador%d",nroSocket);
 		script = file_create(nombreScript);
 		log_print("SCRIPT DE TRANSFORMACION: %s CREADO PARA SOCKET: %d",nombreScript,nroSocket);
 	}
 	else if (etapa == OP_INICIAR_REDUCCION_LOCAL){
-		const char * nombreScript = mstring_create("reductorLocal%d",nroSocket);
 		script = file_create(nombreScript);
 		log_print("SCRIPT DE REDUCCION LOCAL: %s CREADO PARA SOCKET: %d",nombreScript,nroSocket);
 	}
 	else{
-		const char * nombreScript = mstring_create("reductorGlobal%d",nroSocket);
 		script = file_create(nombreScript);
 		log_print("SCRIPT DE REDUCCION Global: %s CREADO PARA SOCKET: %d",nombreScript,nroSocket);
 	}
@@ -32,11 +30,10 @@ t_file* crearScript(char * bufferScript, int etapa,int nroSocket) {
 
 }
 
-t_file * crearArchivo(char * bufferArchivo, char*nombreArchivo) {
+t_file * crearArchivo(char * bufferArchivo, int size, char*nombreArchivo) {
 	t_file * archivo = file_create(nombreArchivo);
-	int aux = string_length(bufferArchivo);
 	file_open(file_path(archivo));
-	fwrite(bufferArchivo, sizeof(char), aux, file_pointer(archivo));
+	fwrite(bufferArchivo, sizeof(char), size, file_pointer(archivo));
 	fclose(file_pointer(archivo));
 	return archivo;
 }
@@ -120,11 +117,12 @@ char * crearListaParaReducir(tEtapaReduccionGlobalWorker * rg) {
 	mlist_t * archivosAReducir = mlist_create();
 	mlist_t * socketsAWorker = mlist_create();
 	int socket;
+	int size;
 	char * bufferArchivoTemporal;
 	char * archivoAReducir ;
 	if (rg->lenLista > 1) {
 		printf("tamanio lista:%d\n",rg->lenLista);
-		archivoAReducir = mstring_create("%s/%s",system_userdir(),"archivo");
+		archivoAReducir = mstring_create("%s/%s",system_userdir(),path_temp());
 		for (int i = 0; i < rg->lenLista; i++) {
 			rg->rg = mlist_get(rg->datosWorker, i);
 			if (!string_equals_ignore_case(rg->rg->encargado, SI)) {
@@ -138,8 +136,8 @@ char * crearListaParaReducir(tEtapaReduccionGlobalWorker * rg) {
 				paquete.operation = OP_MANDAR_ARCHIVO;
 				protocol_send_packet(paquete, socketWorker);
 				paquete = protocol_receive_packet(socketWorker);
-				serial_unpack(paquete.content, "s", &bufferArchivoTemporal);
-				t_file * archivo = crearArchivo(bufferArchivoTemporal,
+				serial_unpack(paquete.content, "si", &bufferArchivoTemporal, &size);
+				t_file * archivo = crearArchivo(bufferArchivoTemporal, size,
 						rg->rg->archivo_temporal_de_rl);
 				mlist_append(archivosAReducir, (char *) file_path(archivo));
 
@@ -147,8 +145,8 @@ char * crearListaParaReducir(tEtapaReduccionGlobalWorker * rg) {
 				char * aux = mstring_create("%s%s",system_userdir(),rg->rg->archivo_temporal_de_rl);
 				mlist_append(archivosAReducir, aux);
 			}
-	path_merge(archivosAReducir, archivoAReducir);
 		}
+		path_merge(archivosAReducir, archivoAReducir);
 	}else{
 		log_print("ESTO SIGNIFICA QUE SOLO HAY 1 NODO LABURANDO");
 		rg->rg = mlist_get(rg->datosWorker,0);
@@ -187,7 +185,7 @@ void listen_to_master() {
 	log_print("Escuchando puertos");
 	socketEscuchaMaster = socket_init(NULL, config_get("PUERTO_WORKER"));
 	t_socket socketAceptado;
-	char * bufferScript, *archivoEtapa, *archivoPreReduccion = "preReduccion";
+	char * bufferScript, *archivoEtapa, *archivoPreReduccion = path_temp();
 
 	char * command;
 	char * rutaDatabin;
@@ -242,6 +240,7 @@ void listen_to_master() {
 //					ejecutarComando(command, socketAceptado);
 					bool tt_ok = block_transform(trans->bloque, trans->bytesOcupados, file_path(scriptTransformacion), archivoEtapa,trans->bytesOcupados);
 					protocol_send_response(socketAceptado, tt_ok ? RESPONSE_OK : RESPONSE_ERROR);
+					path_remove(file_path(scriptTransformacion));
 					exit(1);
 					break;
 				case OP_INICIAR_REDUCCION_LOCAL:
@@ -262,6 +261,8 @@ void listen_to_master() {
 //					free(command);
 					bool lr_ok = reducir_path(file_path(archivo), file_path(scriptReduccion), rl->archivoTemporal);
 					protocol_send_response(socketAceptado, lr_ok ? RESPONSE_OK : RESPONSE_ERROR);
+					path_remove(file_path(scriptReduccion));
+					path_remove(archivoPreReduccion);
 					exit(1);
 					break;
 				case OP_INICIAR_REDUCCION_GLOBAL:
@@ -279,6 +280,8 @@ void listen_to_master() {
 //					free(command);
 					bool gr_ok = reducir_path(archivoAReducir, file_path(scriptReduccionGlobal), rg->archivoEtapa);
 					protocol_send_response(socketAceptado, gr_ok ? RESPONSE_OK : RESPONSE_ERROR);
+					path_remove(file_path(scriptReduccionGlobal));
+					path_remove(archivoAReducir);
 					exit(1);
 					break;
 				case OP_INICIAR_ALMACENAMIENTO:
@@ -335,7 +338,7 @@ void listen_to_master() {
 					char * aux2 = mstring_create("%s%s",system_userdir(),nombreDelArchivo);
 					archivo = file_open(aux2);
 					bufferArchivo = file_map(archivo);
-					paquete.content = serial_pack("s", bufferArchivo);
+					paquete.content = serial_pack("si", bufferArchivo, file_size(archivo));
 					paquete.operation = OP_MANDAR_ARCHIVO;
 					protocol_send_packet(paquete, socketAceptado);
 					file_unmap(archivo, bufferArchivo);
