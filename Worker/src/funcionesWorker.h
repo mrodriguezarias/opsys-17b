@@ -82,7 +82,7 @@ t_socket socketEscuchaMaster,socketEscuchaWorker, socketFileSystem,socketWorker;
 
 
 void listen_to_master();
-t_file* crearScript(char * bufferScript,int);
+t_file* crearScript(char * bufferScript,int,int);
 tEtapaReduccionLocalWorker * etapa_rl_unpack_bis(t_serial * serial);
 tEtapaReduccionGlobalWorker * rg_unpack(t_serial*);
 void manejador_master(t_packet *packet,int socket);
@@ -94,7 +94,7 @@ void ejecutarComando(char * command, int socketAceptado);
 char*  crearListaParaReducir(tEtapaReduccionGlobalWorker * rg);
 tEtapaAlmacenamientoWorker * af_unpack(t_serial * serial);
 int connect_to_filesystem();
-bool block_transform(int blockno, size_t size, const char *script, const char *output);
-
+bool block_transform(int blockno, size_t size, const char *script, const char *output,int);
+bool reducir_path(const char *input, const char *script, const char *output);
 
 #endif

@@ -1,17 +1,24 @@
 #include "funcionesWorker.h"
 
-t_file* crearScript(char * bufferScript, int etapa) {
+t_file* crearScript(char * bufferScript, int etapa,int nroSocket) {
 	int aux, auxChmod;
 	char mode[] = "0777";
 	t_file*script;
 	aux = string_length(bufferScript);
-	if (etapa == OP_INICIAR_TRANSFORMACION)
-		script = file_create("transformador");
-	else if (etapa == OP_INICIAR_REDUCCION_LOCAL)
-		script = file_create("reductor");
-	else
-		script = file_create("reductorGlobal");
-	file_open(file_path(script));
+	const char * nombreScript = path_temp();
+	if (etapa == OP_INICIAR_TRANSFORMACION){
+		script = file_create(nombreScript);
+		log_print("SCRIPT DE TRANSFORMACION: %s CREADO PARA SOCKET: %d",nombreScript,nroSocket);
+	}
+	else if (etapa == OP_INICIAR_REDUCCION_LOCAL){
+		script = file_create(nombreScript);
+		log_print("SCRIPT DE REDUCCION LOCAL: %s CREADO PARA SOCKET: %d",nombreScript,nroSocket);
+	}
+	else{
+		script = file_create(nombreScript);
+		log_print("SCRIPT DE REDUCCION Global: %s CREADO PARA SOCKET: %d",nombreScript,nroSocket);
+	}
+	//file_open(file_path(script));
 	fwrite(bufferScript, sizeof(char), aux, file_pointer(script));
 	auxChmod = strtol(mode, 0, 8);
 	if (chmod(file_path(script), auxChmod) < 0) {
@@ -23,11 +30,10 @@ t_file* crearScript(char * bufferScript, int etapa) {
 
 }
 
-t_file * crearArchivo(char * bufferArchivo, char*nombreArchivo) {
+t_file * crearArchivo(char * bufferArchivo, int size, char*nombreArchivo) {
 	t_file * archivo = file_create(nombreArchivo);
-	int aux = string_length(bufferArchivo);
 	file_open(file_path(archivo));
-	fwrite(bufferArchivo, sizeof(char), aux, file_pointer(archivo));
+	fwrite(bufferArchivo, sizeof(char), size, file_pointer(archivo));
 	fclose(file_pointer(archivo));
 	return archivo;
 }
@@ -111,11 +117,12 @@ char * crearListaParaReducir(tEtapaReduccionGlobalWorker * rg) {
 	mlist_t * archivosAReducir = mlist_create();
 	mlist_t * socketsAWorker = mlist_create();
 	int socket;
+	int size;
 	char * bufferArchivoTemporal;
 	char * archivoAReducir ;
 	if (rg->lenLista > 1) {
 		printf("tamanio lista:%d\n",rg->lenLista);
-		archivoAReducir = mstring_create("%s/%s",system_userdir(),"archivo");
+		archivoAReducir = mstring_create("%s/%s",system_userdir(),path_temp());
 		for (int i = 0; i < rg->lenLista; i++) {
 			rg->rg = mlist_get(rg->datosWorker, i);
 			if (!string_equals_ignore_case(rg->rg->encargado, SI)) {
@@ -129,8 +136,8 @@ char * crearListaParaReducir(tEtapaReduccionGlobalWorker * rg) {
 				paquete.operation = OP_MANDAR_ARCHIVO;
 				protocol_send_packet(paquete, socketWorker);
 				paquete = protocol_receive_packet(socketWorker);
-				serial_unpack(paquete.content, "s", &bufferArchivoTemporal);
-				t_file * archivo = crearArchivo(bufferArchivoTemporal,
+				serial_unpack(paquete.content, "si", &bufferArchivoTemporal, &size);
+				t_file * archivo = crearArchivo(bufferArchivoTemporal, size,
 						rg->rg->archivo_temporal_de_rl);
 				mlist_append(archivosAReducir, (char *) file_path(archivo));
 
@@ -138,8 +145,8 @@ char * crearListaParaReducir(tEtapaReduccionGlobalWorker * rg) {
 				char * aux = mstring_create("%s%s",system_userdir(),rg->rg->archivo_temporal_de_rl);
 				mlist_append(archivosAReducir, aux);
 			}
-	path_merge(archivosAReducir, archivoAReducir);
 		}
+		path_merge(archivosAReducir, archivoAReducir);
 	}else{
 		log_print("ESTO SIGNIFICA QUE SOLO HAY 1 NODO LABURANDO");
 		rg->rg = mlist_get(rg->datosWorker,0);
@@ -178,7 +185,7 @@ void listen_to_master() {
 	log_print("Escuchando puertos");
 	socketEscuchaMaster = socket_init(NULL, config_get("PUERTO_WORKER"));
 	t_socket socketAceptado;
-	char * bufferScript, *archivoEtapa, *archivoPreReduccion = "preReduccion";
+	char * bufferScript, *archivoEtapa, *archivoPreReduccion = path_temp();
 
 	char * command;
 	char * rutaDatabin;
@@ -209,7 +216,7 @@ void listen_to_master() {
 							&archivoEtapa, &trans->bloque,
 							&trans->bytesOcupados);
 					scriptTransformacion = crearScript(bufferScript,
-							OP_INICIAR_TRANSFORMACION);
+							OP_INICIAR_TRANSFORMACION,socketAceptado);
 					printf("bloque: %d, bytes: %d \n",trans->bloque,trans->bytesOcupados);
 					free(bufferScript);
 //					if(trans->bloque == 0){
@@ -229,18 +236,18 @@ void listen_to_master() {
 //									file_path(scriptTransformacion),
 //									system_userdir(), archivoEtapa);
 //					}
-					printf("offset: %d\n",offset);
 //					log_print("COMMAND: %s",command);
 //					ejecutarComando(command, socketAceptado);
-					bool tt_ok = block_transform(trans->bloque, trans->bytesOcupados, file_path(scriptTransformacion), archivoEtapa);
+					bool tt_ok = block_transform(trans->bloque, trans->bytesOcupados, file_path(scriptTransformacion), archivoEtapa,trans->bytesOcupados);
 					protocol_send_response(socketAceptado, tt_ok ? RESPONSE_OK : RESPONSE_ERROR);
+					path_remove(file_path(scriptTransformacion));
 					exit(1);
 					break;
 				case OP_INICIAR_REDUCCION_LOCAL:
 					log_print("OP_INICIAR_REDUCCION_LOCAL");
 					rl = etapa_rl_unpack_bis(packet.content);
 					t_file *scriptReduccion = crearScript(rl->script,
-							OP_INICIAR_REDUCCION_LOCAL);
+							OP_INICIAR_REDUCCION_LOCAL,socketAceptado);
 					char * aux = mstring_create("%s/%s", system_userdir(),
 							archivoPreReduccion);
 					t_file * archivo = file_create(aux);
@@ -252,8 +259,10 @@ void listen_to_master() {
 //							system_userdir(), rl->archivoTemporal);
 //					ejecutarComando(command, socketAceptado);
 //					free(command);
-					bool lr_ok = path_reduce(file_path(archivo), file_path(scriptReduccion), rl->archivoTemporal);
+					bool lr_ok = reducir_path(file_path(archivo), file_path(scriptReduccion), rl->archivoTemporal);
 					protocol_send_response(socketAceptado, lr_ok ? RESPONSE_OK : RESPONSE_ERROR);
+					path_remove(file_path(scriptReduccion));
+					path_remove(archivoPreReduccion);
 					exit(1);
 					break;
 				case OP_INICIAR_REDUCCION_GLOBAL:
@@ -262,15 +271,17 @@ void listen_to_master() {
 					rg = rg_unpack(packet.content);
 					t_file *scriptReduccionGlobal;
 					scriptReduccionGlobal = crearScript(rg->scriptReduccion,
-							OP_INICIAR_REDUCCION_GLOBAL);
+							OP_INICIAR_REDUCCION_GLOBAL,socketAceptado);
 					archivoAReducir = crearListaParaReducir(rg);
 //					command = mstring_create("cat %s | perl %s > %s%s",
 //							archivoAReducir, file_path(scriptReduccionGlobal),system_userdir(),
 //							rg->archivoEtapa);
 //					ejecutarComando(command, socketAceptado);
 //					free(command);
-					bool gr_ok = path_reduce(archivoAReducir, file_path(scriptReduccionGlobal), rg->archivoEtapa);
+					bool gr_ok = reducir_path(archivoAReducir, file_path(scriptReduccionGlobal), rg->archivoEtapa);
 					protocol_send_response(socketAceptado, gr_ok ? RESPONSE_OK : RESPONSE_ERROR);
+					path_remove(file_path(scriptReduccionGlobal));
+					path_remove(archivoAReducir);
 					exit(1);
 					break;
 				case OP_INICIAR_ALMACENAMIENTO:
@@ -327,7 +338,7 @@ void listen_to_master() {
 					char * aux2 = mstring_create("%s%s",system_userdir(),nombreDelArchivo);
 					archivo = file_open(aux2);
 					bufferArchivo = file_map(archivo);
-					paquete.content = serial_pack("s", bufferArchivo);
+					paquete.content = serial_pack("si", bufferArchivo, file_size(archivo));
 					paquete.operation = OP_MANDAR_ARCHIVO;
 					protocol_send_packet(paquete, socketAceptado);
 					file_unmap(archivo, bufferArchivo);
@@ -347,7 +358,7 @@ void listen_to_master() {
 	}
 }
 
-bool block_transform(int blockno, size_t size, const char *script, const char *output) {
+bool block_transform(int blockno, size_t size, const char *script, const char *output,int bytesOcupados) {
 	char *scrpath = path_create(PTYPE_USER, script);
 	if(!path_exists(scrpath)) {
 		free(scrpath);
@@ -357,7 +368,19 @@ bool block_transform(int blockno, size_t size, const char *script, const char *o
 	size_t start = blockno * BLOCK_SIZE + 1;
 	char *datapath = path_create(PTYPE_YATPOS, config_get("RUTA_DATABIN"));
 	char *outpath = path_create(PTYPE_YATPOS, output);
-	char *command = mstring_create("cat %s | tail -c+%zi | head -c%zi | %s | sort > %s", datapath, start, size, scrpath, outpath);
+	//char *command = mstring_create("cat %s | tail -c %zi | head -c %zi | %s | sort > %s", datapath, start, size, scrpath, outpath);
+	char * command; int offset;
+	if (blockno == 0) {
+		offset = bytesOcupados;
+		command = mstring_create("head -c %d < %s | sh %s | sort > %s%s",
+				offset, datapath, scrpath, system_userdir(), outpath);
+	} else {
+		offset = blockno * BLOCK_SIZE + bytesOcupados;
+		command = mstring_create(
+				"head -c %d < %s | tail -c %d | sh %s | sort > %s%s", offset,
+				datapath, bytesOcupados, scrpath, system_userdir(), outpath);
+	}
+	log_print("COMMAND: %s",command);
 	free(datapath);
 	free(scrpath);
 	free(outpath);
@@ -366,4 +389,23 @@ bool block_transform(int blockno, size_t size, const char *script, const char *o
 	free(command);
 	return r == 0;
 }
+bool reducir_path(const char *input, const char *script, const char *output) {
+	char *scrpath = path_create(PTYPE_USER, script);
+	if(!path_exists(scrpath)) {
+		free(scrpath);
+		return false;
+	}
 
+	char *inpath = path_create(PTYPE_YATPOS, input);
+	char *outpath = path_create(PTYPE_YATPOS, output);
+
+	char *command = mstring_create("cat %s | %s > %s%s", inpath, scrpath, system_userdir(),outpath);
+
+	int r = system(command);
+	log_print("COMMAND: %s",command);
+	free(inpath);
+	free(outpath);
+	free(command);
+	free(scrpath);
+	return r == 0;
+}
