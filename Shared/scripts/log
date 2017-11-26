@@ -7,12 +7,17 @@
 ##################################################################################
 logdir="/home/utnso/yatpos/logs"
 declare -A procs=([dnode]="DataNode" [fs]="FileSystem" [master]="Master" [worker]="Worker" [yama]="YAMA")
-if [ "$#" -ne 1 ] || ! [[ "${!procs[@]}" =~ "$1" ]]; then
-	echo "Uso: log [dnode|fs|master|worker|yama]"
+if [ "$#" -ne 1 ] || ! [[ " ${!procs[@]} " =~ " $1 " ]] && ! [[ " node all " =~ " $1 " ]]; then
+	echo "Uso: log [dnode|fs|master|worker|yama|node|all]"
 	exit
 fi
-proc="${procs[$1]}"
-logfile="${logdir}/${proc}.log"
-mkdir -p "${logdir}"
-touch "${logfile}"
-tail -F "${logfile}"
+mkdir -p $logdir && cd $logdir
+if [[ "$1" == "node" ]]; then
+	logfiles="DataNode.log Worker.log"
+elif [[ "$1" == "all" ]]; then
+	logfiles=$(printf "%s.log " "${procs[@]}")
+else
+	logfiles="${procs[$1]}.log"
+fi
+touch $logfiles && tail -qF $logfiles
+cd - &> /dev/null
