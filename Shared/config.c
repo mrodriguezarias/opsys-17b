@@ -58,7 +58,7 @@ static const char *config_name() {
 
 static char *config_file(bool user) {
 	const char *dir = user ? system_userdir() : system_rscdir();
-	return mstring_create("%s/config/%s.cnf", dir, config_name());
+	return mstring_create("%s/config/%s%s.cnf", dir, config_name(), user ? process_node() : "");
 }
 
 static void set_defaults() {

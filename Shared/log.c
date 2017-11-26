@@ -17,11 +17,12 @@ static void template(bool error, bool print, const char *format, va_list args);
 
 void log_init() {
 	if(silent != NULL) return;
-	char *pname = (char*) process_name(process_current());
+	char *pname = mstring_create("%s%s", process_name(process_current()), process_node());
 	char *logfile = mstring_create("%s/logs/%s.log", system_userdir(), pname);
 	silent = log_create(logfile, pname, false, LOG_LEVEL_TRACE);
 	printer = log_create(logfile, pname, true, LOG_LEVEL_TRACE);
 	free(logfile);
+	free(pname);
 }
 
 void log_inform(const char *format, ...) {
