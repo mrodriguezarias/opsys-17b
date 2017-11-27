@@ -372,12 +372,12 @@ bool block_transform(int blockno, size_t size, const char *script, const char *o
 	char * command; int offset;
 	if (blockno == 0) {
 		offset = bytesOcupados;
-		command = mstring_create("head -c %d < %s | sh %s | sort > %s%s",
+		command = mstring_create("head -c %d < %s | %s | sort > %s%s",
 				offset, datapath, scrpath, system_userdir(), outpath);
 	} else {
 		offset = blockno * BLOCK_SIZE + bytesOcupados;
 		command = mstring_create(
-				"head -c %d < %s | tail -c %d | sh %s | sort > %s%s", offset,
+				"head -c %d < %s | tail -c %d | %s | sort > %s%s", offset,
 				datapath, bytesOcupados, scrpath, system_userdir(), outpath);
 	}
 	log_print("COMMAND: %s",command);
