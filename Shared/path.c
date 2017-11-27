@@ -393,7 +393,7 @@ void path_merge(mlist_t *sources, const char *target) {
 	t_file *output = file_create(target);
 	mlist_t *list = mlist_copy(files);
 	mlist_traverse(list, read_file);
-
+	printf("CANTIDAD DE ARCHIVOS A MERGIAR: files:%d, list:%d",mlist_length(files),mlist_length(list));
 	while(true) {
 		mlist_traverse(list, read_file);
 		mlist_t *aux = mlist_filter(list, line_set);
