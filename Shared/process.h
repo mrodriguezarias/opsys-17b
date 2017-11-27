@@ -38,6 +38,10 @@ const char *process_name(t_process process);
  */
 t_process process_type(const char *name);
 
+const char *_process_node(const char *name);
+#define process_node(...) __process_node(NULL, ##__VA_ARGS__, NULL)
+#define __process_node(null, name, ...) _process_node(name)
+
 /**
  * Libera los recursos inicializados por process_init().
  */

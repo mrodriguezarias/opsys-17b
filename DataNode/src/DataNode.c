@@ -22,6 +22,7 @@ static void terminate(void);
 // ========== Funciones públicas ==========
 
 int main(int argc, char *argv[]) {
+	if(argc == 2) process_node(argv[1]);
 	process_init();
 	thread_signal_capture(SIGINT, terminate);
 	data_open(config_get("RUTA_DATABIN"), mstring_toint(config_get("DATABIN_SIZE")));

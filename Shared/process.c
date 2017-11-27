@@ -7,6 +7,7 @@
 #include <thread.h>
 
 static t_process current = PROC_UNDEFINED;
+static char *node = NULL;
 
 static char *names[] = {"(Undefined)", "YAMA", "FileSystem", "Master", "Worker", "DataNode"};
 
@@ -14,6 +15,7 @@ static char *names[] = {"(Undefined)", "YAMA", "FileSystem", "Master", "Worker",
 
 void process_init() {
 	current = process_type(path_name(system_proc()));
+	node = process_node("");
 	system_init();
 	log_init();
 	config_init();
@@ -36,8 +38,16 @@ t_process process_type(const char *name) {
 	return PROC_UNDEFINED;
 }
 
+const char *_process_node(const char *name) {
+	if(name != NULL && node == NULL) {
+		node = mstring_duplicate(name);
+	}
+	return node;
+}
+
 void process_term() {
 	thread_term();
 	log_term();
 	config_term();
+	free(node);
 }

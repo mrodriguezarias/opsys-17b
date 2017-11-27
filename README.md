@@ -36,7 +36,7 @@ Luego de instalar, ejecutar:
 
 - `yatpos build [dnode|fs|master|worker|yama|node|all]` para compilar,
 - `yatpos config [dnode|fs|master|worker|yama|node|all]` para configurar,
-- `dnode|fs|master|worker|yama|node|all` para correr cada proceso, y
+- `dnode|fs|master|worker|yama` para correr cada proceso, y
 - `yatpos log [dnode|fs|master|worker|yama|node|all]` para ver los logs.
 
 Para desinstalar todo ejecutar `yatpos uninstall`.

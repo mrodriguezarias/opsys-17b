@@ -185,7 +185,6 @@ void listen_to_master() {
 	log_print("Escuchando puertos");
 	socketEscuchaMaster = socket_init(NULL, config_get("PUERTO_WORKER"));
 	t_socket socketAceptado;
-	char * bufferScript, *archivoEtapa, *archivoPreReduccion = path_temp();
 
 	char * command;
 	char * rutaDatabin;
@@ -210,6 +209,7 @@ void listen_to_master() {
 				case OP_INICIAR_TRANSFORMACION:
 					log_print("OP_INICIAR_TRANSFORMACION");
 					int offset = 0;
+					char * bufferScript, *archivoEtapa;
 					printf("offset: %d\n",offset);
 					t_file*scriptTransformacion;
 					serial_unpack(packet.content, "ssii", &bufferScript,
@@ -245,6 +245,7 @@ void listen_to_master() {
 					break;
 				case OP_INICIAR_REDUCCION_LOCAL:
 					log_print("OP_INICIAR_REDUCCION_LOCAL");
+					char* *archivoPreReduccion = path_temp();
 					rl = etapa_rl_unpack_bis(packet.content);
 					t_file *scriptReduccion = crearScript(rl->script,
 							OP_INICIAR_REDUCCION_LOCAL,socketAceptado);
@@ -372,12 +373,12 @@ bool block_transform(int blockno, size_t size, const char *script, const char *o
 	char * command; int offset;
 	if (blockno == 0) {
 		offset = bytesOcupados;
-		command = mstring_create("head -c %d < %s | sh %s | sort > %s%s",
+		command = mstring_create("head -c %d < %s | %s | sort > %s%s",
 				offset, datapath, scrpath, system_userdir(), outpath);
 	} else {
 		offset = blockno * BLOCK_SIZE + bytesOcupados;
 		command = mstring_create(
-				"head -c %d < %s | tail -c %d | sh %s | sort > %s%s", offset,
+				"head -c %d < %s | tail -c %d | %s | sort > %s%s", offset,
 				datapath, bytesOcupados, scrpath, system_userdir(), outpath);
 	}
 	log_print("COMMAND: %s",command);
