@@ -46,5 +46,7 @@ void finalizarJobGlobalEnTablaEstado(int,int, char*);
 void finalizarJobGlobal(int, int, int, char*);
 void eliminarCargasReduccionesLocales(char*,int,int);
 int obtenerHistorico(char *);
+void avanzoPosicion(int *,int,t_workerPlanificacion[]);
+void asignoBloque(t_workerPlanificacion[], int *,int*,int);
 
 #endif

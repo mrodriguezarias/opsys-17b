@@ -103,22 +103,42 @@ void llenarArrayPlanificador(t_workerPlanificacion planificador[],int tamaniolis
 void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificacion planificador[],int* bloque,mlist_t* listaBloque){
 	t_block* infoArchivo = mlist_get(listaBloque, *bloque);
 
-	if(planificador[*posicion].disponibilidad == 0){
-		planificador[*posicion].disponibilidad = atoi(config_get("DISP_BASE"));
-		*posicion = *posicion +1;
-		contadorBloquesSeguidosNoAsignados++;
-	}else if(!strcmp(infoArchivo->copies[0].node, planificador[*posicion].nombreWorker) || !strcmp(infoArchivo->copies[1].node, planificador[*posicion].nombreWorker)){
-		planificador[*posicion].disponibilidad--;
-		mlist_append(planificador[*posicion].bloque,(void*)*bloque);
-		*bloque = *bloque + 1;
-		if(mlist_length(listaBloque) == *bloque){
-			asigneBloquesDeArchivo = true;
+		if(planificador[*posicion].disponibilidad == 0){
+			planificador[*posicion].disponibilidad = atoi(config_get("DISP_BASE"));
+			*posicion = *posicion +1;
+			contadorBloquesSeguidosNoAsignados++;
+		}else if(infoArchivo->copies[0].node == NULL){
+			if(!strcmp(infoArchivo->copies[1].node, planificador[*posicion].nombreWorker))
+			{
+				asignoBloque(planificador,posicion,bloque,mlist_length(listaBloque));
+
+			}
+			else{
+				avanzoPosicion(posicion,tamaniolistaNodos,planificador);
+			}
+
 		}
-		*posicion = *posicion +1;
-		contadorBloquesSeguidosNoAsignados = 0;
-	}
-	else{
-		*posicion = *posicion + 1;
+
+		else if(infoArchivo->copies[1].node == NULL){
+			if(!strcmp(infoArchivo->copies[0].node, planificador[*posicion].nombreWorker))
+			{
+				asignoBloque(planificador,posicion,bloque,mlist_length(listaBloque));
+
+			}
+			else{
+				avanzoPosicion(posicion,tamaniolistaNodos,planificador);
+			}
+		}
+		else if(!strcmp(infoArchivo->copies[0].node, planificador[*posicion].nombreWorker) || !strcmp(infoArchivo->copies[1].node, planificador[*posicion].nombreWorker)){
+			asignoBloque(planificador,posicion,bloque,mlist_length(listaBloque));
+		}
+		else{
+			avanzoPosicion(posicion,tamaniolistaNodos,planificador);
+		}
+}
+
+void avanzoPosicion(int *posicion,int tamaniolistaNodos,t_workerPlanificacion planificador[]){
+*posicion = *posicion + 1;
 		contadorBloquesSeguidosNoAsignados++;
 		if(contadorBloquesSeguidosNoAsignados == tamaniolistaNodos){
 			int i;
@@ -127,11 +147,19 @@ void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificaci
 			}
 			contadorBloquesSeguidosNoAsignados = 0;
 		}
-	}
-
 }
 
+void asignoBloque(t_workerPlanificacion planificador[], int *posicion,int* bloque,int tamanioListaBloque){
 
+	planificador[*posicion].disponibilidad--;
+	mlist_append(planificador[*posicion].bloque,(void*)*bloque);
+	*bloque = *bloque + 1;
+	if(tamanioListaBloque == *bloque){
+		asigneBloquesDeArchivo = true;
+	}
+	*posicion = *posicion +1;
+	contadorBloquesSeguidosNoAsignados = 0;
+}
 
 respuestaOperacionTranf* serial_unpackRespuestaOperacion(t_serial *serial){
 	respuestaOperacionTranf* operacion = malloc(sizeof(respuestaOperacionTranf));
@@ -169,6 +197,7 @@ void abortarJob(int job, int socketMaster, int codigoError){
 t_yfile* reciboInformacionSolicitada(int job,int master){
 	t_yfile* Datosfile = malloc(sizeof(t_yfile));
 	t_packet packetNodosActivos = protocol_receive_packet(yama.fs_socket);
+	printf("recibi paquete de filesystem \n");
 	if(packetNodosActivos.operation == OP_NODES_ACTIVE_INFO){
 	listaNodosActivos = nodelist_unpack(packetNodosActivos.content);
 	}
@@ -182,6 +211,7 @@ t_yfile* reciboInformacionSolicitada(int job,int master){
 
 		else if(packetArchivo.operation == OP_ARCHIVO_NODES){
 			Datosfile = yfile_unpack(packetArchivo.content);
+			printf("recibi correctamente de filesystem \n");
 			return Datosfile;
 		}
 		return Datosfile; //nunca llega a esta instancia.
@@ -227,9 +257,8 @@ void eliminarEstadosMultiples(int socketMaster,int job, char* estadoNuevo, char*
 		indiceEncontrado = mlist_index(listaEstados, condicionIndice);
 		estadoEncontrado->estado = mstring_duplicate(estadoNuevo);
 		mlist_replace(listaEstados, indiceEncontrado, estadoEncontrado);
-		log_print("Actualizacion tabla de estado: aborto de job: %d || nodo: %s",job,estadoEncontrado->nodo);
 	}
-
+	log_print("Actualizacion tabla de estado: Aborto de job: %d",job);
 	mlist_destroy(listaFiltrada, destruirlista);
 }
 
@@ -254,11 +283,12 @@ void destruirlista(void* bloqueobtenido) {
 
 
 void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
-
+	printf("Entre a replanificar \n");
 	bool aborto = false;
 	t_serial* serial_send = serial_pack("s",pathArchivo);
 	requerirInformacionFilesystem(serial_send);
 	t_yfile* Datosfile = reciboInformacionSolicitada(job, master);
+	printf("recibi informacion de filesystem \n");
 	if(Datosfile->size > 0){
 
 	bool esNodoBuscado(void* estadoTarea){
@@ -268,40 +298,58 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 	mlist_t* listaFiltradaEstadosBloquesDelNodo = mlist_filter(listaEstados, (void*)esNodoBuscado);
 
 	int i;
-
+	mlist_t* ListaDeBloquesReplanificar = mlist_create();
 	for(i=0; i < mlist_length(listaFiltradaEstadosBloquesDelNodo); i++){
 		void* estadoActualBloqueObtenido = mlist_get(listaFiltradaEstadosBloquesDelNodo, i);
-		t_Estado *  estadoActualBloque = (t_Estado*) estadoActualBloqueObtenido;
-		actualizoTablaEstado(estadoActualBloque->nodo,estadoActualBloque->block,master,job,"Error");
-	}
-	bool esBloqueBuscado(void* bloqueActual){
-	  return !string_equals_ignore_case( ((t_block*) bloqueActual)->copies[0].node, nodo ) && !string_equals_ignore_case( ((t_block*) bloqueActual)->copies[1].node, nodo );
-	 }
-	 mlist_remove(Datosfile->blocks, esBloqueBuscado, destruirlista);
+				t_Estado *  estadoActualBloque = (t_Estado*) estadoActualBloqueObtenido;
+				printf("Entre al for de los bloques \n");
+				actualizoTablaEstado(estadoActualBloque->nodo,estadoActualBloque->block,master,job,"Error");
 
+		bool esBloqueBuscado(void* bloqueActual){
+			if(((t_block*) bloqueActual)->copies[0].node == NULL){
+				return (string_equals_ignore_case( ((t_block*) bloqueActual)->copies[1].node, nodo ) && ((t_block*) bloqueActual)->copies[1].blockno == estadoActualBloque->block );
+			}
+			else if(((t_block*) bloqueActual)->copies[1].node == NULL){
+				return (string_equals_ignore_case( ((t_block*) bloqueActual)->copies[0].node, nodo) && ((t_block*) bloqueActual)->copies[0].blockno == estadoActualBloque->block);
+			}
+			else{
+				return (string_equals_ignore_case( ((t_block*) bloqueActual)->copies[0].node, nodo) && ((t_block*) bloqueActual)->copies[0].blockno == estadoActualBloque->block)|| (string_equals_ignore_case( ((t_block*) bloqueActual)->copies[1].node, nodo ) && ((t_block*) bloqueActual)->copies[1].blockno == estadoActualBloque->block );
+			}
+		}
+
+
+		void* bloqueObtenido = mlist_find(Datosfile->blocks,esBloqueBuscado);
+		t_block* bloqueEncontrado = (t_block*) bloqueObtenido;
+		mlist_append(ListaDeBloquesReplanificar,bloqueEncontrado);
+	}
+
+	 printf("Tamanio de la lista es : %d \n",mlist_length(ListaDeBloquesReplanificar));
 	mlist_t* list_to_send = mlist_create();
 
 	int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(nodo);
 	void * cargaNodoObtenida = mlist_get(listaCargaPorNodo, posicionCargaNodoObtenida);
 	t_cargaPorNodo * cargaNodo = (t_cargaPorNodo *) cargaNodoObtenida;
-	for(i=0; i < mlist_length(Datosfile->blocks); i++){
+	for(i=0; i < mlist_length(ListaDeBloquesReplanificar); i++){
 		usleep(retardoPlanificacion);
-		void* bloqueDeListaObtenido = mlist_get(Datosfile->blocks, i);
+		void* bloqueDeListaObtenido = mlist_get(ListaDeBloquesReplanificar, i);
 		t_block* bloqueAReplanificar = (t_block *) bloqueDeListaObtenido;
-
+		printf("Antes del if Para verificar la copia \n");
 		if(nodoEstaEnLaCopia(bloqueAReplanificar, 0, nodo) && !aborto){
 			cargaNodo->cargaActual -= 1;
+			printf("Mando a trabajar a la copia 1 \n");
 			actualizarCargaDelNodo(bloqueAReplanificar->copies[1].node, job, posicionCargaNodoObtenida, 1, 1);
 			generarEtapaTransformacionAEnviarParaCopia(1, bloqueAReplanificar, job, master, list_to_send);
 
 		}
 		else if(nodoEstaEnLaCopia(bloqueAReplanificar, 1, nodo) && !aborto){
 			cargaNodo->cargaActual -= 1;
+			printf("Mando a trabajar a la copia 0 \n");
 			actualizarCargaDelNodo(bloqueAReplanificar->copies[0].node, job, posicionCargaNodoObtenida, 1, 1);
 			generarEtapaTransformacionAEnviarParaCopia(0, bloqueAReplanificar, job, master, list_to_send);
 		}
 		else{
 			aborto = true;
+			printf("Entre a abortar \n");
 		}
 	}
 	if(!aborto){
@@ -319,11 +367,11 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 	else{
 		abortarJob(job, master,ERROR_REPLANIFICACION);
 	}
-
-	free(Datosfile);
-	mlist_destroy(listaFiltradaEstadosBloquesDelNodo,destruirlista);
-	mlist_destroy(Datosfile->blocks,destruirlista);
-	mlist_destroy(list_to_send,destruirlista);
+	//mlist_destroy(Datosfile->blocks,free);
+	//free(Datosfile);
+	//mlist_destroy(listaFiltradaEstadosBloquesDelNodo,free);
+	//mlist_destroy(list_to_send,free);
+	//mlist_destroy(ListaDeBloquesReplanificar,free);
 	}
 }
 
@@ -341,10 +389,34 @@ void generarEtapaTransformacionAEnviarParaCopia(int copia, t_block* bloqueARepla
 
 bool nodoEstaEnLaCopia(t_block* bloqueAReplanificar, int copia, char* nodoAReplanificar){
 	if(copia == 0){
-		return string_equals_ignore_case(nodoAReplanificar, bloqueAReplanificar->copies[0].node) && NodoConCopia_is_active(bloqueAReplanificar->copies[1].node);
+			if( bloqueAReplanificar->copies[0].node == NULL){
+				printf("entre a la copia 0 y encontre NULL \n");
+				return false;
+
+			}
+			else{
+				if(bloqueAReplanificar->copies[1].node == NULL){
+					return false;
+				}
+				else{
+					return string_equals_ignore_case(nodoAReplanificar, bloqueAReplanificar->copies[0].node) && NodoConCopia_is_active(bloqueAReplanificar->copies[1].node);
+				}
+			}
 	}else{
-		return string_equals_ignore_case(nodoAReplanificar, bloqueAReplanificar->copies[1].node) && NodoConCopia_is_active(bloqueAReplanificar->copies[0].node);
+			if(bloqueAReplanificar->copies[1].node == NULL){
+				printf("entre a la copia 1 y encontre NULL \n");
+				return false;
+			}
+			else{
+				if(bloqueAReplanificar->copies[0].node == NULL){
+					return false;
+				}
+				else{
+					return string_equals_ignore_case(nodoAReplanificar, bloqueAReplanificar->copies[1].node) && NodoConCopia_is_active(bloqueAReplanificar->copies[0].node);
+				}
+			}
 	}
+
 
 }
 
@@ -416,11 +488,15 @@ int existeElJobEnLaCopia(int job, mlist_t * listaJobsCopia){
 
 bool NodoConCopia_is_active(char* nodo){
 	bool contieneNodo(void* unNodo){
-		return string_equals_ignore_case(((t_infoNodo*) unNodo)->nodo, nodo);
-	}
-
-	return mlist_any(listaNodosActivos, (void*) contieneNodo);
-
+	  return string_equals_ignore_case(((t_infoNodo*) unNodo)->nodo, nodo);
+	 }
+	 printf("El tamanio de la lista de nodos activos es : %d \n", mlist_length(listaNodosActivos));
+	 if( mlist_length(listaNodosActivos) == 0){
+	  return false;
+	 }
+	 else{
+	  return mlist_any(listaNodosActivos, (void*) contieneNodo);
+	 }
 }
 
 void finalizarJobGlobalEnTablaEstado(int socketMaster,int job, char* estadoNuevo){
