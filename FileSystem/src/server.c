@@ -251,7 +251,7 @@ static void datanode_handler(t_node *node) {
 			if(packet.operation != OP_SEND_BLOCK) {
 				log_report("Se esperaba recibir un bloque pero se recibió otra cosa");
 			} else if(op->opcode == NODE_RECV) {
-				filetable_writeblock(packet.content->data);
+				filetable_writeblock(node->name, op->blockno, packet.content->data);
 			}  else if(op->opcode == NODE_RECV_BLOCK) {
 				thread_respond((void*)packet.content->data);
 			}

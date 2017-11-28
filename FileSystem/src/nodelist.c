@@ -27,7 +27,7 @@ static t_node *create_node(const char *name, int blocks);
 static void destroy_node(t_node *node);
 static bool node_active(t_node *node);
 static double node_empty_rate(t_node *node);
-static t_node *node_for_backup(t_node *original);
+static t_node *balance_node(t_node *original);
 
 // ========== Funciones públicas ==========
 
@@ -61,7 +61,7 @@ int nodelist_length() {
 
 int nodelist_freeblocks() {
 	int adder(int nblocks, t_node *node) {
-		return nblocks + node->free_blocks;
+		return nblocks + (node_active(node) ? node->free_blocks : 0);
 	}
 	return mlist_reduce(nodes, adder);
 }
@@ -93,10 +93,7 @@ bool nodelist_active(t_node *node) {
 
 t_serial* nodelist_active_pack() {
 	t_serial *serial = serial_create(NULL, 0);
-	bool nodeActive(t_node *node) {
-		return nodelist_active(node);
-	}
-	mlist_t* nodes_active = mlist_filter(nodes, nodeActive);
+	mlist_t* nodes_active = mlist_filter(nodes, node_active);
 	serial_add(serial, "i", mlist_length(nodes_active));
 
 	void routine(t_node *node) {
@@ -126,11 +123,12 @@ t_node *nodelist_find(const char *name) {
 	return mlist_find(nodes, finder);
 }
 
-void nodelist_addblock(t_block *block, void *data, t_node *node) {
-	t_node *bnodes[] = {node, node_for_backup(node)};
+void nodelist_addblock(t_block *block, void *data) {
+	t_node *original = NULL;
 	for(int i = 0; i < 2; i++) {
-		t_node *node = bnodes[i];
-		if(node == NULL) continue;
+		t_node *node = balance_node(original);
+		original = node;
+		if(node == NULL || node->free_blocks == 0) continue;
 
 		int blockno = bitmap_firstzero(node->bitmap);
 		bitmap_set(node->bitmap, blockno);
@@ -296,7 +294,7 @@ static double node_empty_rate(t_node *node) {
 	return node->free_blocks * 1.0f / node->total_blocks;
 }
 
-static t_node *node_for_backup(t_node *original) {
+static t_node *balance_node(t_node *original) {
 	double rate = 0;
 	mlist_t *candidates = mlist_create();
 

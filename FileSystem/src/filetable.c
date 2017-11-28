@@ -25,6 +25,7 @@
 
 static struct {
 	mutex_t *mut;
+	mlist_t *blocks;
 	int current;
 	int total;
 	t_file *fp;
@@ -42,13 +43,10 @@ static t_yfile *create_file_from_config(t_config *config);
 static void update_file(t_yfile *file);
 static char *real_file_path(const char *path);
 static bool add_blocks_from_file(t_yfile *yfile, const char *path);
-static int copy_from_bin_file(t_file *source, char *buffer, t_yfile *target,
-		t_node *onode);
-static int copy_from_text_file(t_file *source, char *buffer, t_yfile *target,
-		t_node *onode);
-static int add_and_send_block(t_yfile *yfile, char *buffer, size_t size,
-		t_node *onode);
-static void reset_block_file(size_t total_blocks);
+static int copy_from_bin_file(t_file *source, char *buffer, t_yfile *target);
+static int copy_from_text_file(t_file *source, char *buffer, t_yfile *target);
+static int add_and_send_block(t_yfile *yfile, char *buffer, size_t size);
+static void reset_block_file(mlist_t *blocks);
 static t_file *receive_file(t_yfile *yfile);
 static void receive_block(t_block *block);
 static t_block_copy *first_available_copy(t_block *block);
@@ -289,8 +287,22 @@ bool filetable_stable() {
 	return (fs.formatted && mlist_all(files, available_block));
 }
 
-void filetable_writeblock(void *block) {
-	memcpy(bfile.map + bfile.current * BLOCK_SIZE, block, BLOCK_SIZE);
+void filetable_writeblock(const char *node, int blockno, void *block) {
+
+	bool block_finder(t_block *block) {
+		for(int i = 0; i < 2; i++) {
+			if(mstring_isempty(block->copies[i].node)) continue;
+			if(mstring_equal(block->copies[i].node, node) && block->copies[i].blockno == blockno)
+				return true;
+		}
+		return false;
+	}
+	int index = mlist_index(bfile.blocks, block_finder);
+	if(index == -1) {
+		log_report("Bloque #%d del nodo %s desconocido", blockno, node);
+	}
+
+	memcpy(bfile.map + index * BLOCK_SIZE, block, BLOCK_SIZE);
 
 	thread_mutex_lock(bfile.mut);
 	bfile.current++;
@@ -471,48 +483,41 @@ static bool add_blocks_from_file(t_yfile *yfile, const char *path) {
 	t_file *source = file_open(path);
 	int count, recount;
 
-	if (yfile->type == FTYPE_TXT) {
-		count = copy_from_text_file(source, buffer, NULL, NULL);
+	if(yfile->type == FTYPE_TXT) {
+		count = copy_from_text_file(source, buffer, NULL);
 	} else {
 		count = number_ceiling(file_size(source) * 1.0 / BLOCK_SIZE);
 	}
 
 	bool success = false;
-	t_node *onode = nodelist_freestnode();
 
-	if (onode == NULL) {
-		fprintf(stderr, "Error: no hay nodos disponibles.\n");
+	if(nodelist_freeblocks() < count) {
+		fprintf(stderr, "Error: no hay suficiente espacio libre para guardar este archivo.\n");
 		goto end;
 	}
 
-	if (onode->free_blocks < count) {
-		fprintf(stderr,
-				"Error: no hay suficiente espacio libre para guardar este archivo.\n");
-		goto end;
-	}
-
-	if (yfile->type == FTYPE_TXT) {
-		recount = copy_from_text_file(source, buffer, yfile, onode);
+	if(yfile->type == FTYPE_TXT) {
+		recount = copy_from_text_file(source, buffer, yfile);
 	} else {
-		recount = copy_from_bin_file(source, buffer, yfile, onode);
+		recount = copy_from_bin_file(source, buffer, yfile);
 	}
 
+	printf("count: %d\n", count);
+	printf("recount: %d\n", recount);
 	success = count == recount;
-	if (!success)
-		fprintf(stderr, "Error: no se pudo guardar el archivo.\n");
+	if(!success) fprintf(stderr, "Error: no se pudo guardar el archivo.\n");
 
 	end: file_close(source);
 	return success;
 }
 
-static int copy_from_bin_file(t_file *source, char *buffer, t_yfile *target,
-		t_node *onode) {
+static int copy_from_bin_file(t_file *source, char *buffer, t_yfile *target) {
 	size_t size = 0;
 	int count = 0;
 
 	bool block_handler(const void *block, size_t bsize) {
 		if (size + bsize > BLOCK_SIZE) {
-			count += add_and_send_block(target, buffer, size, onode);
+			count += add_and_send_block(target, buffer, size);
 			size = 0;
 		}
 		memcpy(buffer + size, block, bsize);
@@ -520,39 +525,37 @@ static int copy_from_bin_file(t_file *source, char *buffer, t_yfile *target,
 		return true;
 	}
 	file_btraverse(source, block_handler);
-	count += add_and_send_block(target, buffer, size, onode);
+	count += add_and_send_block(target, buffer, size);
 
 	return count;
 }
 
-static int copy_from_text_file(t_file *source, char *buffer, t_yfile *target,
-		t_node *onode) {
+static int copy_from_text_file(t_file *source, char *buffer, t_yfile *target) {
 	size_t size = 0;
 	int count = 0;
 
 	bool line_handler(const char *line) {
 		if (size + mstring_length(line) + 1 > BLOCK_SIZE) {
-			count += add_and_send_block(target, buffer, size, onode);
+			count += add_and_send_block(target, buffer, size);
 			size = 0;
 		}
 		size += sprintf(buffer + size, "%s", line);
 		return true;
 	}
 	file_ltraverse(source, line_handler);
-	count += add_and_send_block(target, buffer, size, onode);
+	count += add_and_send_block(target, buffer, size);
 
 	return count;
 }
 
-static int add_and_send_block(t_yfile *yfile, char *buffer, size_t size,
-		t_node *onode) {
+static int add_and_send_block(t_yfile *yfile, char *buffer, size_t size) {
 	if (size == 0)
 		return 0;
 	if (yfile != NULL) {
 		t_block *block = calloc(1, sizeof(t_block));
 		block->size = size;
 
-		nodelist_addblock(block, buffer, onode);
+		nodelist_addblock(block, buffer);
 		if (!block_saved(block))
 			return 0;
 
@@ -561,16 +564,18 @@ static int add_and_send_block(t_yfile *yfile, char *buffer, size_t size,
 	return 1;
 }
 
-static void reset_block_file(size_t total_blocks) {
-	path_truncate("metadata/blocks", total_blocks * BLOCK_SIZE);
+static void reset_block_file(mlist_t *blocks) {
+	bfile.blocks = blocks;
+	bfile.total = mlist_length(blocks);
 	bfile.current = 0;
-	bfile.total = total_blocks;
+
+	path_truncate("metadata/blocks", bfile.total * BLOCK_SIZE);
 	bfile.fp = file_open("metadata/blocks");
 	bfile.map = file_map(bfile.fp);
 }
 
 static t_file *receive_file(t_yfile *yfile) {
-	reset_block_file(mlist_length(yfile->blocks));
+	reset_block_file(yfile->blocks);
 	mlist_traverse(yfile->blocks, receive_block);
 	thread_suspend();
 	file_unmap(bfile.fp, bfile.map);
