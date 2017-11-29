@@ -34,6 +34,7 @@ Ejecutar la siguiente línea en una terminal:
 
 Luego de instalar, ejecutar:
 
+- `yatpos get [dataset|nombres|scripts|config|all]` para obtener,
 - `yatpos build [dnode|fs|master|worker|yama|node|all]` para compilar,
 - `yatpos config [dnode|fs|master|worker|yama|node|all]` para configurar,
 - `yatpos run [dnode|fs|master|worker|yama]` para correr cada proceso, y
