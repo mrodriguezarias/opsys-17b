@@ -33,7 +33,7 @@ void server() {
 	thread_create(yama_listener, NULL);
 }
 
-t_nodeop *server_nodeop(int opcode, int blockno, t_serial *block) {
+t_nodeop *server_nodeop(int opcode, int blockno, void *block) {
 	t_nodeop *op = malloc(sizeof(t_nodeop));
 	op->opcode = opcode;
 	op->blockno = blockno;
@@ -61,6 +61,7 @@ static t_node *receive_node_info(t_socket socket) {
 		node->worker_port = string_duplicate(worker_port);
 	}
 	free(name);
+	free(worker_port);
 	return node;
 }
 
@@ -71,6 +72,8 @@ static void node_listener() {
 		t_socket cli_sock = socket_accept(sv_sock);
 
 		t_packet packet = protocol_receive_packet(cli_sock);
+		serial_destroy(packet.content);
+
 		if(packet.operation != OP_HANDSHAKE) {
 			socket_close(cli_sock);
 			break;
@@ -165,6 +168,8 @@ static void yama_listener() {
 		t_socket yama_socket = socket_accept(sv_sock);
 
 		t_packet packet = protocol_receive_packet(yama_socket);
+		serial_destroy(packet.content);
+
 		if(packet.operation != OP_HANDSHAKE || packet.sender != PROC_YAMA) {
 			socket_close(yama_socket);
 			continue;
@@ -242,16 +247,17 @@ static void datanode_handler(t_node *node) {
 
 		if(op->opcode == NODE_SEND) {
 			log_inform("Enviando bloque %d a nodo %s", op->blockno, node->name);
-			packet = protocol_packet(OP_SEND_BLOCK, op->block);
+			t_serial *block = serial_create(op->block, BLOCK_SIZE);
+			packet = protocol_packet(OP_SEND_BLOCK, block);
 			protocol_send_packet(packet, node->socket);
-			serial_destroy(op->block);
+			free(block);
 		} else {
 			log_inform("Recibiendo bloque %d de nodo %s", op->blockno, node->name);
 			packet = protocol_receive_packet(node->socket);
 			if(packet.operation != OP_SEND_BLOCK) {
 				log_report("Se esperaba recibir un bloque pero se recibió otra cosa");
 			} else if(op->opcode == NODE_RECV) {
-				filetable_writeblock(packet.content->data);
+				filetable_writeblock(node->name, op->blockno, packet.content->data);
 			}  else if(op->opcode == NODE_RECV_BLOCK) {
 				thread_respond((void*)packet.content->data);
 			}

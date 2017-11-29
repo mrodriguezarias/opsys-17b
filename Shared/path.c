@@ -456,6 +456,7 @@ static void traverse_dir(const char *dpath, void (*fn)(struct dirent *entry)) {
 	char *upath = system_upath(dpath);
 	DIR *dir = opendir(upath);
 	if(dir == NULL) show_error_and_exit(upath, "leer directorio");
+	free(upath);
 
 	struct dirent *entry;
 	while(entry = readdir(dir), entry != NULL) {

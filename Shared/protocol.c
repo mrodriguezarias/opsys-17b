@@ -33,7 +33,7 @@ t_packet protocol_receive_packet(t_socket socket) {
 	t_packet packet;
 	memset(&packet, 0, sizeof packet);
 	packet.content = serial_create(NULL, 0);
-	t_serial *header = serial_create(malloc(HEADER_SIZE), HEADER_SIZE);
+	t_serial *header = serial_create(NULL, HEADER_SIZE);
 	if(socket_receive_bytes(socket, header->data, header->size)) {
 		serial_unpack(header, "iii", &packet.sender, &packet.operation, &packet.content->size);
 	} else {

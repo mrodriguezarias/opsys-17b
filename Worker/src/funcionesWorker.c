@@ -363,11 +363,11 @@ bool block_transform(int blockno, size_t size, const char *script, const char *o
 	if (r < 0) {
 		log_report("FALLO AL FORKEAR EN SYSTEM");
 	free(command);
-		break;
+		//break;
 	} else if (r == 127) {
 		log_print("NO SE PUDO EJECTUAR EL COMMANDO");
 		free(command);
-		break;
+		//break;
 	}
 	free(command);
 	return r ==0;
@@ -388,11 +388,11 @@ bool reducir_path(const char *input, const char *script, const char *output) {
 	if(r<0){
 		log_report("FALLO AL FORKEAR EN SYSTEM");
 		free(command);
-				break;
+				//break;
 	}else if(r == 127){
 		log_print("NO SE PUDO EJECTUAR EL COMMANDO");
 		free(command);
-				break;
+				//break;
 	}
 	log_print("COMMAND: %s",command);
 	free(inpath);

@@ -27,7 +27,7 @@ static t_node *create_node(const char *name, int blocks);
 static void destroy_node(t_node *node);
 static bool node_active(t_node *node);
 static double node_empty_rate(t_node *node);
-static t_node *node_for_backup(t_node *original);
+static t_node *balance_node(const char *original);
 
 // ========== Funciones públicas ==========
 
@@ -61,7 +61,7 @@ int nodelist_length() {
 
 int nodelist_freeblocks() {
 	int adder(int nblocks, t_node *node) {
-		return nblocks + node->free_blocks;
+		return nblocks + (node_active(node) ? node->free_blocks : 0);
 	}
 	return mlist_reduce(nodes, adder);
 }
@@ -93,10 +93,7 @@ bool nodelist_active(t_node *node) {
 
 t_serial* nodelist_active_pack() {
 	t_serial *serial = serial_create(NULL, 0);
-	bool nodeActive(t_node *node) {
-		return nodelist_active(node);
-	}
-	mlist_t* nodes_active = mlist_filter(nodes, nodeActive);
+	mlist_t* nodes_active = mlist_filter(nodes, node_active);
 	serial_add(serial, "i", mlist_length(nodes_active));
 
 	void routine(t_node *node) {
@@ -126,22 +123,23 @@ t_node *nodelist_find(const char *name) {
 	return mlist_find(nodes, finder);
 }
 
-void nodelist_addblock(t_block *block, void *data, t_node *node) {
-	t_node *bnodes[] = {node, node_for_backup(node)};
-	for(int i = 0; i < 2; i++) {
-		t_node *node = bnodes[i];
-		if(node == NULL) continue;
+bool nodelist_addblock(t_block *block, void *content) {
+	const char *original = block->copies[0].node;
+	t_node *node = balance_node(original);
+	if(node == NULL || node->free_blocks == 0) return false;
 
-		int blockno = bitmap_firstzero(node->bitmap);
-		bitmap_set(node->bitmap, blockno);
-		node->free_blocks--;
-		add_node_to_file(node);
+	int blockno = bitmap_firstzero(node->bitmap);
+	bitmap_set(node->bitmap, blockno);
+	node->free_blocks--;
+	add_node_to_file(node);
 
-		block->copies[i].blockno = blockno;
-		block->copies[i].node = node->name;
-		t_nodeop *op = server_nodeop(NODE_SEND, blockno, serial_create(data, BLOCK_SIZE));
-		thread_send(node->handler, op);
-	}
+	t_block_copy *copy = block->copies + (mstring_isempty(original) ? 0 : 1);
+	copy->blockno = blockno;
+	copy->node = node->name;
+
+	t_nodeop *op = server_nodeop(NODE_SEND, blockno, content);
+	thread_send(node->handler, op);
+	return true;
 }
 
 void nodelist_remove(const char *name) {
@@ -190,7 +188,7 @@ void nodelist_term() {
 	update_file();
 	config_destroy(config);
 	free(path);
-	mlist_destroy(nodes, free);
+	mlist_destroy(nodes, destroy_node);
 }
 
 // ========== Funciones privadas ==========
@@ -281,6 +279,7 @@ static void destroy_node(t_node *node) {
 		thread_kill(node->handler);
 	bitmap_destroy(node->bitmap);
 	free(node->name);
+	free(node->worker_port);
 	free(node);
 }
 
@@ -296,13 +295,13 @@ static double node_empty_rate(t_node *node) {
 	return node->free_blocks * 1.0f / node->total_blocks;
 }
 
-static t_node *node_for_backup(t_node *original) {
+static t_node *balance_node(const char *original) {
 	double rate = 0;
 	mlist_t *candidates = mlist_create();
 
 	void routine(t_node *node) {
 		double cur = node_empty_rate(node);
-		if(cur < rate || node == original || !node_active(node)) return;
+		if(cur < rate || mstring_equal(node->name, original) || !node_active(node)) return;
 
 		if(!number_equals(cur, rate)) mlist_clear(candidates, NULL);
 		mlist_append(candidates, node);

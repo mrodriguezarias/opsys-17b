@@ -24,7 +24,7 @@ struct file {
 static char *fpath(int fd);
 static void show_error_and_exit(const char *path, const char *action);
 static t_file *create_file(const char *path, bool trunc);
-static char *get_line(FILE *fp, char *line);
+static char *get_line(FILE *fp);
 
 // ========== Funciones públicas ==========
 
@@ -60,7 +60,7 @@ void file_rewind(t_file *file) {
 
 char *file_readline(t_file *file) {
 	if(file == NULL) return NULL;
-	char *line = get_line(file->fp, NULL);
+	char *line = get_line(file->fp);
 	if(line != NULL) {
 		char *end = mstring_end(line);
 		if(*end == '\n') *end = '\0';
@@ -79,11 +79,12 @@ void file_writeline(t_file *file, const char *line) {
 void file_ltraverse(t_file *file, bool (*routine)(const char *line)) {
 	if(file == NULL) return;
 	rewind(file->fp);
-	char *line = mstring_empty(NULL);
-	while(line = get_line(file->fp, line), line != NULL) {
-		if(!routine(line)) break;
+	char *line = NULL;
+	bool end = false;
+	while(!end && (line = get_line(file->fp), line != NULL)) {
+		end = !routine(line);
+		free(line);
 	}
-	free(line);
 }
 
 void file_btraverse(t_file *file, bool (*routine)(const void *block, size_t size)) {
@@ -131,6 +132,7 @@ void file_close(t_file *file) {
 	if(file == NULL) return;
 	fclose(file->fp);
 	free(file->path);
+	free(file);
 }
 
 // ========== Funciones privadas ==========
@@ -161,11 +163,15 @@ static t_file *create_file(const char *path, bool trunc) {
 	return file;
 }
 
-static char *get_line(FILE *fp, char *line) {
+static char *get_line(FILE *fp) {
 	size_t len = 0;
+	char *line = NULL;
 	int r = getline(&line, &len, fp);
 	if(r == -1) {
-		line = NULL;
+		if(line != NULL) {
+			free(line);
+			line = NULL;
+		}
 		if(!feof(fp) && errno != 0)
 			show_error_and_exit(fpath(fileno(fp)), "leer línea de");
 	}
