@@ -19,11 +19,12 @@ void imprimirListaEstadosCompleta(){
 	}
 }
 
-void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mlist_t* listaBloque){
+void planificar(t_workerPlanificacion* planificador, int tamaniolistaNodos, mlist_t* listaBloque){
 
 	int posicionArray;
-
+	printf("no llene el planificador \n");
 	llenarArrayPlanificador(planificador,tamaniolistaNodos,&posicionArray);
+
 	int bloque = 0;
 	while(!asigneBloquesDeArchivo){
 		if(posicionArray == tamaniolistaNodos){
@@ -62,26 +63,25 @@ int Disponibilidad(int cargaMax, char* nodo){
 
 int obtenerCargaMaxima(){
 
- int carga(void* carga1){
-  return ((t_cargaPorNodo*) carga1)->cargaActual;
+	int carga(void* carga1){
+		return ((t_cargaPorNodo*) carga1)->cargaActual;
+	}
+	mlist_t* listaDeCargas = mlist_map(listaCargaPorNodo, (void*) carga);
+	bool mayor(void* carga1,void* carga2){
+		return (int) carga1 >= (int)carga2;
+	}
 
- }
- 	 mlist_t* listaDeCargas = mlist_map(listaCargaPorNodo, (void*) carga);
- 	bool mayor(void* carga1,void* carga2){
- 		return (int) carga1 >= (int)carga2;
- 	 }
-
- 	 mlist_sort(listaDeCargas, mayor);
- 	void* cargaMayorObtenido = mlist_first(listaDeCargas);
- 	int CargaMayor = (int) cargaMayorObtenido;
- 	 int cargaActual = CargaMayor;
- 	// mlist_destroy(listaDeCargas, destruirlista); //// ESTE DESTROY ME TIRA SEGFAULT LA SEGUNDA VEZ QUE SE EJECUTA,NO DEBERIA HACERLO YA QUE ES UNA LISTA NUEVA
- 	return cargaActual;
+	mlist_sort(listaDeCargas, mayor);
+	void* cargaMayorObtenido = mlist_first(listaDeCargas);
+	int CargaMayor = (int) cargaMayorObtenido;
+	int cargaActual = CargaMayor;
+	mlist_destroy(listaDeCargas, NULL); //// ESTE DESTROY ME TIRA SEGFAULT LA SEGUNDA VEZ QUE SE EJECUTA,NO DEBERIA HACERLO YA QUE ES UNA LISTA NUEVA
+	return cargaActual;
 }
 
 
 
-void llenarArrayPlanificador(t_workerPlanificacion planificador[],int tamaniolistaNodos,int *posicion){
+void llenarArrayPlanificador(t_workerPlanificacion* planificador,int tamaniolistaNodos,int *posicion){
 	int i,MaximaDisponibilidad = 0, cargaMax = 0;
 	int historicoAnterior = 0;
 	if(!strcmp("WCLOCK",algoritmoBalanceo)){
@@ -110,7 +110,7 @@ void llenarArrayPlanificador(t_workerPlanificacion planificador[],int tamaniolis
 }
 
 
-void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificacion planificador[],int* bloque,mlist_t* listaBloque){
+void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificacion* planificador,int* bloque,mlist_t* listaBloque){
 	t_block* infoArchivo = mlist_get(listaBloque, *bloque);
 
 		if(planificador[*posicion].disponibilidad == 0){
@@ -147,7 +147,7 @@ void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificaci
 		}
 }
 
-void avanzoPosicion(int *posicion,int tamaniolistaNodos,t_workerPlanificacion planificador[]){
+void avanzoPosicion(int *posicion,int tamaniolistaNodos,t_workerPlanificacion* planificador){
 *posicion = *posicion + 1;
 		contadorBloquesSeguidosNoAsignados++;
 		if(contadorBloquesSeguidosNoAsignados == tamaniolistaNodos){
@@ -159,7 +159,7 @@ void avanzoPosicion(int *posicion,int tamaniolistaNodos,t_workerPlanificacion pl
 		}
 }
 
-void asignoBloque(t_workerPlanificacion planificador[], int *posicion,int* bloque,int tamanioListaBloque){
+void asignoBloque(t_workerPlanificacion* planificador, int *posicion,int* bloque,int tamanioListaBloque){
 
 	planificador[*posicion].disponibilidad--;
 	mlist_append(planificador[*posicion].bloque,(void*)*bloque);
@@ -198,6 +198,10 @@ void requerirInformacionFilesystem(t_serial *file){
 
 void abortarJob(int job, int socketMaster, int codigoError){
 	eliminarEstadosMultiples(socketMaster,job, "Error");
+	avisarErrorMaster(job, socketMaster, codigoError);
+}
+
+void avisarErrorMaster(int job, int socketMaster, int codigoError){
 	log_report("Job: %d abortado",job);
 	t_packet packetError = protocol_packet(OP_ERROR_JOB, serial_pack("i",codigoError));
 	protocol_send_packet(packetError, socketMaster);
@@ -272,8 +276,8 @@ void eliminarEstadosMultiples(int socketMaster,int job, char* estadoNuevo){//qui
 
 	}
 	log_print("Actualizacion tabla de estado: Aborto de job: %d",job);
-	imprimirListaEstadosCompleta();
-	//mlist_destroy(listaFiltrada, destruirlista);
+	//imprimirListaEstadosCompleta();
+	mlist_destroy(listaFiltrada, NULL);
 }
 
 
@@ -308,7 +312,7 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 		return string_equals_ignore_case(((t_Estado *) estadoTarea)->nodo,nodo) && ((t_Estado *) estadoTarea)->master == master && ((t_Estado *) estadoTarea)->job == job && string_equals_ignore_case(((t_Estado *) estadoTarea)->etapa,"Transformacion");
 	}
 
-	imprimirListaEstadosCompleta();
+	//imprimirListaEstadosCompleta();
 
 	mlist_t* listaFiltradaEstadosBloquesDelNodo = mlist_filter(listaEstados, (void*)esNodoBuscado);
 
@@ -377,9 +381,9 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 	}
 	//mlist_destroy(Datosfile->blocks,free);
 	//free(Datosfile);
-	//mlist_destroy(listaFiltradaEstadosBloquesDelNodo,free);
-	//mlist_destroy(list_to_send,free);
-	//mlist_destroy(ListaDeBloquesReplanificar,free);
+	mlist_destroy(listaFiltradaEstadosBloquesDelNodo,NULL);
+	mlist_destroy(list_to_send,NULL);
+	mlist_destroy(ListaDeBloquesReplanificar,NULL);
 	}
 }
 
@@ -542,7 +546,6 @@ void finalizarJobGlobal(int job, int socketMaster, int codigoError, char* estado
 
 void eliminarCargasReduccionesLocales(char* nodoGlobal,int master,int job){
 
-
 	bool condicionFiltro(void* unEstado){
 				return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == master && !string_equals_ignore_case( ((t_Estado*) unEstado)->nodo, nodoGlobal ) && string_equals_ignore_case( ((t_Estado*) unEstado)->etapa, "ReduccionLocal" );
 		}
@@ -554,11 +557,9 @@ void eliminarCargasReduccionesLocales(char* nodoGlobal,int master,int job){
 			t_Estado* estadoEncontrado = (t_Estado *) estadoObtenido;
 
 			actualizarCargaDelNodo(estadoEncontrado->nodo, job, 0, 1);
-
-
 		}
 
-		mlist_destroy(listaNodosLocales_whitoutGlobalNode, destruirlista);
+		mlist_destroy(listaNodosLocales_whitoutGlobalNode, NULL);
 
 }
 

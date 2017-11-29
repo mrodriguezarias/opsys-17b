@@ -54,25 +54,29 @@ void listen_to_master() {
 				switch(packetOperacion.operation) {
 				case OP_INIT_JOB:
 					{
+						t_pedidoTrans* pedidoInicio = serial_unpackPedido(packetOperacion.content);
+						log_inform("Inicio de job nuevo :%d",pedidoInicio->idJOB);
+						t_serial* file_serial = serial_pack("s",pedidoInicio->file);
+						requerirInformacionFilesystem(file_serial);
+						t_yfile* Datosfile = reciboInformacionSolicitada(pedidoInicio->idJOB,sock);
+						if(Datosfile->size>0){
+							completarPrimeraVez();
+							int tamaniolistaNodos = mlist_length(listaNodosActivos);
+							if(tamaniolistaNodos == 0){
+								avisarErrorMaster(pedidoInicio->idJOB, sock,ERROR_PLANIFICACION);
+							}
+							else{
+								t_workerPlanificacion *planificador = alloca(tamaniolistaNodos * sizeof(t_workerPlanificacion));
+								//pthread_mutex_lock(&mutexPlanificacion);
+								printf("Entre a planificar con lista de tamanio %d\n", sizeof(planificador));
+								planificar(planificador, tamaniolistaNodos,Datosfile->blocks);
+								//pthread_mutex_unlock(&mutexPlanificacion);
+								printf("Sali de planificar \n");
+								agregarCargaNodoSegunLoPlanificado(pedidoInicio->idJOB, planificador, tamaniolistaNodos);
+								enviarEtapa_transformacion_Master(pedidoInicio->idJOB,tamaniolistaNodos,planificador,Datosfile->blocks,sock);
+							}
 
-					t_pedidoTrans* pedidoInicio = serial_unpackPedido(packetOperacion.content);
-					log_inform("Inicio de job nuevo :%d",pedidoInicio->idJOB);
-					t_serial* file_serial = serial_pack("s",pedidoInicio->file);
-					requerirInformacionFilesystem(file_serial);
-					t_yfile* Datosfile = reciboInformacionSolicitada(pedidoInicio->idJOB,sock);
-					if(Datosfile->size>0){
-					completarPrimeraVez();
-					int tamaniolistaNodos = mlist_length(listaNodosActivos);
-					t_workerPlanificacion planificador[tamaniolistaNodos];
-
-					//pthread_mutex_lock(&mutexPlanificacion);
-					printf("Entre a planificar \n");
-					planificar(planificador, tamaniolistaNodos,Datosfile->blocks);
-					//pthread_mutex_unlock(&mutexPlanificacion);
-					printf("Sali de planificar \n");
-					agregarCargaNodoSegunLoPlanificado(pedidoInicio->idJOB, planificador, tamaniolistaNodos);
-					enviarEtapa_transformacion_Master(pedidoInicio->idJOB,tamaniolistaNodos,planificador,Datosfile->blocks,sock);
-					}
+						}
 					}
 					break;
 				case OP_TRANSFORMACION_LISTA :
@@ -233,7 +237,7 @@ bool verificoFinalizacionTransformacion(char* nodo,int socket,int job){
 		  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->nodo,nodo) && ((t_Estado *) estadoTarea)->master == socket && !string_equals_ignore_case(((t_Estado *) estadoTarea)->estado, "Error") && ((t_Estado *) estadoTarea)->job == job;
 	}
 
-	imprimirListaEstadosCompleta();
+	//imprimirListaEstadosCompleta();
 
 	mlist_t* listaFiltradaDelNodo = mlist_filter(listaEstados, (void*)esNodoBuscado);
 
