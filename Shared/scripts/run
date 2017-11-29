@@ -1,0 +1,14 @@
+#!/bin/bash
+base="/home/utnso/git/tp-2017-2c-YATPOS"
+declare -A procs=([dnode]="DataNode" [fs]="FileSystem" [master]="Master" [worker]="Worker" [yama]="YAMA")
+
+#"$base/$1" "${@:2}"
+if [[ "$#" -lt 1 || ! -n "${procs[$1]}" ]]; then
+	echo "Usage: run [dnode|fs|master|yama|worker]"
+	exit
+fi
+
+proc="${procs[$1]}"
+dir="$base/$proc/Debug"
+
+printf "\033c" && make all -C $dir && printf "\033c" && "$dir/$proc" "${@:2}"

@@ -188,7 +188,7 @@ void nodelist_term() {
 	update_file();
 	config_destroy(config);
 	free(path);
-	mlist_destroy(nodes, free);
+	mlist_destroy(nodes, destroy_node);
 }
 
 // ========== Funciones privadas ==========
@@ -279,6 +279,7 @@ static void destroy_node(t_node *node) {
 		thread_kill(node->handler);
 	bitmap_destroy(node->bitmap);
 	free(node->name);
+	free(node->worker_port);
 	free(node);
 }
 

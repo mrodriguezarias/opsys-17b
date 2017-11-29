@@ -61,6 +61,7 @@ static t_node *receive_node_info(t_socket socket) {
 		node->worker_port = string_duplicate(worker_port);
 	}
 	free(name);
+	free(worker_port);
 	return node;
 }
 
@@ -71,6 +72,8 @@ static void node_listener() {
 		t_socket cli_sock = socket_accept(sv_sock);
 
 		t_packet packet = protocol_receive_packet(cli_sock);
+		serial_destroy(packet.content);
+
 		if(packet.operation != OP_HANDSHAKE) {
 			socket_close(cli_sock);
 			break;
@@ -165,6 +168,8 @@ static void yama_listener() {
 		t_socket yama_socket = socket_accept(sv_sock);
 
 		t_packet packet = protocol_receive_packet(yama_socket);
+		serial_destroy(packet.content);
+
 		if(packet.operation != OP_HANDSHAKE || packet.sender != PROC_YAMA) {
 			socket_close(yama_socket);
 			continue;
