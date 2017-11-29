@@ -187,7 +187,7 @@ void requerirInformacionFilesystem(t_serial *file){
 }
 
 void abortarJob(int job, int socketMaster, int codigoError){
-	eliminarEstadosMultiples(socketMaster,job, "Error", "En proceso");
+	eliminarEstadosMultiples(socketMaster,job, "Error");
 	log_report("Job: %d abortado",job);
 	t_packet packetError = protocol_packet(OP_ERROR_JOB, serial_pack("i",codigoError));
 	protocol_send_packet(packetError, socketMaster);
@@ -238,9 +238,9 @@ void agregarAtablaEstado(int job, char* nodo,int Master,int bloque,char* etapa,c
 }
 
 
-void eliminarEstadosMultiples(int socketMaster,int job, char* estadoNuevo, char* estadoABuscar){
+void eliminarEstadosMultiples(int socketMaster,int job, char* estadoNuevo){//quite estadoABUSCAR
 	bool condicionFiltro(void* unEstado){
-			return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == socketMaster && string_equals_ignore_case( ((t_Estado*) unEstado)->estado, estadoABuscar );
+			return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == socketMaster;
 	}
 	mlist_t * listaFiltrada = mlist_filter(listaEstados, condicionFiltro);
 	int i, indiceEncontrado;
@@ -248,15 +248,18 @@ void eliminarEstadosMultiples(int socketMaster,int job, char* estadoNuevo, char*
 		void * estadoObtenido = mlist_get(listaFiltrada, i);
 		t_Estado* estadoEncontrado = (t_Estado *) estadoObtenido;
 
-		int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(estadoEncontrado->nodo);
-		actualizarCargaDelNodo(estadoEncontrado->nodo, job, posicionCargaNodoObtenida, 0, 1);
+		actualizarCargaDelNodo(estadoEncontrado->nodo, job, 0, 1);
 
 		bool condicionIndice(void * unEstado){
-			return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == socketMaster && string_equals_ignore_case( ((t_Estado*) unEstado)->estado, estadoABuscar ) && string_equals_ignore_case( ((t_Estado*) unEstado)->nodo, estadoEncontrado->nodo ) && ((t_Estado*) unEstado)->block == estadoEncontrado->block;
+			return ((t_Estado*) unEstado)->job == job && ((t_Estado*) unEstado)->master == socketMaster && string_equals_ignore_case( ((t_Estado*) unEstado)->nodo, estadoEncontrado->nodo ) && ((t_Estado*) unEstado)->block == estadoEncontrado->block;
 		}
 		indiceEncontrado = mlist_index(listaEstados, condicionIndice);
+		if(!string_equals_ignore_case(estadoEncontrado->estado , "Error" )){
+			log_print("Actualizacion en la tabla de estado: JOB:%d|MASTER:%d|NODO:%s|BLOQUE:%d|ETAPA:%s|ARCHIVOTEMPORAL:%s|ESTADO:%s",job,socketMaster,estadoEncontrado->nodo,estadoEncontrado->block,estadoEncontrado->etapa,estadoEncontrado->archivoTemporal,estadoEncontrado->estado);
+		}
 		estadoEncontrado->estado = mstring_duplicate(estadoNuevo);
 		mlist_replace(listaEstados, indiceEncontrado, estadoEncontrado);
+
 	}
 	log_print("Actualizacion tabla de estado: Aborto de job: %d",job);
 	mlist_destroy(listaFiltrada, destruirlista);
@@ -288,7 +291,6 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 	t_serial* serial_send = serial_pack("s",pathArchivo);
 	requerirInformacionFilesystem(serial_send);
 	t_yfile* Datosfile = reciboInformacionSolicitada(job, master);
-	printf("recibi informacion de filesystem \n");
 	if(Datosfile->size > 0){
 
 	bool esNodoBuscado(void* estadoTarea){
@@ -302,7 +304,6 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 	for(i=0; i < mlist_length(listaFiltradaEstadosBloquesDelNodo); i++){
 		void* estadoActualBloqueObtenido = mlist_get(listaFiltradaEstadosBloquesDelNodo, i);
 				t_Estado *  estadoActualBloque = (t_Estado*) estadoActualBloqueObtenido;
-				printf("Entre al for de los bloques \n");
 				actualizoTablaEstado(estadoActualBloque->nodo,estadoActualBloque->block,master,job,"Error");
 
 		bool esBloqueBuscado(void* bloqueActual){
@@ -317,13 +318,12 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 			}
 		}
 
-
 		void* bloqueObtenido = mlist_find(Datosfile->blocks,esBloqueBuscado);
 		t_block* bloqueEncontrado = (t_block*) bloqueObtenido;
 		mlist_append(ListaDeBloquesReplanificar,bloqueEncontrado);
 	}
 
-	 printf("Tamanio de la lista es : %d \n",mlist_length(ListaDeBloquesReplanificar));
+	printf("Tamanio de la lista a replanificar es : %d \n",mlist_length(ListaDeBloquesReplanificar));
 	mlist_t* list_to_send = mlist_create();
 
 	int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(nodo);
@@ -333,26 +333,19 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 		usleep(retardoPlanificacion);
 		void* bloqueDeListaObtenido = mlist_get(ListaDeBloquesReplanificar, i);
 		t_block* bloqueAReplanificar = (t_block *) bloqueDeListaObtenido;
-		printf("Antes del if Para verificar la copia \n");
 		if(nodoEstaEnLaCopia(bloqueAReplanificar, 0, nodo) && !aborto){
-			cargaNodo->cargaActual -= 1;
-			printf("Mando a trabajar a la copia 1 \n");
-			actualizarCargaDelNodo(bloqueAReplanificar->copies[1].node, job, posicionCargaNodoObtenida, 1, 1);
 			generarEtapaTransformacionAEnviarParaCopia(1, bloqueAReplanificar, job, master, list_to_send);
 
 		}
 		else if(nodoEstaEnLaCopia(bloqueAReplanificar, 1, nodo) && !aborto){
-			cargaNodo->cargaActual -= 1;
-			printf("Mando a trabajar a la copia 0 \n");
-			actualizarCargaDelNodo(bloqueAReplanificar->copies[0].node, job, posicionCargaNodoObtenida, 1, 1);
 			generarEtapaTransformacionAEnviarParaCopia(0, bloqueAReplanificar, job, master, list_to_send);
 		}
 		else{
 			aborto = true;
-			printf("Entre a abortar \n");
 		}
 	}
 	if(!aborto){
+
 		eliminarCargaJobDelNodo(job, cargaNodo->cargaPorJob);
 		mlist_replace(listaCargaPorNodo, posicionCargaNodoObtenida, cargaNodo);
 
@@ -360,6 +353,8 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 			void* etapaObtenida = mlist_get(list_to_send,i);
 			tEtapaTransformacion* etapa = (tEtapaTransformacion*) etapaObtenida;
 			agregarAtablaEstado(job,etapa->nodo,master,etapa->bloque,"Transformacion",etapa->archivo_etapa,"En proceso");
+			cargaNodo->cargaActual -= 1;
+			actualizarCargaDelNodo(etapa->nodo, job, 1, 1);
 		}
 		mandar_etapa_transformacion(list_to_send,master);
 		log_inform("Envio etapa de transformacion por efecto de la replanificacion %d",job);
@@ -390,7 +385,6 @@ void generarEtapaTransformacionAEnviarParaCopia(int copia, t_block* bloqueARepla
 bool nodoEstaEnLaCopia(t_block* bloqueAReplanificar, int copia, char* nodoAReplanificar){
 	if(copia == 0){
 			if( bloqueAReplanificar->copies[0].node == NULL){
-				printf("entre a la copia 0 y encontre NULL \n");
 				return false;
 
 			}
@@ -404,7 +398,6 @@ bool nodoEstaEnLaCopia(t_block* bloqueAReplanificar, int copia, char* nodoARepla
 			}
 	}else{
 			if(bloqueAReplanificar->copies[1].node == NULL){
-				printf("entre a la copia 1 y encontre NULL \n");
 				return false;
 			}
 			else{
@@ -417,7 +410,6 @@ bool nodoEstaEnLaCopia(t_block* bloqueAReplanificar, int copia, char* nodoARepla
 			}
 	}
 
-
 }
 
 int obtenerPosicionCargaNodo(char * nodoAReplanificar){
@@ -427,7 +419,7 @@ int obtenerPosicionCargaNodo(char * nodoAReplanificar){
 	return mlist_index(listaCargaPorNodo, condicionIndice);
 }
 
-void actualizarCargaDelNodo(char* nodoCopia, int job, int posicionCargaNodoObtenida, int aumentarOQuitar, int cantidadAAumentar){//1 para aumentar, 0 para quitar
+void actualizarCargaDelNodo(char* nodoCopia, int job, int aumentarOQuitar, int cantidadAAumentar){//1 para aumentar, 0 para quitar
 	int posicionCargaNodoObtenidaCopia, posicionCargaJobObtenidoCopia;
 	bool condicionIndiceCopia1(void* cargaNodotraida){
 			return string_equals_ignore_case( ((t_cargaPorNodo *) cargaNodotraida)->nodo, nodoCopia);
@@ -444,14 +436,14 @@ void actualizarCargaDelNodo(char* nodoCopia, int job, int posicionCargaNodoObten
 			t_cargaPorJob * cargaJob = (t_cargaPorJob *) cargaJobObtenida;
 
 			cargaNodoCopia->cargaActual -= cargaJob->cargaDelJob;
-
+			printf("La carga actual del Nodo: %s, es: %d \n", cargaNodoCopia->nodo, cargaNodoCopia->cargaActual);
 			eliminarCargaJobDelNodo(job, cargaNodoCopia->cargaPorJob);
 		}
 	}
 	else{
 		cargaNodoCopia->cargaActual += cantidadAAumentar;
 		cargaNodoCopia->cargaHistorica += cantidadAAumentar;
-
+		printf("La carga actual del Nodo: %s, es: %d \n", cargaNodoCopia->nodo, cargaNodoCopia->cargaActual);
 		if(posicionCargaJobObtenidoCopia != -1){
 			void * cargaJobObtenida = mlist_get(cargaNodoCopia->cargaPorJob, posicionCargaJobObtenidoCopia);
 			t_cargaPorJob * cargaJobCopia = (t_cargaPorJob *) cargaJobObtenida;
@@ -509,8 +501,7 @@ void finalizarJobGlobalEnTablaEstado(int socketMaster,int job, char* estadoNuevo
 	void * estadoObtenido = mlist_get(listaEstados, indiceReduEncargado);
 	t_Estado* estadoEncontrado = (t_Estado *) estadoObtenido;
 
-	int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(estadoEncontrado->nodo);
-	actualizarCargaDelNodo(estadoEncontrado->nodo, job, posicionCargaNodoObtenida, 0, 1);
+	actualizarCargaDelNodo(estadoEncontrado->nodo, job, 0, 1);
 
 	estadoEncontrado->estado = mstring_duplicate(estadoNuevo);
 	mlist_replace(listaEstados, indiceReduEncargado, estadoEncontrado);
@@ -549,8 +540,7 @@ void eliminarCargasReduccionesLocales(char* nodoGlobal,int master,int job){
 			void * estadoObtenido = mlist_get(listaNodosLocales_whitoutGlobalNode, i);
 			t_Estado* estadoEncontrado = (t_Estado *) estadoObtenido;
 
-			int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(estadoEncontrado->nodo);
-			actualizarCargaDelNodo(estadoEncontrado->nodo, job, posicionCargaNodoObtenida, 0, 1);
+			actualizarCargaDelNodo(estadoEncontrado->nodo, job, 0, 1);
 
 
 		}
