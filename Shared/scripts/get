@@ -1,0 +1,33 @@
+#!/bin/bash
+[ "$#" -lt 1 ] && item="all" || item="$1"
+
+declare -A items
+items[dataset]="https://www.dropbox.com/s/5i2cnqjvb5mqwlx/datasets.tar.gz?dl=1"
+items[nombres]="https://www.dropbox.com/s/2hw9y40yfdx7dfi/nombres.tar.gz?dl=1"
+items[scripts]="https://api.github.com/repos/iago64/SO-Nombres-Dataset/tarball/master"
+#items[config]=""
+
+if [[ "$item" != "all" && ! -n "${items[$item]}" ]]; then
+    echo "Usage: get [dataset|nombres|scripts|config|all]"
+    exit
+fi
+
+mkdir tars && cd tars
+
+for cur in "${!items[@]}"; do
+	[[ "$item" != "all" && "$cur" != "$item" ]] && continue
+	url="${items[$cur]}"
+	file="$cur.tar.gz"
+	echo "Downloading $file…"
+	curl -#L $url > $file
+done
+
+echo -n "Unpacking…"
+
+for f in ./*.tar.gz; do
+	tar xf $f
+	rm $f
+done
+
+mv ./* .. && cd .. && rmdir tars
+echo " done."
