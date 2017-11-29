@@ -182,6 +182,8 @@ void agregarCargaNodoSegunLoPlanificado(int job, t_workerPlanificacion planifica
 		cargaNodo->cargaActual += mlist_length(planificador[i].bloque);
 		cargaNodo->cargaHistorica += mlist_length(planificador[i].bloque);
 
+		printf("La carga actual del Nodo: %s, es: %d \n", cargaNodo->nodo, cargaNodo->cargaActual);
+
 		t_cargaPorJob * cargaPorJob = malloc(sizeof(t_cargaPorJob));
 		cargaPorJob->job = job;
 		cargaPorJob->cargaDelJob = mlist_length(planificador[i].bloque);
@@ -230,6 +232,8 @@ bool verificoFinalizacionTransformacion(char* nodo,int socket,int job){
 	bool esNodoBuscado(void* estadoTarea){
 		  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->nodo,nodo) && ((t_Estado *) estadoTarea)->master == socket && !string_equals_ignore_case(((t_Estado *) estadoTarea)->estado, "Error") && ((t_Estado *) estadoTarea)->job == job;
 	}
+
+	imprimirListaEstadosCompleta();
 
 	mlist_t* listaFiltradaDelNodo = mlist_filter(listaEstados, (void*)esNodoBuscado);
 
@@ -372,11 +376,10 @@ char* seleccionarEncargado(mlist_t* NodosRL, int job){
 	mlist_sort(listaDeNombreNodos, condicionAComparar);
 	void * nodoObtenido = mlist_first(listaDeNombreNodos);
 	char* nodoConMenorCarga = (char*) nodoObtenido;
-	int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(nodoConMenorCarga);
 
 	int cantidadAAumentar = 1 + ((mlist_length(NodosRL) - 1) / 2);
 
-	actualizarCargaDelNodo(nodoConMenorCarga, job, posicionCargaNodoObtenida, 1, cantidadAAumentar);
+	actualizarCargaDelNodo(nodoConMenorCarga, job, 1, cantidadAAumentar);
 	return nodoConMenorCarga;
 
 }
