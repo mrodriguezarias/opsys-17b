@@ -9,6 +9,16 @@ mlist_t * listaCargaPorNodo;
 static int contadorBloquesSeguidosNoAsignados = 0;
 static bool asigneBloquesDeArchivo = false;
 
+void imprimirListaEstadosCompleta(){
+	int i;
+	printf("\nJob  Nodo    Bloque    Etapa          Estado\n");
+	for(i=0;i< mlist_length(listaEstados);i++){
+		void * nuevoEstado = mlist_get(listaEstados, i);
+		t_Estado* estado = (t_Estado*) nuevoEstado;
+		printf("%d  %s  %d  %s  %s \n", estado->job, estado->nodo, estado->block, estado->etapa, estado->estado);
+	}
+}
+
 void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mlist_t* listaBloque){
 
 	int posicionArray;
@@ -262,7 +272,8 @@ void eliminarEstadosMultiples(int socketMaster,int job, char* estadoNuevo){//qui
 
 	}
 	log_print("Actualizacion tabla de estado: Aborto de job: %d",job);
-	mlist_destroy(listaFiltrada, destruirlista);
+	imprimirListaEstadosCompleta();
+	//mlist_destroy(listaFiltrada, destruirlista);
 }
 
 
@@ -296,6 +307,8 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 	bool esNodoBuscado(void* estadoTarea){
 		return string_equals_ignore_case(((t_Estado *) estadoTarea)->nodo,nodo) && ((t_Estado *) estadoTarea)->master == master && ((t_Estado *) estadoTarea)->job == job && string_equals_ignore_case(((t_Estado *) estadoTarea)->etapa,"Transformacion");
 	}
+
+	imprimirListaEstadosCompleta();
 
 	mlist_t* listaFiltradaEstadosBloquesDelNodo = mlist_filter(listaEstados, (void*)esNodoBuscado);
 
@@ -557,3 +570,5 @@ int obtenerHistorico(char * nodo){
 	t_cargaPorNodo * cargaNodo = (t_cargaPorNodo *) cargaNodoObtenida;
 	return cargaNodo->cargaHistorica;
 }
+
+

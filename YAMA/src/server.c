@@ -233,6 +233,8 @@ bool verificoFinalizacionTransformacion(char* nodo,int socket,int job){
 		  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->nodo,nodo) && ((t_Estado *) estadoTarea)->master == socket && !string_equals_ignore_case(((t_Estado *) estadoTarea)->estado, "Error") && ((t_Estado *) estadoTarea)->job == job;
 	}
 
+	imprimirListaEstadosCompleta();
+
 	mlist_t* listaFiltradaDelNodo = mlist_filter(listaEstados, (void*)esNodoBuscado);
 
 	bool FinalizacionDeTransf_Nodo(void* estadoTarea){
