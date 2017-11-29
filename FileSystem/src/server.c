@@ -33,7 +33,7 @@ void server() {
 	thread_create(yama_listener, NULL);
 }
 
-t_nodeop *server_nodeop(int opcode, int blockno, t_serial *block) {
+t_nodeop *server_nodeop(int opcode, int blockno, void *block) {
 	t_nodeop *op = malloc(sizeof(t_nodeop));
 	op->opcode = opcode;
 	op->blockno = blockno;
@@ -242,9 +242,10 @@ static void datanode_handler(t_node *node) {
 
 		if(op->opcode == NODE_SEND) {
 			log_inform("Enviando bloque %d a nodo %s", op->blockno, node->name);
-			packet = protocol_packet(OP_SEND_BLOCK, op->block);
+			t_serial *block = serial_create(op->block, BLOCK_SIZE);
+			packet = protocol_packet(OP_SEND_BLOCK, block);
 			protocol_send_packet(packet, node->socket);
-			serial_destroy(op->block);
+			free(block);
 		} else {
 			log_inform("Recibiendo bloque %d de nodo %s", op->blockno, node->name);
 			packet = protocol_receive_packet(node->socket);

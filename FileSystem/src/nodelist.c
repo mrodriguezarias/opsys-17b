@@ -27,7 +27,7 @@ static t_node *create_node(const char *name, int blocks);
 static void destroy_node(t_node *node);
 static bool node_active(t_node *node);
 static double node_empty_rate(t_node *node);
-static t_node *balance_node(t_node *original);
+static t_node *balance_node(const char *original);
 
 // ========== Funciones públicas ==========
 
@@ -123,23 +123,23 @@ t_node *nodelist_find(const char *name) {
 	return mlist_find(nodes, finder);
 }
 
-void nodelist_addblock(t_block *block, void *data) {
-	t_node *original = NULL;
-	for(int i = 0; i < 2; i++) {
-		t_node *node = balance_node(original);
-		original = node;
-		if(node == NULL || node->free_blocks == 0) continue;
+bool nodelist_addblock(t_block *block, void *content) {
+	const char *original = block->copies[0].node;
+	t_node *node = balance_node(original);
+	if(node == NULL || node->free_blocks == 0) return false;
 
-		int blockno = bitmap_firstzero(node->bitmap);
-		bitmap_set(node->bitmap, blockno);
-		node->free_blocks--;
-		add_node_to_file(node);
+	int blockno = bitmap_firstzero(node->bitmap);
+	bitmap_set(node->bitmap, blockno);
+	node->free_blocks--;
+	add_node_to_file(node);
 
-		block->copies[i].blockno = blockno;
-		block->copies[i].node = node->name;
-		t_nodeop *op = server_nodeop(NODE_SEND, blockno, serial_create(data, BLOCK_SIZE));
-		thread_send(node->handler, op);
-	}
+	t_block_copy *copy = block->copies + (mstring_isempty(original) ? 0 : 1);
+	copy->blockno = blockno;
+	copy->node = node->name;
+
+	t_nodeop *op = server_nodeop(NODE_SEND, blockno, content);
+	thread_send(node->handler, op);
+	return true;
 }
 
 void nodelist_remove(const char *name) {
@@ -294,13 +294,13 @@ static double node_empty_rate(t_node *node) {
 	return node->free_blocks * 1.0f / node->total_blocks;
 }
 
-static t_node *balance_node(t_node *original) {
+static t_node *balance_node(const char *original) {
 	double rate = 0;
 	mlist_t *candidates = mlist_create();
 
 	void routine(t_node *node) {
 		double cur = node_empty_rate(node);
-		if(cur < rate || node == original || !node_active(node)) return;
+		if(cur < rate || mstring_equal(node->name, original) || !node_active(node)) return;
 
 		if(!number_equals(cur, rate)) mlist_clear(candidates, NULL);
 		mlist_append(candidates, node);

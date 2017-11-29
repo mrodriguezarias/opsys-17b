@@ -97,10 +97,14 @@ char *mstring_empty(char **string) {
 }
 
 bool mstring_equal(const char *str1, const char *str2) {
+	if(str1 == NULL && str2 == NULL) return true;
+	if(str1 == NULL || str2 == NULL) return false;
 	return strcmp(str1, str2) == 0;
 }
 
 bool mstring_equali(const char *str1, const char *str2) {
+	if(str1 == NULL && str2 == NULL) return true;
+	if(str1 == NULL || str2 == NULL) return false;
 	return strcasecmp(str1, str2) == 0;
 }
 
