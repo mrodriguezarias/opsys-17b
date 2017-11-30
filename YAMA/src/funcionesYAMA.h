@@ -21,11 +21,11 @@
 
 
 
-void planificar(t_workerPlanificacion*, int, mlist_t*);
+void planificar(t_workerPlanificacion[], int, mlist_t*);
 void mostrar_configuracion();
-void llenarArrayPlanificador(t_workerPlanificacion*,int,int *);
+void llenarArrayPlanificador(t_workerPlanificacion[],int,int *);
 int Disponibilidad(int, char*);
-void verificarCondicion(int, int *,t_workerPlanificacion*,int*,mlist_t*);
+void verificarCondicion(int, int *,t_workerPlanificacion[],int*,mlist_t*);
 respuestaOperacionTranf* serial_unpackRespuestaOperacion(t_serial *);
 respuestaOperacion* serial_unpackrespuestaOperacion(t_serial *);
 bool NodoConCopia_is_active(char*);
@@ -46,8 +46,8 @@ void finalizarJobGlobalEnTablaEstado(int,int, char*);
 void finalizarJobGlobal(int, int, int, char*);
 void eliminarCargasReduccionesLocales(char*,int,int);
 int obtenerHistorico(char *);
-void avanzoPosicion(int *,int,t_workerPlanificacion*);
-void asignoBloque(t_workerPlanificacion*, int *,int*,int);
+void avanzoPosicion(int *,int,t_workerPlanificacion[]);
+void asignoBloque(t_workerPlanificacion[], int *,int*,int);
 void avisarErrorMaster(int, int , int );
 
 #endif

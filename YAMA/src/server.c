@@ -18,6 +18,7 @@
 static bool esLaPrimeraVezQueReciboLosNodos;
 
 void listen_to_master() {
+	t_workerPlanificacion planificador[25];
 	esLaPrimeraVezQueReciboLosNodos = true;
 	log_inform("Escuchando puertos de master");
 	t_socket sv_sock = socket_init(NULL, config_get("MASTER_PUERTO"));
@@ -66,9 +67,7 @@ void listen_to_master() {
 								avisarErrorMaster(pedidoInicio->idJOB, sock,ERROR_PLANIFICACION);
 							}
 							else{
-								t_workerPlanificacion *planificador = alloca(tamaniolistaNodos * sizeof(t_workerPlanificacion));
 								//pthread_mutex_lock(&mutexPlanificacion);
-								printf("Entre a planificar con lista de tamanio %d\n", sizeof(planificador));
 								planificar(planificador, tamaniolistaNodos,Datosfile->blocks);
 								//pthread_mutex_unlock(&mutexPlanificacion);
 								printf("Sali de planificar \n");
@@ -244,7 +243,6 @@ bool verificoFinalizacionTransformacion(char* nodo,int socket,int job){
 	bool FinalizacionDeTransf_Nodo(void* estadoTarea){
 			  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->estado,"FinalizadoOK");
 	}
-
 
 	return mlist_all(listaFiltradaDelNodo, (void*) FinalizacionDeTransf_Nodo);
 
