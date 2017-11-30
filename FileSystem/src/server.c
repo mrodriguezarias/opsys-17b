@@ -223,6 +223,9 @@ static void yama_handler(t_socket yama_socket) {
 			}
 
 			free(file_request);
+		} else {
+			serial_destroy(packet.content);
+			break;
 		}
 	}
 }

@@ -7,18 +7,28 @@
 ##################################################################################
 logdir="/home/utnso/yatpos/logs"
 declare -A procs=([dnode]="DataNode" [fs]="FileSystem" [master]="Master" [worker]="Worker" [yama]="YAMA")
-[ "$#" -lt 1 ] && proc="all" || proc="$1"
-if ! [[ " ${!procs[@]} " =~ " $proc " ]] && ! [[ " node all " =~ " $proc " ]]; then
-	echo "Usage: log [dnode|fs|master|worker|yama|node|all]"
-	exit
-fi
-mkdir -p $logdir && cd $logdir
-if [[ "$proc" == "node" ]]; then
-	logfiles="DataNode.log Worker.log"
-elif [[ "$proc" == "all" ]]; then
-	logfiles=$(printf "%s.log " "${procs[@]}")
+#[ "$#" -lt 1 ] && proc="all" || proc="$1"
+
+if [[ "$#" -eq 0 || ("$#" -eq 1 && "$1" == "all") ]]; then
+	curs=("fs" "dnode" "yama" "worker" "master")
 else
-	logfiles="${procs[$1]}.log"
+	for p in "$@"; do
+		if [[ "$p" != "node" && ! -n "${procs[$p]}" ]]; then
+			echo "Usage: build [dnode|fs|master|worker|yama|node|all]"
+			exit
+		fi
+	done
+	curs=($(echo "$@" | sed 's/\bnode\b/dnode worker/g'))
 fi
-touch $logfiles && tail -qF $logfiles
+
+for ((i=0; i<${#curs[@]}; i++)); do
+	cur="${curs[$i]}"
+	curs[$i]="${procs[$cur]}.log"
+done
+
+mkdir -p $logdir && cd $logdir
+logfiles=$(printf "%s " "${curs[@]}")
+touch $logfiles
+printf "\033c"
+tail -qF $logfiles
 cd - &> /dev/null

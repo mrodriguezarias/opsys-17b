@@ -7,15 +7,22 @@
 ##################################################################################
 base="/home/utnso/git/tp-2017-2c-YATPOS"
 declare -A procs=([dnode]="DataNode" [fs]="FileSystem" [master]="Master" [worker]="Worker" [yama]="YAMA")
-[[ "$#" -eq 1 && ("$1" == "node" || -n "${procs[$1]}") ]] && proc="$1" || proc="all"
-[ -n "${procs[$proc]}" ] && n=1 || n=0
 
-printf "Building module%.*s…\n" $((n != 1)) "s"
+if [[ "$#" -eq 0 || ("$#" -eq 1 && "$1" == "all") ]]; then
+	curs=("fs" "dnode" "yama" "worker" "master")
+else
+	for p in "$@"; do
+		if [[ "$p" != "node" && ! -n "${procs[$p]}" ]]; then
+			echo "Usage: build [dnode|fs|master|worker|yama|node|all]"
+			exit
+		fi
+	done
+	curs=($(echo "$@" | sed 's/\bnode\b/dnode worker/g'))
+fi
 
-for kcur in "${!procs[@]}"; do
-	[[ "$proc" != "all" ]] && [[ "$kcur" != "$proc" ]] && [[ "$proc" != "node" || "$kcur" != "dnode" && "$kcur" != "worker" ]] && continue
+for kcur in "${curs[@]}"; do
 	vcur="${procs[$kcur]}"
-	echo -n " • $vcur: building…"
+	echo -ne " • \e[1m$vcur\e[0m: building…"
 	make all -s -B -C $base/$vcur/Debug &> /dev/null
-	echo -e "\r\e[0K • $vcur: done."
+	echo -e "\r\e[0K • \e[1m$vcur\e[0m: done."
 done
