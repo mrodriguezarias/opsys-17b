@@ -7,41 +7,38 @@
 ##################################################################################
 base="/home/utnso/git/tp-2017-2c-YATPOS"
 yatpos="/home/utnso/yatpos"
-declare -A procs=([dnode]="DataNode" [fs]="FileSystem" [master]="Master" [worker]="Worker" [yama]="YAMA")
-[[ "$#" -eq 1 && ("$1" == "node" || -n "${procs[$1]}") ]] && proc="$1" || proc="all"
-[ -n "${procs[$proc]}" ] && n=1 || n=0
+declare -A procs=([node]="Node" [fs]="FileSystem" [master]="Master" [yama]="YAMA")
 
-printf "Creating configuration file%.*s…\n" $((n != 1)) "s"
+if [[ "$#" -eq 0 || ("$#" -eq 1 && "$1" == "all") ]]; then
+	curs=("fs" "yama" "master" "node")
+else
+	for p in "$@"; do
+		if [[ ! " ${!procs[@]} " =~ " $p " ]]; then
+			echo "Usage: config [node|fs|master|yama|all]"
+			exit
+		fi
+	done
+	curs=("$@")
+fi
+
 mkdir -p $yatpos/config
 
-for kcur in "${!procs[@]}"; do
-	[[ "$proc" != "all" ]] && [[ "$kcur" != "$proc" ]] && [[ "$proc" != "node" || "$kcur" != "dnode" ]] && continue
-	[[ "$kcur" == "dnode" || "$kcur" == "worker" ]] && vcur="Node" || vcur="${procs[$kcur]}"
+for kcur in "${curs[@]}"; do
+	vcur="${procs[$kcur]}"
 	file="$yatpos/config/$vcur.cnf"
-	[ -f $file ] && continue
-	cp $base/Shared/rsc/config/$vcur.cnf $file
-	case "$vcur" in
-	"Node")
-		ip_fs_key="IP_FILESYSTEM"
-		printf "$ip_fs_key="; read ip_fs_val < /dev/tty
-		sed -i "s/^\($ip_fs_key=\).*/\1$ip_fs_val/" $file
-		node_name_key="NOMBRE_NODO"
-		printf "$node_name_key="; read node_name_val < /dev/tty
-		sed -i "s/^\($node_name_key=\).*/\1$node_name_val/" $file
-		data_size_key="DATABIN_SIZE"
-		printf "$data_size_key="; read size < /dev/tty
-		data_size_val=$(echo "$size" | bc)
-		sed -i "s/^\($data_size_key=\).*/\1$data_size_val/" $file
-		;;
-	"Master")
-		ip_master_key="YAMA_IP"
-		printf "$ip_master_key="; read ip_master_val < /dev/tty
-		sed -i "s/^\($ip_master_key=\).*/\1$ip_master_val/" $file
-		;;
-	"YAMA")
-		ip_fs_key="FS_IP"
-		printf "$ip_fs_key="; read ip_fs_val < /dev/tty
-		sed -i "s/^\($ip_fs_key=\).*/\1$ip_fs_val/" $file
-		;;
-	esac
+	[ ! -f $file ] && cp $base/Shared/rsc/config/$vcur.cnf $file
+	echo -e "\e[1m$vcur.cnf\e[0m:"
+	IFS="="
+	while read -r name value; do
+		echo -n " • $name (${value//\"/}) = "
+		read new_value < /dev/tty
+		if [[ ! -z "$new_value" ]]; then
+			if [[ "$name" =~ "SIZE" ]]; then
+				new_value=$(echo "$new_value" | awk '/[0-9]$/{print $1;next};/[mM]$/{printf "%u\n", $1*(1024*1024);next};/[kK]$/{printf "%u\n", $1*1024;next}')
+			elif [[ "$name" =~ "IP" && ! "$new_value" =~ "." ]]; then
+				new_value="192.168.3.$new_value"
+			fi
+			sed -i "s/^\($name=\).*/\1$new_value/" $file
+		fi
+	done < $file
 done

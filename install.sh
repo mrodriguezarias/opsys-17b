@@ -68,6 +68,7 @@ export LC_ALL LANG
 fi
 
 echo "Ready. Run:"
+echo -e " • \e[1myatpos get\e[0m to get tests"
 echo -e " • \e[1myatpos build\e[0m to build modules"
 echo -e " • \e[1myatpos config\e[0m to config modules"
 echo -e " • \e[1mdnode\e[0m|\e[1mfs\e[0m|\e[1mmaster\e[0m|\e[1mworker\e[0m|\e[1myama\e[0m to run modules"

@@ -1,33 +1,35 @@
 #!/bin/bash
-[ "$#" -lt 1 ] && item="all" || item="$1"
-
 declare -A items
 items[dataset]="https://www.dropbox.com/s/5i2cnqjvb5mqwlx/datasets.tar.gz?dl=1"
 items[nombres]="https://www.dropbox.com/s/2hw9y40yfdx7dfi/nombres.tar.gz?dl=1"
 items[scripts]="https://api.github.com/repos/iago64/SO-Nombres-Dataset/tarball/master"
-#items[config]=""
+items[config]="https://www.dropbox.com/s/j52k7a3wb6d6r3f/config.tar.gz?dl=1"
 
-if [[ "$item" != "all" && ! -n "${items[$item]}" ]]; then
-    echo "Usage: get [dataset|nombres|scripts|config|all]"
-    exit
+if [[ "$#" -eq 0 || ("$#" -eq 1 && "$1" == "all") ]]; then
+	curs=("config" "scripts" "dataset" "nombres")
+else
+	for p in "$@"; do
+		if [[ ! -n "${items[$p]}" ]]; then
+			echo "Usage: get [dataset|nombres|scripts|config|all]"
+			exit
+		fi
+	done
+	curs=("$@")
 fi
 
-mkdir tars && cd tars
-
-for cur in "${!items[@]}"; do
-	[[ "$item" != "all" && "$cur" != "$item" ]] && continue
+for cur in "${curs[@]}"; do
 	url="${items[$cur]}"
 	file="$cur.tar.gz"
-	echo "Downloading $file…"
-	curl -#L $url > $file
+	echo -ne " • \e[1m$file\e[0m: fetching…"
+	curl -L $url -o $file 2>&1 -# | stdbuf -oL tr -s '\r' '\n' | grep --line-buffered -o '[0-9]*\.[0-9]%' | while read i; do echo -ne "\r\e[0K • \e[1m$file\e[0m: downloading ($i)…"; done
+	echo -ne "\r\e[0K • \e[1m$file\e[0m: downloading (100.0%)…"
+
+	echo -ne "\r\e[0K • \e[1m$file\e[0m: preparing…"
+	export total=$(($(gzip -l $file | awk 'NR == 2 {print $2}')/10240))
+	mkdir "$cur"
+	tar xf $file -C "$cur" --strip-components 1 --checkpoint=100 --checkpoint-action='exec=python -c "print \"%.1f\" % (100.0*$TAR_CHECKPOINT/$total,)"' | while read i; do echo -ne "\r\e[0K • \e[1m$file\e[0m: unpacking ($i%)…"; done
+	echo -ne "\r\e[0K • \e[1m$file\e[0m: unpacking (100.0%)…"
+	unset total
+	rm "$file"
+	echo -e "\r\e[0K • \e[1m$file\e[0m: done."
 done
-
-echo -n "Unpacking…"
-
-for f in ./*.tar.gz; do
-	tar xf $f
-	rm $f
-done
-
-mv ./* .. && cd .. && rmdir tars
-echo " done."
