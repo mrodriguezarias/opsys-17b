@@ -15,8 +15,8 @@ extern int numeroJob;
 extern mlist_t* listaNodosActivos;
 extern int retardoPlanificacion;
 extern char* algoritmoBalanceo;
-//extern pthread_mutex_t mutexPlanificacion;
-extern sem_t semPlanificacion;
+extern bool entreAPlanificar;
+extern bool recibiSenial;
 
 
 void inicializoVariablesGlobalesConfig();

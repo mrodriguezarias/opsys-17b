@@ -35,11 +35,12 @@ mlist_t* listaNodosActivos;
 int retardoPlanificacion;
 char* algoritmoBalanceo;
 void trapper(int signum);
-sem_t semPlanificacion;
-//pthread_mutex_t mutexPlanificacion = PTHREAD_MUTEX_INITIALIZER;
+bool entreAPlanificar = false;
+bool recibiSenial = false;
+
+
 
 int main() {
-	sem_init(&semPlanificacion,1,1);
 	thread_signal_capture(SIGUSR1, trapper);
 	process_init();
 	inicializoVariablesGlobalesConfig();
@@ -51,18 +52,21 @@ int main() {
 }
 
 void trapper(int signum){
-	printf("\nRecibi la señal\n"); //luego quitar probar
-	//pthread_mutex_lock(&mutexPlanificacion); //NO ANDAN LOS SEMAFOROS.
-	sem_wait(&semPlanificacion);
-	printf("entre al wait \n");
-	config_reload();
-	retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));
-	strcpy(algoritmoBalanceo,config_get("ALGORITMO_BALANCEO"));
-	log_print("Señal atrapada, modificacion del retardo a :%d || modificacion del algoritmo a:%s",retardoPlanificacion,algoritmoBalanceo);
-	sem_post(&semPlanificacion);
-	printf("sali del post \n");
-	//pthread_mutex_unlock(&mutexPlanificacion);
+	printf("\nRecibi la señal\n");
+
+	if(entreAPlanificar){
+		printf("estoy planificando, luego recargare \n");
+		recibiSenial = true;
+	}
+	else{
+		config_reload();
+		retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));
+		strcpy(algoritmoBalanceo,config_get("ALGORITMO_BALANCEO"));
+		log_print("Modificacion del retardo a :%d || modificacion del algoritmo a:%s",retardoPlanificacion,algoritmoBalanceo);
+		recibiSenial = false;
+	}
 }
+
 
 void inicializoVariablesGlobalesConfig(){
 	retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));

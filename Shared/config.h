@@ -21,4 +21,8 @@ const char *config_get(const char *property);
  */
 void config_term(void);
 
+/* recarga la configuracion */
+
+void config_reload(void);
+
 #endif /* MCONFIG_H_ */

@@ -19,7 +19,6 @@ extern mlist_t * listaCargaPorNodo;
 
 void listen_to_master(void);
 void requerirInformacionFilesystem(t_serial*);
-//int reciboInformacionSolicitada(t_yfile*,int);
 void enviarEtapa_transformacion_Master(int,int,t_workerPlanificacion[],mlist_t*,int);
 void agregarAtablaEstado(int, char*,int,int,char*,char*,char*);
 char* generarNombreArchivoTemporalTransf(int,int, int);
@@ -38,5 +37,6 @@ void mandarEtapaAlmacenadoFinal(char*,int,int);
 char* BuscoNodoEncargado(int);
 void completarPrimeraVez();
 void agregarCargaNodoSegunLoPlanificado(int , t_workerPlanificacion[], int );
+void crearCargaPorNodo(char*);
 
 #endif /* SERVER_H_ */

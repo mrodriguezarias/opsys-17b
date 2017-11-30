@@ -18,6 +18,7 @@
 static bool esLaPrimeraVezQueReciboLosNodos;
 
 void listen_to_master() {
+	//t_workerPlanificacion planificador[25];
 	esLaPrimeraVezQueReciboLosNodos = true;
 	log_inform("Escuchando puertos de master");
 	t_socket sv_sock = socket_init(NULL, config_get("MASTER_PUERTO"));
@@ -60,19 +61,26 @@ void listen_to_master() {
 						requerirInformacionFilesystem(file_serial);
 						t_yfile* Datosfile = reciboInformacionSolicitada(pedidoInicio->idJOB,sock);
 						if(Datosfile->size>0){
-							completarPrimeraVez();
 							int tamaniolistaNodos = mlist_length(listaNodosActivos);
 							if(tamaniolistaNodos == 0){
 								avisarErrorMaster(pedidoInicio->idJOB, sock,ERROR_PLANIFICACION);
 							}
 							else{
-								t_workerPlanificacion *planificador = alloca(tamaniolistaNodos * sizeof(t_workerPlanificacion));
-								//pthread_mutex_lock(&mutexPlanificacion);
-								sem_wait(&semPlanificacion);
-								printf("Entre a planificar con lista de tamanio %d\n", sizeof(planificador));
+
+								completarPrimeraVez();
+								t_workerPlanificacion planificador[tamaniolistaNodos];
+								printf("entre a planificar \n");
+								entreAPlanificar = true;
+								sleep(retardoPlanificacion);
 								planificar(planificador, tamaniolistaNodos,Datosfile->blocks);
-								sem_post(&semPlanificacion);
-								//pthread_mutex_unlock(&mutexPlanificacion);
+								if(recibiSenial){
+									 config_reload();
+									 retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));
+									 strcpy(algoritmoBalanceo,config_get("ALGORITMO_BALANCEO"));
+									 log_print("Modificacion del retardo a :%d || modificacion del algoritmo a:%s",retardoPlanificacion,algoritmoBalanceo);
+									 recibiSenial = false;
+								}
+								entreAPlanificar = false;
 								printf("Sali de planificar \n");
 								agregarCargaNodoSegunLoPlanificado(pedidoInicio->idJOB, planificador, tamaniolistaNodos);
 								enviarEtapa_transformacion_Master(pedidoInicio->idJOB,tamaniolistaNodos,planificador,Datosfile->blocks,sock);
@@ -85,11 +93,17 @@ void listen_to_master() {
 					{respuestaOperacionTranf* finalizoOperacion = serial_unpackRespuestaOperacion(packetOperacion.content);
 
 					if(finalizoOperacion->response == -1){
-						//pthread_mutex_lock(&mutexPlanificacion);
-						sem_wait(&semPlanificacion);
+						entreAPlanificar = true;
+						sleep(retardoPlanificacion);
 						replanificacion(finalizoOperacion->nodo,finalizoOperacion->file,sock,finalizoOperacion->idJOB);
-						sem_post(&semPlanificacion);
-						//pthread_mutex_unlock(&mutexPlanificacion);
+						if(recibiSenial){
+							 config_reload();
+							 retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));
+							 strcpy(algoritmoBalanceo,config_get("ALGORITMO_BALANCEO"));
+							 log_print("Modificacion del retardo a :%d || modificacion del algoritmo a:%s",retardoPlanificacion,algoritmoBalanceo);
+							 recibiSenial = false;
+						}
+						entreAPlanificar = false;
 					}
 					else{
 						log_inform("Transformacion terminada para :%d bloque: %d",finalizoOperacion->idJOB,finalizoOperacion->bloque);
@@ -161,21 +175,41 @@ void listen_to_master() {
 
 void completarPrimeraVez(){
 	if(esLaPrimeraVezQueReciboLosNodos){
-		listaCargaPorNodo = mlist_create();
+			listaCargaPorNodo = mlist_create();
+			int i;
+			for(i = 0; i < mlist_length(listaNodosActivos); i++){
+				t_infoNodo* datosNodo = mlist_get(listaNodosActivos, i);
+				crearCargaPorNodo(datosNodo->nodo);
+				esLaPrimeraVezQueReciboLosNodos = false;
+			}
+	}
+	else if(mlist_length(listaNodosActivos)>mlist_length(listaCargaPorNodo)){
 		int i;
 		for(i = 0; i < mlist_length(listaNodosActivos); i++){
 			t_infoNodo* datosNodo = mlist_get(listaNodosActivos, i);
-			t_cargaPorNodo* cargaPorNodo = malloc(sizeof(t_cargaPorNodo));
-			cargaPorNodo->nodo = malloc(sizeof(datosNodo->nodo) + 1);
-			cargaPorNodo->nodo = strcpy(cargaPorNodo->nodo, datosNodo->nodo);
-			cargaPorNodo->cargaActual = 0;
-			cargaPorNodo->cargaHistorica = 0;
-			cargaPorNodo->cargaPorJob = mlist_create();
-			mlist_append(listaCargaPorNodo, cargaPorNodo);
-			esLaPrimeraVezQueReciboLosNodos = false;
+
+			bool esNodoBuscado(void * unaCargaNodo){
+			 return string_equals_ignore_case( ((t_cargaPorNodo *) unaCargaNodo)->nodo , datosNodo->nodo);
+			}
+
+			if(!mlist_any(listaCargaPorNodo,esNodoBuscado)){
+				crearCargaPorNodo(datosNodo->nodo);
+
+			}
 		}
 	}
 }
+
+void crearCargaPorNodo(char* nombreNodo){
+ t_cargaPorNodo* cargaPorNodo = malloc(sizeof(t_cargaPorNodo));
+ cargaPorNodo->nodo = malloc(sizeof(nombreNodo) + 1);
+ cargaPorNodo->nodo = strcpy(cargaPorNodo->nodo, nombreNodo);
+ cargaPorNodo->cargaActual = 0;
+ cargaPorNodo->cargaHistorica = 0;
+ cargaPorNodo->cargaPorJob = mlist_create();
+ mlist_append(listaCargaPorNodo, cargaPorNodo);
+}
+
 
 void agregarCargaNodoSegunLoPlanificado(int job, t_workerPlanificacion planificador[], int tamanioPlanificador){
 	int i, posicionObtenida;
@@ -248,7 +282,6 @@ bool verificoFinalizacionTransformacion(char* nodo,int socket,int job){
 	bool FinalizacionDeTransf_Nodo(void* estadoTarea){
 			  	return string_equals_ignore_case(((t_Estado *) estadoTarea)->estado,"FinalizadoOK");
 	}
-
 
 	return mlist_all(listaFiltradaDelNodo, (void*) FinalizacionDeTransf_Nodo);
 

@@ -19,18 +19,16 @@ void imprimirListaEstadosCompleta(){
 	}
 }
 
-void planificar(t_workerPlanificacion* planificador, int tamaniolistaNodos, mlist_t* listaBloque){
+void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mlist_t* listaBloque){
 
 	int posicionArray;
 	printf("no llene el planificador \n");
 	llenarArrayPlanificador(planificador,tamaniolistaNodos,&posicionArray);
-
 	int bloque = 0;
 	while(!asigneBloquesDeArchivo){
 		if(posicionArray == tamaniolistaNodos){
 			posicionArray = 0;
 		}
-		usleep(retardoPlanificacion);
 		verificarCondicion(tamaniolistaNodos, &posicionArray,planificador, &bloque, listaBloque);
 	}
 
@@ -81,7 +79,7 @@ int obtenerCargaMaxima(){
 
 
 
-void llenarArrayPlanificador(t_workerPlanificacion* planificador,int tamaniolistaNodos,int *posicion){
+void llenarArrayPlanificador(t_workerPlanificacion planificador[],int tamaniolistaNodos,int *posicion){
 	int i,MaximaDisponibilidad = 0, cargaMax = 0;
 	int historicoAnterior = 0;
 	if(!strcmp("WCLOCK",algoritmoBalanceo)){
@@ -110,7 +108,7 @@ void llenarArrayPlanificador(t_workerPlanificacion* planificador,int tamaniolist
 }
 
 
-void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificacion* planificador,int* bloque,mlist_t* listaBloque){
+void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificacion planificador[],int* bloque,mlist_t* listaBloque){
 	t_block* infoArchivo = mlist_get(listaBloque, *bloque);
 
 		if(planificador[*posicion].disponibilidad == 0){
@@ -147,7 +145,7 @@ void verificarCondicion(int tamaniolistaNodos, int *posicion,t_workerPlanificaci
 		}
 }
 
-void avanzoPosicion(int *posicion,int tamaniolistaNodos,t_workerPlanificacion* planificador){
+void avanzoPosicion(int *posicion,int tamaniolistaNodos,t_workerPlanificacion planificador[]){
 *posicion = *posicion + 1;
 		contadorBloquesSeguidosNoAsignados++;
 		if(contadorBloquesSeguidosNoAsignados == tamaniolistaNodos){
@@ -159,7 +157,7 @@ void avanzoPosicion(int *posicion,int tamaniolistaNodos,t_workerPlanificacion* p
 		}
 }
 
-void asignoBloque(t_workerPlanificacion* planificador, int *posicion,int* bloque,int tamanioListaBloque){
+void asignoBloque(t_workerPlanificacion planificador[], int *posicion,int* bloque,int tamanioListaBloque){
 
 	planificador[*posicion].disponibilidad--;
 	mlist_append(planificador[*posicion].bloque,(void*)*bloque);
@@ -349,7 +347,6 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 	void * cargaNodoObtenida = mlist_get(listaCargaPorNodo, posicionCargaNodoObtenida);
 	t_cargaPorNodo * cargaNodo = (t_cargaPorNodo *) cargaNodoObtenida;
 	for(i=0; i < mlist_length(ListaDeBloquesReplanificar); i++){
-		usleep(retardoPlanificacion);
 		void* bloqueDeListaObtenido = mlist_get(ListaDeBloquesReplanificar, i);
 		t_block* bloqueAReplanificar = (t_block *) bloqueDeListaObtenido;
 		if(nodoEstaEnLaCopia(bloqueAReplanificar, 0, nodo) && !aborto){
