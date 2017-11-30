@@ -45,6 +45,11 @@ void config_term() {
 	config = NULL;
 }
 
+void config_reload(){
+	config_term();
+	config_init();
+}
+
 // ========== Funciones privadas ==========
 
 static const char *config_name() {

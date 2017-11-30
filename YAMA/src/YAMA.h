@@ -3,6 +3,7 @@
 
 #include <socket.h>
 #include <mlist.h>
+#include <semaphore.h>
 
 typedef struct {
 	t_socket fs_socket;
@@ -14,7 +15,8 @@ extern int numeroJob;
 extern mlist_t* listaNodosActivos;
 extern int retardoPlanificacion;
 extern char* algoritmoBalanceo;
-extern pthread_mutex_t mutexPlanificacion;
+//extern pthread_mutex_t mutexPlanificacion;
+extern sem_t semPlanificacion;
 
 
 void inicializoVariablesGlobalesConfig();
