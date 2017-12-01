@@ -196,11 +196,11 @@ void requerirInformacionFilesystem(t_serial *file){
 
 void abortarJob(int job, int socketMaster, int codigoError){
 	eliminarEstadosMultiples(socketMaster,job, "Error");
+	log_report("Job: %d abortado",job);
 	avisarErrorMaster(job, socketMaster, codigoError);
 }
 
 void avisarErrorMaster(int job, int socketMaster, int codigoError){
-	log_report("Job: %d abortado",job);
 	t_packet packetError = protocol_packet(OP_ERROR_JOB, serial_pack("i",codigoError));
 	protocol_send_packet(packetError, socketMaster);
 	serial_destroy(packetError.content);
@@ -209,24 +209,26 @@ void avisarErrorMaster(int job, int socketMaster, int codigoError){
 t_yfile* reciboInformacionSolicitada(int job,int master){
 	t_yfile* Datosfile = malloc(sizeof(t_yfile));
 	t_packet packetNodosActivos = protocol_receive_packet(yama.fs_socket);
-	printf("recibi paquete de filesystem \n");
 	if(packetNodosActivos.operation == OP_NODES_ACTIVE_INFO){
-	listaNodosActivos = nodelist_unpack(packetNodosActivos.content);
+		listaNodosActivos = nodelist_unpack(packetNodosActivos.content);
 	}
-		t_packet packetArchivo = protocol_receive_packet(yama.fs_socket);
-		if(packetArchivo.operation == OP_ARCHIVO_INEXISTENTE){
-			abortarJob(job, master,ARCHIVO_INEXISTENTE);
-			log_report("Aborto de job %d por archivo inexistente",job);
-			Datosfile->size = 0;
-			return Datosfile;
-		}
+	t_packet packetArchivo = protocol_receive_packet(yama.fs_socket);
+	if(packetArchivo.operation == OP_ARCHIVO_INEXISTENTE){
+		abortarJob(job, master,ARCHIVO_INEXISTENTE);
+		log_report("Aborto de job %d por archivo inexistente",job);
+		Datosfile->size = 0;
+		return Datosfile;
+	}
 
-		else if(packetArchivo.operation == OP_ARCHIVO_NODES){
-			Datosfile = yfile_unpack(packetArchivo.content);
-			printf("recibi correctamente de filesystem \n");
-			return Datosfile;
-		}
-		return Datosfile; //nunca llega a esta instancia.
+	else if(packetArchivo.operation == OP_ARCHIVO_NODES){
+		Datosfile = yfile_unpack(packetArchivo.content);
+		printf("recibi correctamente de filesystem \n");
+		return Datosfile;
+	}
+	else{
+		FinalizarEjecucion();
+	}
+	return Datosfile; //nunca llega a esta instancia.
 }
 
 char* generarNombreArchivoTemporalTransf(int job,int master, int bloque){
@@ -591,5 +593,35 @@ int buscarIdJobParaMasterCaido(int socketMaster){
 		else{
 			return -1;
 		}
+	}
+}
+
+
+mlist_t* buscarSocketsActivos(){
+	bool esSocketActivo(void* unEstado){
+		return string_equals_ignore_case(((t_Estado*)unEstado)->estado,"En proceso");
+	}
+	mlist_t* listaSockets = mlist_filter(listaEstados,esSocketActivo);
+	return listaSockets;
+
+}
+
+
+void FinalizarEjecucion(){
+	if(mlist_length(listaEstados)==0){
+		log_report("Filesystem desconectado, se desconecta YAMA");
+		exit(0);
+	}
+	else{
+		mlist_t * listaEstadoSocketMasters = buscarSocketsActivos();
+		if(mlist_length(listaEstadoSocketMasters) > 0){
+
+			void cerrarMasters(void* unEstadoSocketMaster){
+				avisarErrorMaster(((t_Estado*) unEstadoSocketMaster)->job,((t_Estado*) unEstadoSocketMaster)->master,ERROR_FS_DISCONNECTED);
+			}
+			mlist_traverse(listaEstadoSocketMasters,cerrarMasters);
+		}
+		log_report("Filesystem desconectado, se desconecta YAMA");
+		exit(0);
 	}
 }

@@ -51,7 +51,8 @@ enum{FS_NO_ESTABLE = -1,
 	ERROR_REDUCCION_LOCAL = -4,
 	ERROR_REDUCCION_GLOBAL = -5,
 	ERROR_ALMACENAMIENTO_FINAL = -6, //solo lo usa yama.
-	ERROR_PLANIFICACION = -7
+	ERROR_PLANIFICACION = -7,
+	ERROR_FS_DISCONNECTED = -8
 }; //yama -> master
 
 typedef struct {

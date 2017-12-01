@@ -50,5 +50,7 @@ void avanzoPosicion(int *,int,t_workerPlanificacion[]);
 void asignoBloque(t_workerPlanificacion[], int *,int*,int);
 void avisarErrorMaster(int, int , int );
 int buscarIdJobParaMasterCaido(int);
+mlist_t* buscarSocketsActivos();
+void FinalizarEjecucion();
 
 #endif
