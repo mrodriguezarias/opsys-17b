@@ -5,6 +5,7 @@
 #include <process.h>
 #include <system.h>
 #include <thread.h>
+#include <stdlib.h>
 
 static t_process current = PROC_UNDEFINED;
 static char *node = NULL;
@@ -14,8 +15,9 @@ static char *names[] = {"(Undefined)", "YAMA", "FileSystem", "Master", "Worker",
 // ========== Funciones públicas ==========
 
 void process_init() {
+	putenv("LC_ALL=C");
 	current = process_type(path_name(system_proc()));
-	node = process_node("");
+	node = (char*) process_node("");
 	system_init();
 	log_init();
 	config_init();

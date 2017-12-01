@@ -75,6 +75,7 @@ char *_path_create(t_ptype type, const char *scount, ...) {
 }
 
 bool path_exists(const char *path) {
+	if(mstring_isempty(path)) return false;
 	char *upath = system_upath(path);
 	bool exists = access(upath, F_OK) != -1;
 	free(upath);

@@ -4,24 +4,41 @@
 # Copiar este archivo a /usr/local/bin, darle permisos de ejecución (chmod +x) y #
 # ejecutar el comando `sync` desde la consola para sincronizar todas las VMs.    #
 ##################################################################################
-fs=(192.168.56.101)
-yama=(192.168.56.102)
-master=(192.168.56.103)
-nodes=(192.168.56.104 192.168.56.105 192.168.56.106)
-
+echo "utnso" | sudo -S su &> /dev/null
 base="/home/utnso/git/tp-2017-2c-YATPOS"
-declare -A procs=([FileSystem]=fs [YAMA]=yama [Master]=master [DataNode]=nodes [Worker]=nodes)
+config="/home/utnso/yatpos/.sync"
 
-for proc in "${!procs[@]}"; do
-	echo "Syncing $proc…"
-	ips=${procs[$proc]}[@]
-	for ip in "${!ips}"; do
-		echo -n " • $ip…"
-		path="$base/$proc/Debug/$proc"
-		sshpass -p "utnso" rsync -azuRq -e ssh $path utnso@$ip:/ 2> /dev/null; ret=$?
-		echo -ne "\r\e[0K • $ip "
-		[ $ret -eq 0 ] && echo "OK." || echo "ERROR."
+[[ "$#" -eq 1 && "$1" == "--config" ]] && rm "$config" &> /dev/null
+
+if [ ! -f "$config" ]; then
+	dpkg-query -W -f='${Status}' sshpass 2>/dev/null | grep -q "install ok"
+	if [ "$?" -ne 0 ]; then
+		echo "Installing dependencies…"
+		sudo apt install sshpass &> /dev/null
+	fi
+	echo "Creating config file…"
+	
+	ips=()
+	echo "Connect to:"
+	while :; do
+		printf "> "
+		read ip < /dev/tty
+		[[ -z "$ip" ]] && break
+		[[ ! "$ip" =~ "." ]] && ip="192.168.3.$ip"
+		ips+=("$ip")
 	done
+	echo "SYNC_IPS=(${ips[@]})" > "$config"
+	exit
+fi
+
+source "$config"
+echo "Syncing…"
+
+for ip in "${SYNC_IPS[@]}"; do
+	echo -n " • $ip…"
+	sshpass -p "utnso" rsync -azuRq -e ssh $base utnso@$ip:/ 2> /dev/null; ret=$?
+	echo -ne "\r\e[0K • $ip "
+	[ $ret -eq 0 ] && echo "OK." || echo "ERROR."
 done
 
 echo "Sync complete."

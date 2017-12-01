@@ -138,14 +138,14 @@ void filetable_rename(const char *path, const char *new_name) {
 
 void filetable_remove(const char *path) {
 	t_yfile *file = filetable_find(path);
-	if (file == NULL)
-		return;
+	if (file == NULL) return;
+
+	path_remove(file->path);
 
 	bool cond(t_yfile *elem) {
 		return mstring_equal(elem->path, file->path);
 	}
 	mlist_remove(files, cond, yfile_destroy);
-	path_remove(file->path);
 }
 
 void filetable_clear() {
