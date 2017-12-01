@@ -129,6 +129,11 @@ bool filetable_stable();
 void filetable_rm_block(t_yfile *file, t_block* block, int copy);
 
 /**
+ * Avisa que terminó de mandarse un bloque.
+ */
+void filetable_sentblock(void);
+
+/**
  * Escribe un bloque en el archivo de bloques.
  * @param node Nombre del nodo.
  * @param blockno Número de bloque.

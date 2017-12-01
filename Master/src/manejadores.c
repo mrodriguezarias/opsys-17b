@@ -32,11 +32,15 @@ void finalizar_manejador_transf(int response, t_socket socket,
 			yama_socket);
 	free(transformacion);
 	times.transf_end = mtime_now();
+	thread_sem_signal(sem);
 	thread_exit(0);
 }
 
 void manejador_transformacion(tEtapaTransformacion* transformacion) {
 	thread_t *hilo = thread_self();
+	if(hilo == 0){
+		printf("NO CREO EL HILO.... \n");
+	}
 	log_print("Hilo %lu creado ETAPA_TRANSFORMACION", hilo);
 	int response;
 
@@ -44,7 +48,7 @@ void manejador_transformacion(tEtapaTransformacion* transformacion) {
 
 	if (socket == -1){
 		response = -1;
-		finalizar_manejador_transf(response, socket, transformacion);
+		//finalizar_manejador_transf(response, socket, transformacion);
 	}else{
 		t_serial *serial_worker = serial_pack("ssii",
 			script.script_transf,
@@ -56,11 +60,11 @@ void manejador_transformacion(tEtapaTransformacion* transformacion) {
 					socket);
 		if(!enviar_operacion_worker(OP_INICIAR_TRANSFORMACION, socket, serial_worker)){
 			response = -1;
-			finalizar_manejador_transf(response, socket, transformacion);
+			//finalizar_manejador_transf(response, socket, transformacion);
 		}else{
 			log_inform("Se recibe respuesta de ETAPA_TRANSFORMACION del worker en socket %d",
 					socket);
-			response_worker(socket, &response);
+			response = protocol_receive_response(socket);
 		}
 	}
 
@@ -290,7 +294,7 @@ void etapa_transformacion(const t_packet* paquete) {
 		tEtapaTransformacion* etapa_transformacion = mlist_get(
 				listTranformacion, i);
 		t_hilos* hilo_transformacion = set_hilo(TRANSFORMACION, etapa_transformacion->nodo);
-
+		thread_sem_wait(sem);
 		if ((hilo_transformacion->hilo = thread_create(manejador_transformacion,
 				etapa_transformacion)) < 0) {
 			log_report("Error al crear hilo en INICIAR_TRANSFORMACION");

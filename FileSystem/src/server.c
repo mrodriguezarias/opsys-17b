@@ -56,9 +56,12 @@ static t_node *receive_node_info(t_socket socket) {
 	} else if(nodelist_active(node)) {
 		node = NULL;
 		log_inform("El nodo %s se quiso conectar pero ya estaba activo en el FS", name);
-	} else {
+	} else if(node == NULL) {
+		log_inform("Conectando con nodo nuevo %s", name);
 		node = nodelist_add(name, blocks);
 		node->worker_port = string_duplicate(worker_port);
+	} else {
+		log_inform("Conectando con nodo viejo %s", name);
 	}
 	free(name);
 	free(worker_port);
@@ -70,6 +73,7 @@ static void node_listener() {
 
 	while(thread_active()) {
 		t_socket cli_sock = socket_accept(sv_sock);
+		nodelist_refresh();
 
 		t_packet packet = protocol_receive_packet(cli_sock);
 		serial_destroy(packet.content);
@@ -84,6 +88,7 @@ static void node_listener() {
 
 		if (packet.sender == PROC_DATANODE) {
 			t_node *node = receive_node_info(cli_sock);
+
 			if(node == NULL) {
 				protocol_send_response(cli_sock, RESPONSE_ERROR);
 				socket_close(cli_sock);
@@ -92,7 +97,7 @@ static void node_listener() {
 
 			protocol_send_response(cli_sock, RESPONSE_OK);
 
-			log_inform("Nodo %s conectado desde %s:%s", node->name, ip, port);
+			log_inform("Nodo %s conectado desde %s:%s (socket %d)", node->name, ip, port, cli_sock);
 
 			node->socket = cli_sock;
 			node->handler = thread_create(datanode_handler, node);
@@ -249,11 +254,12 @@ static void datanode_handler(t_node *node) {
 		serial_destroy(serial);
 
 		if(op->opcode == NODE_SEND) {
-			log_inform("Enviando bloque %d a nodo %s", op->blockno, node->name);
+			log_inform("Enviando bloque %d a nodo %s por socket %d", op->blockno, node->name, node->socket);
 			t_serial *block = serial_create(op->block, BLOCK_SIZE);
 			packet = protocol_packet(OP_SEND_BLOCK, block);
 			protocol_send_packet(packet, node->socket);
 			free(block);
+			filetable_sentblock();
 		} else {
 			log_inform("Recibiendo bloque %d de nodo %s", op->blockno, node->name);
 			packet = protocol_receive_packet(node->socket);
@@ -261,7 +267,7 @@ static void datanode_handler(t_node *node) {
 				log_report("Se esperaba recibir un bloque pero se recibió otra cosa");
 			} else if(op->opcode == NODE_RECV) {
 				filetable_writeblock(node->name, op->blockno, packet.content->data);
-			}  else if(op->opcode == NODE_RECV_BLOCK) {
+			} else if(op->opcode == NODE_RECV_BLOCK) {
 				thread_respond((void*)packet.content->data);
 			}
 			serial_destroy(packet.content);

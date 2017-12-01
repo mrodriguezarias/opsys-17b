@@ -139,8 +139,12 @@ bool thread_active() {
 
 thread_t *thread_self() {
 	pthread_t self = pthread_self();
+	thread_t* tid;
 	bool cond(thread_t *elem) { return elem->id == self; }
-	return mlist_find(threads, cond);
+	do{
+		tid = mlist_find(threads,cond);
+	} while(tid == NULL && (thread_sleep(500),1));
+	return tid;
 }
 
 thread_t *thread_main() {

@@ -29,7 +29,7 @@ static char *get_line(FILE *fp);
 // ========== Funciones públicas ==========
 
 t_file *file_create(const char *path) {
-	return create_file(path, true);
+	return create_file(path, true); //LINEA QUE ROMPE
 }
 
 t_file *file_open(const char *path) {

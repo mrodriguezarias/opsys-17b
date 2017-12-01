@@ -4,6 +4,7 @@
 void kill_thread(t_hilos* hilo){
 		hilo->active = false;
 		pthread_cancel((pthread_t)hilo->hilo);
+		thread_sem_signal(sem);
 }
 
 void node_drop(){
@@ -54,11 +55,13 @@ bool enviar_operacion_worker(int operacion, t_socket socket, t_serial* serial_wo
 }
 
 void response_worker(t_socket socket, int* response) {
-	t_packet paquete = protocol_receive_packet(socket);
-	if (paquete.operation == OP_UNDEFINED) {
-		*response = -1;
+	int operacion = protocol_receive_response(socket);
+	printf("operacion: %d, , socket: %d  \n",operacion,socket);
+	if (operacion != RESPONSE_OK) {
+		printf("recibi operacion indefinida de worker \n");
+		*response = 1; //iria -1
 	} else {
-		serial_unpack(paquete.content, "i", &*response);
+		*response = operacion;
 	}
 }
 
@@ -178,7 +181,7 @@ void init(char* argv[]){
 	thread_init();
 	hilos = mlist_create();
 	pthread_mutex_init(&mutex_hilos, NULL);
-
+	sem = thread_sem_create(30);
 	tareasParalelo.total = 0;
 	tareasParalelo.transf = 0;
 	tareasParalelo.reducc = 0;

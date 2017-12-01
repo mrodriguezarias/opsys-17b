@@ -162,6 +162,7 @@ tEtapaAlmacenamientoWorker * af_unpack(t_serial * serial) {
 	log_print("Archivo de reduccion: %s , archivoFinal: %s \n",af->archivoReduccion,af->archivoFinal);
 	return af;
 }
+
 int connect_to_filesystem() {
 	t_socket socket = socket_connect(config_get("IP_FILESYSTEM"),
 			config_get("PUERTO_FILESYSTEM"));
@@ -182,10 +183,7 @@ void listen_to_master() {
 	socketEscuchaMaster = socket_init(NULL, config_get("PUERTO_WORKER"));
 	t_socket socketAceptado;
 	int status;
-	tEtapaTransformacionWorker * trans = malloc(sizeof(tEtapaTransformacionWorker));
-	tEtapaReduccionLocalWorker* rl;
-	tEtapaReduccionGlobalWorker * rg;
-	tEtapaAlmacenamientoWorker * af;
+
 	while (true) {
 		pid_t pid;
 		socketAceptado = socket_accept(socketEscuchaMaster);
@@ -198,6 +196,7 @@ void listen_to_master() {
 				switch (packet.operation) {
 				case OP_INICIAR_TRANSFORMACION:
 					log_print("OP_INICIAR_TRANSFORMACION");
+					tEtapaTransformacionWorker * trans = malloc(sizeof(tEtapaTransformacionWorker));
 					char * bufferScript, *archivoEtapa;
 					t_file*scriptTransformacion;
 					serial_unpack(packet.content, "ssii", &bufferScript,
@@ -205,23 +204,24 @@ void listen_to_master() {
 							&trans->bytesOcupados);
 					scriptTransformacion = crearScript(bufferScript,
 							OP_INICIAR_TRANSFORMACION,socketAceptado);
-					free(bufferScript);
+
 					bool tt_ok = block_transform(trans->bloque, trans->bytesOcupados, file_path(scriptTransformacion), archivoEtapa,trans->bytesOcupados);
 					if (tt_ok) {
 						log_print("MANDANDO RESPUESTA CORRECTA A MASTER");
-						protocol_send_response(socketAceptado,
-								tt_ok ? RESPONSE_OK : RESPONSE_ERROR);
+						protocol_send_response(socketAceptado,RESPONSE_OK );
 					} else {
 						log_report("MANDANDO RESPUESTA INCORRECTA A MASTER");
-						protocol_send_response(socketAceptado,
-								tt_ok ? RESPONSE_OK : RESPONSE_ERROR);
+						protocol_send_response(socketAceptado, RESPONSE_ERROR);
 					}
 					path_remove(file_path(scriptTransformacion));
-					exit(1);
+					//serial_destroy(packet.content); //agrego esto
+					free(bufferScript); //lo movi, originalmente estaba en linea 208
+					exit(0);
 					break;
 				case OP_INICIAR_REDUCCION_LOCAL:
 					log_print("OP_INICIAR_REDUCCION_LOCAL");
 					char* archivoPreReduccion = path_temp();
+					tEtapaReduccionLocalWorker* rl;
 					rl = etapa_rl_unpack_bis(packet.content);
 					t_file *scriptReduccion = crearScript(rl->script,
 							OP_INICIAR_REDUCCION_LOCAL,socketAceptado);
@@ -239,12 +239,13 @@ void listen_to_master() {
 											protocol_send_response(socketAceptado, lr_ok ? RESPONSE_OK : RESPONSE_ERROR);
 					}
 					path_remove(file_path(scriptReduccion));
-					//path_remove(archivoPreReduccion);
+					path_remove(archivoPreReduccion);
 					exit(1);
 					break;
 				case OP_INICIAR_REDUCCION_GLOBAL:
 					log_print("OP_INICIAR_REDUCCION_GLOBAL");
 					char *archivoAReducir;
+					tEtapaReduccionGlobalWorker * rg;
 					rg = rg_unpack(packet.content);
 					t_file *scriptReduccionGlobal;
 					scriptReduccionGlobal = crearScript(rg->scriptReduccion,
@@ -258,6 +259,7 @@ void listen_to_master() {
 					break;
 				case OP_INICIAR_ALMACENAMIENTO:
 					log_print("OP_INICIAR_ALMACENAMIENTO");
+					tEtapaAlmacenamientoWorker * af;
 					af = af_unpack(packet.content);
 					t_file * archivoReduccion;
 					char * bufferArchivoReduccion;
@@ -292,7 +294,6 @@ void listen_to_master() {
 				}
 			} else if (pid > 0) {
 				log_print("PROCESO_PADRE:%d", pid);
-				waitpid(pid,&status,0);
 			} else if (pid < 0) {
 				log_report("NO SE PUDO HACER EL FORK");
 			}
@@ -324,7 +325,6 @@ void listen_to_master() {
 				}
 			} else if (pid > 0) {
 				log_print("PROCESO PADRE HOMOLOG");
-				waitpid(pid,&status,0);
 			} else if (pid < 0) {
 				log_report("NO SE PUDO CREAR EL PROCESO HIJO HOMOLOGO");
 			}
@@ -355,21 +355,23 @@ bool block_transform(int blockno, size_t size, const char *script, const char *o
 				datapath, bytesOcupados, scrpath, system_userdir(), outpath);
 	}
 	log_print("COMMAND: %s",command);
-	free(datapath);
-	free(scrpath);
-	free(outpath);
+
 
 	int r = system(command);
 	if (r < 0) {
 		log_report("FALLO AL FORKEAR EN SYSTEM");
-	free(command);
+
 		//break;
 	} else if (r == 127) {
 		log_print("NO SE PUDO EJECTUAR EL COMMANDO");
-		free(command);
+
 		//break;
 	}
 	free(command);
+	free(datapath);
+	free(scrpath);
+	free(outpath);
+	printf("EL RESULTADO DE SYSTEM %d \n", r);
 	return r ==0;
 }
 bool reducir_path(const char *input, const char *script, const char *output) {
@@ -399,5 +401,5 @@ bool reducir_path(const char *input, const char *script, const char *output) {
 	free(outpath);
 	free(command);
 	free(scrpath);
-	return r ==0 ;
+	return r == 0 ;
 }

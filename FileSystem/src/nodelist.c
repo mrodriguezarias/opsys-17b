@@ -142,6 +142,17 @@ bool nodelist_addblock(t_block *block, void *content) {
 	return true;
 }
 
+void nodelist_rmblock(t_block *block) {
+	for(int i = 0; i < 2; i++) {
+		t_block_copy *copy = block->copies + i;
+		t_node *node = nodelist_find(copy->node);
+		if(node == NULL) continue;
+		bitmap_unset(node->bitmap, copy->blockno);
+		node->free_blocks++;
+		add_node_to_file(node);
+	}
+}
+
 void nodelist_remove(const char *name) {
 	bool condition(t_node *elem) {
 		return mstring_equal(elem->name, name);
@@ -158,6 +169,10 @@ void nodelist_clear() {
 	mlist_clear(nodes, destroy_node);
 	dictionary_clean_and_destroy_elements(config->properties, free);
 	update_file();
+}
+
+void nodelist_refresh() {
+	mlist_traverse(nodes, node_active);
 }
 
 void nodelist_print() {

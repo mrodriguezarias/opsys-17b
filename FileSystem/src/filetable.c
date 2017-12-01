@@ -27,6 +27,12 @@
 
 static struct {
 	mutex_t *mut;
+	int current;
+	int total;
+} bsent;
+
+static struct {
+	mutex_t *mut;
 	mlist_t *blocks;
 	int current;
 	int total;
@@ -63,6 +69,7 @@ void filetable_init() {
 	if(files != NULL) return;
 	files = mlist_create();
 	dirtree_traverse(dir_traverser);
+	bsent.mut = thread_mutex_create();
 	bfile.mut = thread_mutex_create();
 }
 
@@ -141,6 +148,7 @@ void filetable_remove(const char *path) {
 	if (file == NULL) return;
 
 	path_remove(file->path);
+	mlist_traverse(file->blocks, nodelist_rmblock);
 
 	bool cond(t_yfile *elem) {
 		return mstring_equal(elem->path, file->path);
@@ -290,6 +298,14 @@ bool filetable_stable() {
 	return (fs.formatted && mlist_all(files, available_block));
 }
 
+void filetable_sentblock() {
+	thread_mutex_lock(bsent.mut);
+	bsent.current++;
+	bool done = bsent.current == bsent.total;
+	thread_mutex_unlock(bsent.mut);
+	if(done) thread_resume(thread_main());
+}
+
 void filetable_writeblock(const char *node, int blockno, void *block) {
 
 	bool block_finder(t_block *block) {
@@ -317,6 +333,7 @@ void filetable_writeblock(const char *node, int blockno, void *block) {
 
 void filetable_term() {
 	mlist_destroy(files, yfile_destroy);
+	thread_mutex_destroy(bsent.mut);
 	thread_mutex_destroy(bfile.mut);
 }
 
@@ -503,18 +520,25 @@ static bool add_blocks_from_file(t_yfile *yfile, const char *path) {
 		saved_blocks += nodelist_addblock(block, tmap + block->index * BLOCK_SIZE) ? 1 : 0;
 	}
 
+	bsent.current = 0;
+	bsent.total = 2 * numblocks;
+
 	mlist_traverse(yfile->blocks, send_block);
 	mlist_traverse(yfile->blocks, send_block);
 
+	bsent.total = saved_blocks;
 	bool success = numblocks <= saved_blocks && saved_blocks <= 2 * numblocks;
 	if(!success) fprintf(stderr, "Error: no se pudo guardar el archivo.\n");
 
+	thread_suspend();
 	file_unmap(target, tmap);
 	file_delete(target);
+
 	return success;
 }
 
 static int count_file_blocks(t_file *source, t_yfile *yfile) {
+	log_inform("Contando bloques en el archivo");
 	int count = 0;
 	if(yfile->type == FTYPE_TXT) {
 		count = partition_text_file(source, NULL, NULL);
@@ -525,6 +549,7 @@ static int count_file_blocks(t_file *source, t_yfile *yfile) {
 }
 
 static int partition_file_into_blocks(void *source, void *target, t_yfile *yfile) {
+	log_inform("Particionando archivo en bloques");
 	int count = 0;
 	if(yfile->type == FTYPE_TXT) {
 		count = partition_text_file(source, target, yfile);

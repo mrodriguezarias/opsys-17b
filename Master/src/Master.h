@@ -35,6 +35,7 @@ struct{
 bool job_active;
 mlist_t* hilos;
 pthread_mutex_t mutex_hilos;
+sem_t* sem;
 thread_t* hilo_node_drop;
 extern int IDJOB;
 

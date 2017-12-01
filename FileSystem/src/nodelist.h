@@ -81,13 +81,19 @@ t_node *nodelist_add(const char *name, int blocks);
 t_node *nodelist_find(const char *name);
 
 /**
- * Agrega un bloque a nodos de la lista.
+ * Agrega un bloque a un nodo de la lista.
  * Le envía el contenido del bloque al DataNode correspondiente.
  * @param block Bloque a agregar.
  * @param content Contenido del bloque.
  * @return Valor indicando si se pudo guardar el bloque.
  */
 bool nodelist_addblock(t_block *block, void *content);
+
+/**
+ * Elimina un bloque de un nodo de la lista.
+ * @param block Bloque a eliminar.
+ */
+void nodelist_rmblock(t_block *block);
 
 /**
  * Elimina un nodo de la lista de nodos.
@@ -99,6 +105,11 @@ void nodelist_remove(const char *name);
  * Elimina todos los nodos de la lista de nodos.
  */
 void nodelist_clear();
+
+/**
+ * Hace PING a todos los nodos para ver si están activos.
+ */
+void nodelist_refresh();
 
 /**
  * Formatea todos los nodos de la lista de nodos.
