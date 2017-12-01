@@ -267,10 +267,15 @@ void eliminarEstadosMultiples(int socketMaster,int job, char* estadoNuevo){//qui
 		}
 		indiceEncontrado = mlist_index(listaEstados, condicionIndice);
 		if(!string_equals_ignore_case(estadoEncontrado->estado , "Error" )){
+			estadoEncontrado->estado = mstring_duplicate(estadoNuevo);
 			log_print("Actualizacion en la tabla de estado: JOB:%d|MASTER:%d|NODO:%s|BLOQUE:%d|ETAPA:%s|ARCHIVOTEMPORAL:%s|ESTADO:%s",job,socketMaster,estadoEncontrado->nodo,estadoEncontrado->block,estadoEncontrado->etapa,estadoEncontrado->archivoTemporal,estadoEncontrado->estado);
+			mlist_replace(listaEstados, indiceEncontrado, estadoEncontrado);
 		}
-		estadoEncontrado->estado = mstring_duplicate(estadoNuevo);
-		mlist_replace(listaEstados, indiceEncontrado, estadoEncontrado);
+		else{
+			estadoEncontrado->estado = mstring_duplicate(estadoNuevo);
+			mlist_replace(listaEstados, indiceEncontrado, estadoEncontrado);
+		}
+
 
 	}
 	log_print("Actualizacion tabla de estado: Aborto de job: %d",job);
@@ -571,4 +576,20 @@ int obtenerHistorico(char * nodo){
 	return cargaNodo->cargaHistorica;
 }
 
-
+int buscarIdJobParaMasterCaido(int socketMaster){
+	if(mlist_length(listaEstados) == 0){
+		return -1;
+	}
+	else{
+		bool jobTablaDeEstado(void* estado){
+			return ((t_Estado*) estado)->master == socketMaster && string_equals_ignore_case(((t_Estado*) estado)->estado,"En proceso");
+		}
+		if(mlist_any(listaEstados,jobTablaDeEstado)){
+			t_Estado* estadoJob = mlist_find(listaEstados,jobTablaDeEstado);
+			return estadoJob->job;
+		}
+		else{
+			return -1;
+		}
+	}
+}

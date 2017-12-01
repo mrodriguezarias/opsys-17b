@@ -18,7 +18,6 @@
 static bool esLaPrimeraVezQueReciboLosNodos;
 
 void listen_to_master() {
-	//t_workerPlanificacion planificador[25];
 	esLaPrimeraVezQueReciboLosNodos = true;
 	log_inform("Escuchando puertos de master");
 	t_socket sv_sock = socket_init(NULL, config_get("MASTER_PUERTO"));
@@ -47,6 +46,10 @@ void listen_to_master() {
 				t_packet packetOperacion = protocol_receive_packet(sock);
 				if(packetOperacion.operation == OP_UNDEFINED) {
 					log_report("Desconexion del master: %d", sock);
+					int idJob = buscarIdJobParaMasterCaido(sock);
+					if(idJob > 0){
+						eliminarEstadosMultiples(sock,idJob, "Error");
+					}
 					socket_close(sock);
 					socket_set_remove(sock, &sockets);
 					continue;
@@ -151,14 +154,14 @@ void listen_to_master() {
 				break;
 				case OP_ALMACENAMIENTO_LISTA:
 					{respuestaOperacion* finalizoAF = serial_unpackrespuestaOperacion(packetOperacion.content);
-					if(finalizoAF->response == -1){
-						finalizarJobGlobal(finalizoAF->idJOB,sock,ERROR_ALMACENAMIENTO_FINAL,"Error");
-
-					}
-					else{
+					if(finalizoAF->response == 0){
+						printf("recibi que termino bien \n");
 						finalizarJobGlobal(finalizoAF->idJOB,sock,ERROR_ALMACENAMIENTO_FINAL,"FinalizadoOK");
 						log_inform("Almacenamiento final terminada para :%d",finalizoAF->idJOB);
-
+					}
+					else{
+						printf("Recibi un %d para abortar job \n",finalizoAF->response);
+						finalizarJobGlobal(finalizoAF->idJOB,sock,ERROR_ALMACENAMIENTO_FINAL,"Error");
 					}
 					}
 				break;
