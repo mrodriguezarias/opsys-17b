@@ -400,6 +400,7 @@ void manejador_yama(t_packet paquete) {
 		times.job_end = mtime_now();
 		break;
 	default:
+		printf("entre en default \n");
 		break;
 	}
 

@@ -47,7 +47,7 @@ void listen_to_master() {
 				serial_destroy(packet.content);
 			}
 			else if(sock == yama.fs_socket){
-				FinalizarEjecucion();
+				FinalizarEjecucion(-1,-1);
 			}
 			else {
 				t_packet packetOperacion = protocol_receive_packet(sock);
@@ -68,7 +68,6 @@ void listen_to_master() {
 						t_pedidoTrans* pedidoInicio = serial_unpackPedido(packetOperacion.content);
 						log_inform("Inicio de job nuevo :%d",pedidoInicio->idJOB);
 						t_serial* file_serial = serial_pack("s",pedidoInicio->file);
-						sleep(10);
 						requerirInformacionFilesystem(file_serial);
 						t_yfile* Datosfile = reciboInformacionSolicitada(pedidoInicio->idJOB,sock);
 						if(Datosfile->size>0){

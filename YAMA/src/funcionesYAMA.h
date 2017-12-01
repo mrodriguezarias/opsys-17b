@@ -51,6 +51,6 @@ void asignoBloque(t_workerPlanificacion[], int *,int*,int);
 void avisarErrorMaster(int, int , int );
 int buscarIdJobParaMasterCaido(int);
 mlist_t* buscarSocketsActivos();
-void FinalizarEjecucion();
+void FinalizarEjecucion(int,int);
 
 #endif

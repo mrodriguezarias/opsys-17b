@@ -226,7 +226,7 @@ t_yfile* reciboInformacionSolicitada(int job,int master){
 		return Datosfile;
 	}
 	else{
-		FinalizarEjecucion();
+		FinalizarEjecucion(master,job);
 	}
 	return Datosfile; //nunca llega a esta instancia.
 }
@@ -607,10 +607,12 @@ mlist_t* buscarSocketsActivos(){
 }
 
 
-void FinalizarEjecucion(){
+void FinalizarEjecucion(int socket,int job){
+
+	if(socket == -1){
 	if(mlist_length(listaEstados)==0){
-		log_report("Filesystem desconectado, se desconecta YAMA");
-		exit(0);
+			log_report("Filesystem desconectado, se desconecta YAMA");
+			exit(0);
 	}
 	else{
 		mlist_t * listaEstadoSocketMasters = buscarSocketsActivos();
@@ -623,5 +625,26 @@ void FinalizarEjecucion(){
 		}
 		log_report("Filesystem desconectado, se desconecta YAMA");
 		exit(0);
+	}
+	}
+	else{
+		avisarErrorMaster(job,socket,ERROR_FS_DISCONNECTED);
+		if(mlist_length(listaEstados)==0){
+			log_report("Filesystem desconectado, se desconecta YAMA");
+			exit(0);
+		}
+		else{
+		mlist_t * listaEstadoSocketMasters = buscarSocketsActivos();
+			if(mlist_length(listaEstadoSocketMasters) > 0){
+
+				void cerrarMasters(void* unEstadoSocketMaster){
+					avisarErrorMaster(((t_Estado*) unEstadoSocketMaster)->job,((t_Estado*) unEstadoSocketMaster)->master,ERROR_FS_DISCONNECTED);
+				}
+				mlist_traverse(listaEstadoSocketMasters,cerrarMasters);
+			}
+			log_report("Filesystem desconectado, se desconecta YAMA");
+			exit(0);
+		}
+
 	}
 }
