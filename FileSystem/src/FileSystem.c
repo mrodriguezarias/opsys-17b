@@ -41,6 +41,7 @@ static void init() {
 	filetable_init();
 	nodelist_init();
 	fs.formatted = nodelist_length() > 0;
+	fs.yama_connected = false;
 	log_inform("Inicializado %s", fs.formatted ? "con estado anterior" : "sin formato");
 }
 

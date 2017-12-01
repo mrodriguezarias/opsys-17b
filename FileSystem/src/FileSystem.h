@@ -6,6 +6,7 @@
 
 struct {
 	bool formatted;
+	bool yama_connected;
 } fs;
 
 #endif /* FILESYSTEM_H_ */

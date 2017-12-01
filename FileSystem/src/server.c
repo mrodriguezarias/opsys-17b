@@ -187,6 +187,7 @@ static void yama_listener() {
 			continue;
 		}
 
+		fs.yama_connected = true;
 		log_inform("Yama conectado en socket: %d", yama_socket);
 		protocol_send_response(yama_socket, RESPONSE_OK);
 		yama_handler(yama_socket);
@@ -230,6 +231,7 @@ static void yama_handler(t_socket yama_socket) {
 			free(file_request);
 		} else {
 			serial_destroy(packet.content);
+			fs.yama_connected = false;
 			break;
 		}
 	}

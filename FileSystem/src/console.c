@@ -36,7 +36,6 @@ static void cmd_clear(void);
 static void cmd_cpblock(void);
 static void cmd_cpfrom(void);
 static void cmd_cpto(void);
-static void cmd_debug(void);
 static void cmd_format(void);
 static void cmd_help(void);
 static void cmd_info(void);
@@ -44,9 +43,12 @@ static void cmd_ls(void);
 static void cmd_md5(void);
 static void cmd_mkdir(void);
 static void cmd_mv(void);
+static void cmd_nodes(void);
 static void cmd_quit(void);
 static void cmd_rename(void);
 static void cmd_rm(void);
+static void cmd_status(void);
+static void cmd_tree(void);
 
 static void init_console();
 static void term_console();
@@ -68,7 +70,6 @@ static t_command commands[] = {
 		{"cpblock", cmd_cpblock, "Copia un bloque de un archivo en un nodo", "archivo bloque nodo"},
 		{"cpfrom", cmd_cpfrom, "Copia un archivo local a yamafs", "archivo_local directorio_yamafs"},
 		{"cpto", cmd_cpto, "Copia un archivo yamafs al sistema local", "archivo_yamafs directorio_local"},
-		{"debug", cmd_debug, "", ""},
 		{"exit", cmd_quit, "", ""},
 		{"format", cmd_format, "Da formato al sistema de archivos", ""},
 		{"help", cmd_help, "Lista los comandos disponibles", "[comando]"},
@@ -77,9 +78,12 @@ static t_command commands[] = {
 		{"md5", cmd_md5, "Muestra el MD5 de un archivo", "archivo"},
 		{"mkdir", cmd_mkdir, "Crea un directorio", "directorio"},
 		{"mv", cmd_mv, "Mueve un archivo o directorio", "ruta_original ruta_final"},
+		{"nodes", cmd_nodes, "Muestra información sobre los nodos de datos", ""},
 		{"quit", cmd_quit, "Termina la ejecución del proceso", ""},
 		{"rename", cmd_rename, "Renombra un archivo o directorio", "ruta_original nombre_final"},
 		{"rm", cmd_rm, "Elimina un archivo, directorio o bloque", "archivo | -d directorio | -b archivo bloque copia"},
+		{"status", cmd_status, "Muestra información sobre el estado del sistema", ""},
+		{"tree", cmd_tree, "Muestra la estructura de árbol de los directorios", ""},
 		{NULL, NULL, NULL, NULL}
 };
 
@@ -266,30 +270,6 @@ static void cmd_cpto() {
 	free(udir);
 }
 
-static void cmd_debug() {
-	if(num_args() == 0) return;
-	char *mode = extract_arg(1);
-	if(mstring_equal(mode, "nodes")) {
-		nodelist_print();
-	} else if(mstring_equal(mode, "dirs")) {
-		dirtree_print();
-	} else if(mstring_equal(mode, "files")) {
-		filetable_print();
-	} else if(mstring_equal(mode, "recv")) {
-		puts("Prueba de petición de un bloque a un DataNode. Datos recibidos:");
-		t_node *node = nodelist_find("NODO1");
-		t_serial *serial = serial_pack("ii", 0, 0);
-		t_packet request = protocol_packet(OP_REQUEST_BLOCK, serial);
-		protocol_send_packet(request, node->socket);
-		serial_destroy(serial);
-
-		t_packet response = protocol_receive_packet(node->socket);
-		printf("Received: %s\n", (char*)response.content->data);
-		serial_destroy(response.content);
-	}
-	free(mode);
-}
-
 static void cmd_format() {
 	if(nodelist_length() == 0) {
 		print_error("ningún nodo conectado");
@@ -406,6 +386,10 @@ static void cmd_mv() {
 	free(new_path);
 }
 
+static void cmd_nodes() {
+	nodelist_print();
+}
+
 static void cmd_quit() {
 	should_quit = true;
 }
@@ -494,6 +478,17 @@ static void cmd_rm() {
 	free(path);
 }
 
+static void cmd_status() {
+	printf(" %s Nodos conectados\n", nodelist_nactive() > 0 ? "✓" : "×");
+	printf(" %s Sistema formateado\n", fs.formatted ? "✓" : "×");
+	printf(" %s Sistema estable\n", filetable_stable() ? "✓" : "×");
+	printf(" %s YAMA conectado\n", fs.yama_connected ? "✓" : "×");
+}
+
+static void cmd_tree() {
+	dirtree_print();
+}
+
 // ========== Funciones para libreadline ==========
 
 static void execute_line(const char *line) {
@@ -516,8 +511,9 @@ static void execute_line(const char *line) {
 
 	if(!fs.formatted
 			&& !mstring_equal(command->name, "format")
-			&& !mstring_equal(command->name, "debug")
 			&& !mstring_equal(command->name, "help")
+			&& !mstring_equal(command->name, "nodes")
+			&& !mstring_equal(command->name, "status")
 			&& !mstring_equal(command->name, "clear")
 			&& !mstring_equal(command->name, "quit")) {
 		printf("\nEl Filesystem no se encuentra formateado.\n"
