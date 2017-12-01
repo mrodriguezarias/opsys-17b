@@ -2,9 +2,9 @@
 #include "mstring.h"
 
 void kill_thread(t_hilos* hilo){
-		hilo->active = false;
-		pthread_cancel((pthread_t)hilo->hilo);
-		thread_sem_signal(sem);
+	hilo->active = false;
+	thread_kill(hilo->hilo);
+	thread_sem_signal(sem);
 }
 
 void node_drop(){

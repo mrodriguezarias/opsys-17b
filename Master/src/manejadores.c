@@ -7,6 +7,7 @@ void finalizar_manejador_transf(int response, t_socket socket,
 	if(response == -1){
 		thread_send(hilo_node_drop, (void*)mstring_duplicate(transformacion->nodo));
 		thread_suspend();
+		if(!thread_active()) thread_exit(NULL);
 		log_report("Finalización del hilo %d etapa TRANSFORMACION por caída del nodo: %s",
 				thread_self(),
 				transformacion->nodo);
@@ -65,6 +66,7 @@ void manejador_transformacion(tEtapaTransformacion* transformacion) {
 			log_inform("Se recibe respuesta de ETAPA_TRANSFORMACION del worker en socket %d",
 					socket);
 			response = protocol_receive_response(socket);
+			if(!thread_active()) thread_exit(NULL);
 		}
 	}
 
@@ -404,7 +406,8 @@ void manejador_yama(t_packet paquete) {
 		times.job_end = mtime_now();
 		break;
 	default:
-		printf("entre en default \n");
+		log_inform("entra en default");
+		job_active = false;
 		break;
 	}
 

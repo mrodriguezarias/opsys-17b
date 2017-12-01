@@ -59,6 +59,13 @@ int nodelist_length() {
 	return mlist_length(nodes);
 }
 
+int nodelist_blocks() {
+	int adder(int nblocks, t_node *node) {
+		return nblocks + node->total_blocks;
+	}
+	return mlist_reduce(nodes, adder);
+}
+
 int nodelist_nactive() {
 	bool cond(t_node *node) {
 		return node_active(node);

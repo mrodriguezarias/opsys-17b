@@ -77,6 +77,13 @@ int filetable_size() {
 	return mlist_length(files);
 }
 
+size_t filetable_totalsize() {
+	int adder(int nsize, t_yfile *file) {
+		return nsize + file->size;
+	}
+	return mlist_reduce(files, adder);
+}
+
 void filetable_add(t_yfile *file) {
 	if (filetable_find(file->path) != NULL)
 		return;

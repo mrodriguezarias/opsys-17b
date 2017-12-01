@@ -34,6 +34,12 @@ void nodelist_init(void);
 int nodelist_length(void);
 
 /**
+ * Devuelve la cantidad total de bloques.
+ * @return Cantidad de bloques.
+ */
+int nodelist_blocks(void);
+
+/**
  * Devuelve la cantidad de nodos activos.
  * @return Cantidad de nodos activos.
  */

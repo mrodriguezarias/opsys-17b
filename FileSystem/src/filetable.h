@@ -17,6 +17,12 @@ void filetable_init(void);
 int filetable_size(void);
 
 /**
+ * Devuelve el total usado por los archivos en la tabla.
+ * @return Total usado.
+ */
+size_t filetable_totalsize(void);
+
+/**
  * Agrega un archivo a la tabla de archivos.
  * @param file Archivo yama a agregar.
  */

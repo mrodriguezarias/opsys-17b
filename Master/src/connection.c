@@ -37,6 +37,7 @@ void request_job_for_file(const char *file) {
 
 t_socket connect_to_worker(const char *ip, const char *port) { // La ip y el puerto son obtenidos mediante YAMA
 	t_socket socket = socket_connect(ip, port);
+	if(!thread_active()) thread_exit(NULL);
 	if(socket == -1) {
 		log_report("Worker no está corriendo en %s:%s", ip, port);
 	}else{
