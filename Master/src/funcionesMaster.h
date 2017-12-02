@@ -41,7 +41,7 @@ const char *datetime(time_t);
 
 const char *timediff(time_t, time_t);
 
-void verificarParalelismo();
+void verificarParalelismo(int);
 
 void init(char*[]);
 void terminate();

@@ -38,11 +38,7 @@ void finalizar_manejador_transf(int response, t_socket socket,
 }
 
 void manejador_transformacion(tEtapaTransformacion* transformacion) {
-	thread_t *hilo = thread_self();
-	if(hilo == 0){
-		printf("NO CREO EL HILO.... \n");
-	}
-	log_print("Hilo %lu creado ETAPA_TRANSFORMACION", hilo);
+	log_print("Hilo %d creado ETAPA_TRANSFORMACION", thread_self());
 	int response;
 
 	t_socket socket = connect_to_worker(transformacion->ip, transformacion->puerto);
@@ -80,6 +76,7 @@ void finalizar_manejador_rl(int response, t_socket socket,
 	if(response == -1){
 		thread_send(hilo_node_drop, (void*)mstring_duplicate(etapa_rl->nodo));
 		thread_suspend();
+		if(!thread_active()) thread_exit(NULL);
 		log_report("Finalización del hilo %d etapa REDUCCION_LOCAL por caída del nodo: %s",
 				thread_self(),
 				etapa_rl->nodo);
@@ -110,7 +107,7 @@ void manejador_rl(tEtapaReduccionLocal * etapa_rl) {
 
 	if (socket == -1){
 		response = -1;
-		finalizar_manejador_rl(response, socket, etapa_rl);
+		//finalizar_manejador_rl(response, socket, etapa_rl);
 	}else{
 		t_serial *serial_worker = serial_create(NULL, 0);
 		serial_add(serial_worker, "s", script.script_reduc);
@@ -128,11 +125,12 @@ void manejador_rl(tEtapaReduccionLocal * etapa_rl) {
 
 		if(!enviar_operacion_worker(OP_INICIAR_REDUCCION_LOCAL, socket, serial_worker)){
 			response = -1;
-			finalizar_manejador_rl(response, socket, etapa_rl);
+			//finalizar_manejador_rl(response, socket, etapa_rl);
 		}else{
 			log_inform("Se recibe respuesta de ETAPA_REDUCCION_LOCAL del worker en socket %d",
 					socket);
-			response_worker(socket, &response);
+			response = protocol_receive_response(socket);
+			if(!thread_active()) thread_exit(NULL);
 		}
 	}
 
@@ -181,7 +179,7 @@ void manejador_rg(mlist_t* list) {
 
 	if (socket == -1){
 		response = -1;
-		finalizar_manejador_rg(response, socket, list, worker_manager);
+		//finalizar_manejador_rg(response, socket, list, worker_manager);
 	}else{
 		t_serial *serial_worker = serial_create(NULL, 0);
 		serial_add(serial_worker, "s", script.script_reduc);
@@ -206,11 +204,11 @@ void manejador_rg(mlist_t* list) {
 				socket);
 		if(!enviar_operacion_worker(OP_INICIAR_REDUCCION_GLOBAL, socket, serial_worker)){
 			response = -1;
-			finalizar_manejador_rg(response, socket, list, worker_manager);
+			//finalizar_manejador_rg(response, socket, list, worker_manager);
 		}else{
 			log_inform("Se recibe respuesta de ETAPA_REDUCCION_GLOBAL del worker en socket %d",
 					socket);
-			response_worker(socket, &response);
+			response = protocol_receive_response(socket);
 		}
 	}
 
@@ -261,7 +259,7 @@ void manejador_af(tAlmacenadoFinal* af) {
 	t_socket socket = connect_to_worker(af->ip, af->puerto);
 	if (socket == -1){
 		response = -1;
-		finalizar_manejador_af(response, socket, af);
+		//finalizar_manejador_af(response, socket, af);
 	}else{
 		t_serial *serial_worker = serial_pack("ss",af->archivo_etapa, job.arch_result);
 
@@ -270,11 +268,11 @@ void manejador_af(tAlmacenadoFinal* af) {
 				socket);
 		if(!enviar_operacion_worker(OP_INICIAR_ALMACENAMIENTO, socket, serial_worker)){
 			response = -1;
-			finalizar_manejador_af(response, socket, af);
+			//finalizar_manejador_af(response, socket, af);
 		}else{
 			log_inform("Se recibe respuesta de ETAPA_ALMACENAMIENTO_FINAL del worker en socket %d",
 					socket);
-			response_worker(socket, &response);
+			response = protocol_receive_response(socket);
 		}
 	}
 
@@ -305,7 +303,7 @@ void etapa_transformacion(const t_packet* paquete) {
 
 		pthread_mutex_lock(&mutex_hilos);
 		mlist_append(hilos, hilo_transformacion);
-		verificarParalelismo();
+		verificarParalelismo(TRANSFORMACION);
 		pthread_mutex_unlock(&mutex_hilos);
 	}
 }
@@ -330,7 +328,7 @@ void etapa_reduccion_local(const t_packet* paquete) {
 
 	pthread_mutex_lock(&mutex_hilos);
 	mlist_append(hilos, hilo_rl);
-	verificarParalelismo();
+	verificarParalelismo(REDUCCION_GLOBAL);
 	pthread_mutex_unlock(&mutex_hilos);
 }
 
@@ -406,7 +404,7 @@ void manejador_yama(t_packet paquete) {
 		times.job_end = mtime_now();
 		break;
 	default:
-		log_inform("entra en default");
+		log_inform("Operación indefinida (desconexión de YAMA)");
 		job_active = false;
 		break;
 	}

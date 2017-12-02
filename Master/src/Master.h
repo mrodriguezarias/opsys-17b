@@ -40,7 +40,6 @@ thread_t* hilo_node_drop;
 extern int IDJOB;
 
 struct{
-	int total;
 	int transf;
 	int reducc;
 }tareasParalelo;

@@ -112,20 +112,20 @@ const char *timeprom(mtime_t t1, mtime_t t2, int etapa){
 	}
 }
 
-void verificarParalelismo(){
+void verificarParalelismo(int etapa){
 	bool statusEtapaTransformacion(t_hilos* hilo){
 		return (hilo->etapa == TRANSFORMACION && hilo->active);
 	}
 	bool statusEtapaReduccionLocal(t_hilos* hilo){
 		return (hilo->etapa == REDUCCION_LOCAL && hilo->active);
 	}
-	int totalEtapas = mlist_count(hilos, statusEtapaTransformacion) + mlist_count(hilos, statusEtapaReduccionLocal);
-	if(mlist_count(hilos, statusEtapaTransformacion) > 0 &&
-			mlist_count(hilos, statusEtapaReduccionLocal) > 0 &&
-			totalEtapas > tareasParalelo.total){
-		tareasParalelo.total = totalEtapas;
-		tareasParalelo.transf = mlist_count(hilos, statusEtapaTransformacion);
-		tareasParalelo.reducc = mlist_count(hilos, statusEtapaReduccionLocal);
+	int total;
+	if (etapa == TRANSFORMACION){
+		total = mlist_count(hilos, statusEtapaTransformacion);
+		if (total > tareasParalelo.transf) tareasParalelo.transf = total;
+	}else if (etapa == REDUCCION_LOCAL){
+		total = mlist_count(hilos, statusEtapaReduccionLocal);
+		if (total > tareasParalelo.reducc) tareasParalelo.reducc = total;
 	}
 }
 
@@ -150,11 +150,9 @@ void calcular_metricas(){
 			timeprom(times.transf_init, times.transf_end, TRANSFORMACION),
 			timeprom(times.rl_init, times.rl_end, REDUCCION_LOCAL),
 			timeprom(times.rg_init, times.rg_end, REDUCCION_GLOBAL));
-	printf("Cantidad de etapas ejecutadas en paralelo: %d\n"
-			"Transformaciones: %d\n"
-			"Reducciones Locales: %d\n",
-			tareasParalelo.total,
-			tareasParalelo.transf,
+	printf("Cantidad total de Transformaciones realizadas en paralelo: %d\n",
+			tareasParalelo.transf);
+	printf("Cantidad total de Reducciones realizadas en paralelo: %d\n",
 			tareasParalelo.reducc);
 	printf("Cantidad total de tareas realizadas:\n"
 			"Transformaciones: %d\n"
@@ -170,7 +168,7 @@ void calcular_metricas(){
 }
 
 void init(char* argv[]){
-	times.job_init = mtime_now();
+	times.job_init = times.job_end = mtime_now();
 
 	job.path_transf = string_duplicate(argv[1]);
 	job.path_reduc = string_duplicate(argv[2]);
@@ -182,7 +180,6 @@ void init(char* argv[]){
 	hilos = mlist_create();
 	pthread_mutex_init(&mutex_hilos, NULL);
 	sem = thread_sem_create(30);
-	tareasParalelo.total = 0;
 	tareasParalelo.transf = 0;
 	tareasParalelo.reducc = 0;
 
