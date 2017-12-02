@@ -148,8 +148,9 @@ static void worker_handler(t_socket worker_socket) {
 			path_remove(path);
 			free(path);
 
+			log_inform("Se responde a worker");
 			if(filetable_contains(ypath)) {
-				log_inform("Archivo almacenado");
+
 				protocol_send_response(worker_socket, RESPONSE_OK);
 			} else {
 				log_inform("Espacio insuficiente para almacenar archivo");

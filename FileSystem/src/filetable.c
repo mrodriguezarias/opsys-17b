@@ -29,6 +29,7 @@ static struct {
 	mutex_t *mut;
 	int current;
 	int total;
+	thread_t *th;
 } bsent;
 
 static struct {
@@ -310,7 +311,7 @@ void filetable_sentblock() {
 	bsent.current++;
 	bool done = bsent.current == bsent.total;
 	thread_mutex_unlock(bsent.mut);
-	if(done) thread_resume(thread_main());
+	if(done) thread_resume(bsent.th);
 }
 
 void filetable_writeblock(const char *node, int blockno, void *block) {
@@ -527,6 +528,7 @@ static bool add_blocks_from_file(t_yfile *yfile, const char *path) {
 		saved_blocks += nodelist_addblock(block, tmap + block->index * BLOCK_SIZE) ? 1 : 0;
 	}
 
+	bsent.th = thread_self();
 	bsent.current = 0;
 	bsent.total = 2 * numblocks;
 
