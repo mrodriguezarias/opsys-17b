@@ -364,6 +364,8 @@ static void cmd_mkdir() {
 	char *path = extract_arg(1);
 	if(dirtree_contains(path)) {
 		print_error("ya existe el directorio");
+	} else if(dirtree_size() == 100) {
+		print_error("límite de directorios alcanzado");
 	} else {
 		dirtree_add(path);
 	}
@@ -480,29 +482,28 @@ static void cmd_rm() {
 }
 
 static void cmd_status() {
-	printf("Estado del sistema:\n");
-//
-//	int nnodes = nodelist_length();
-//	int nfiles = filetable_size();
-//	int ndirs = dirtree_size();
-//
-//	size_t ntotal = nodelist_blocks() * BLOCK_SIZE;
-//	size_t nusing = filetable_totalsize();
-//	size_t nfree = ntotal - nusing;
-//
-//	char *btotal = mstring_bsize(ntotal);
-//	char *busing = mstring_bsize(nusing);
-//	char *bfree = mstring_bsize(nfree);
-//
-//	t_number pusing = nusing * 1.0 /
-//
-//	printf("  %s Sistema formateado\t %2i nodo%s\t %s totales\n", fs.formatted ? "✓" : "×", nnodes, nnodes == 1 ? "" : "s", btotal);
-//	printf("  %s Sistema estable\t %2i archivo%s\t %s libres (%.1f)\n", filetable_stable() ? "✓" : "×", nfiles, nfiles == 1 ? "" : "s", bfree);
-//	printf("  %s YAMA conectado\t %2i directorio%s\t %s ocupados (%.1f)\n", fs.yama_connected ? "✓" : "×", ndirs, ndirs == 1 ? "" : "s", busing);
-//
-//	free(btotal);
-//	free(busing);
-//	free(bfree);
+	int nnodes = nodelist_length();
+	int nfiles = filetable_size();
+	int ndirs = dirtree_size();
+
+	size_t ntotal = nodelist_blocks() * BLOCK_SIZE;
+	size_t nusing = filetable_totalsize();
+	size_t nfree = ntotal - nusing;
+
+	float fusing = ntotal == 0 ? ntotal : nusing * 100.0 / ntotal;
+	float ffree = 100.0 - fusing;
+
+	char *btotal = mstring_bsize(ntotal);
+	char *busing = mstring_bsize(nusing);
+	char *bfree = mstring_bsize(nfree);
+
+	printf("  %s Sistema formateado  %3i nodo%s        %10s usado (%5.1f%%)\n", fs.formatted ? "✓" : "×", nnodes, nnodes == 1 ? " " : "s", busing, fusing);
+	printf("  %s Sistema estable     %3i archivo%s     %10s libre (%5.1f%%)\n", filetable_stable() ? "✓" : "×", nfiles, nfiles == 1 ? " " : "s", bfree, ffree);
+	printf("  %s YAMA conectado      %3i directorio%s  %10s total\n", fs.yama_connected ? "✓" : "×", ndirs, ndirs == 1 ? " " : "s", btotal);
+
+	free(btotal);
+	free(busing);
+	free(bfree);
 }
 
 static void cmd_tree() {

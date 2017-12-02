@@ -181,9 +181,9 @@ char *mstring_end(const char *string) {
 }
 
 char *mstring_bsize(size_t size) {
-	static const char *pref[] = {"", "K", "M", "G", "T"};
+	static const char *pref[] = {" ", "K", "M", "G", "T"};
 	const unsigned short mult = 1024;
-	const char *x = size < mult ? "" : "i";
+	const char *x = size < mult ? " " : "i";
 	float s = size;
 	int i = 0;
 	while(s >= mult || number_round(s, 1) == mult) {

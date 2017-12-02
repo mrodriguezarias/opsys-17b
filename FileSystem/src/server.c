@@ -59,10 +59,10 @@ static t_node *receive_node_info(t_socket socket) {
 	} else if(node == NULL) {
 		log_inform("Conectando con nodo nuevo %s", name);
 		node = nodelist_add(name, blocks);
-		node->worker_port = string_duplicate(worker_port);
 	} else {
 		log_inform("Conectando con nodo viejo %s", name);
 	}
+	node->worker_port = mstring_duplicate(worker_port);
 	free(name);
 	free(worker_port);
 	return node;

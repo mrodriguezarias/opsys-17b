@@ -25,6 +25,8 @@
 
 #define BLOCKS_PATH "metadata/blocks"
 
+static mutex_t *cpmut;
+
 static struct {
 	mutex_t *mut;
 	int current;
@@ -70,6 +72,7 @@ void filetable_init() {
 	if(files != NULL) return;
 	files = mlist_create();
 	dirtree_traverse(dir_traverser);
+	cpmut = thread_mutex_create();
 	bsent.mut = thread_mutex_create();
 	bfile.mut = thread_mutex_create();
 }
@@ -253,6 +256,7 @@ void filetable_list(const char *path) {
 }
 
 void filetable_cpfrom(const char *path, const char *dir) {
+	thread_mutex_lock(cpmut);
 	t_ftype type = path_istext(path) ? FTYPE_TXT : FTYPE_BIN;
 	char *ypath = path_create(PTYPE_YAMA, dir, path_name(path));
 	t_yfile *file = yfile_create(NULL, type);
@@ -269,6 +273,7 @@ void filetable_cpfrom(const char *path, const char *dir) {
 	}
 
 	free(ypath);
+	thread_mutex_unlock(cpmut);
 }
 
 void filetable_cpto(const char *path, const char *dir) {
@@ -341,6 +346,7 @@ void filetable_writeblock(const char *node, int blockno, void *block) {
 
 void filetable_term() {
 	mlist_destroy(files, yfile_destroy);
+	thread_mutex_destroy(cpmut);
 	thread_mutex_destroy(bsent.mut);
 	thread_mutex_destroy(bfile.mut);
 }
@@ -509,8 +515,9 @@ static bool add_blocks_from_file(t_yfile *yfile, const char *path) {
 	t_file *source = file_open(path);
 
 	int numblocks = count_file_blocks(source, yfile);
+	int freeblocks = nodelist_freeblocks();
 
-	if(nodelist_freeblocks() < numblocks) {
+	if(freeblocks < numblocks) {
 		fprintf(stderr, "Error: no hay suficiente espacio libre para guardar este archivo.\n");
 		file_close(source);
 		return false;
@@ -530,16 +537,16 @@ static bool add_blocks_from_file(t_yfile *yfile, const char *path) {
 
 	bsent.th = thread_self();
 	bsent.current = 0;
-	bsent.total = 2 * numblocks;
+	bsent.total = number_min(freeblocks, 2 * numblocks);
 
 	mlist_traverse(yfile->blocks, send_block);
 	mlist_traverse(yfile->blocks, send_block);
-
-	bsent.total = saved_blocks;
-	bool success = numblocks <= saved_blocks && saved_blocks <= 2 * numblocks;
-	if(!success) fprintf(stderr, "Error: no se pudo guardar el archivo.\n");
 
 	thread_suspend();
+
+	bool success = saved_blocks == bsent.total && numblocks <= saved_blocks && saved_blocks <= 2 * numblocks;
+	if(!success) fprintf(stderr, "Error: no se pudo guardar el archivo.\n");
+
 	file_unmap(target, tmap);
 	file_delete(target);
 
