@@ -13,7 +13,7 @@
 #include "client.h"
 #include <semaphore.h>
 
-#define MAXIMO_TAMANIO_DATOS 256 //definiendo el tamanio maximo
+#define MAXIMO_TAMANIO_DATOS 256
 int SocketBuscado_GLOBAL = 0;
 
 typedef struct{
@@ -52,17 +52,16 @@ int main() {
 }
 
 void trapper(int signum){
-	printf("\nRecibi la señal\n");
+	log_inform("Senial atrapada");
 
 	if(entreAPlanificar){
-		printf("estoy planificando, luego recargare \n");
 		recibiSenial = true;
 	}
 	else{
 		config_reload();
 		retardoPlanificacion = atoi(config_get("RETARDO_PLANIFICACION"));
 		strcpy(algoritmoBalanceo,config_get("ALGORITMO_BALANCEO"));
-		log_print("Modificacion del retardo a :%d || modificacion del algoritmo a:%s",retardoPlanificacion,algoritmoBalanceo);
+		log_inform("Modificacion del retardo a :%d || Modificacion del algoritmo a:%s",retardoPlanificacion,algoritmoBalanceo);
 		recibiSenial = false;
 	}
 }

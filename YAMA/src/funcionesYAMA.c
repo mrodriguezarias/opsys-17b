@@ -22,7 +22,6 @@ void imprimirListaEstadosCompleta(){
 void planificar(t_workerPlanificacion planificador[], int tamaniolistaNodos, mlist_t* listaBloque){
 
 	int posicionArray;
-	printf("no llene el planificador \n");
 	llenarArrayPlanificador(planificador,tamaniolistaNodos,&posicionArray);
 	int bloque = 0;
 	while(!asigneBloquesDeArchivo){
@@ -73,7 +72,7 @@ int obtenerCargaMaxima(){
 	void* cargaMayorObtenido = mlist_first(listaDeCargas);
 	int CargaMayor = (int) cargaMayorObtenido;
 	int cargaActual = CargaMayor;
-	mlist_destroy(listaDeCargas, NULL); //// ESTE DESTROY ME TIRA SEGFAULT LA SEGUNDA VEZ QUE SE EJECUTA,NO DEBERIA HACERLO YA QUE ES UNA LISTA NUEVA
+	mlist_destroy(listaDeCargas, NULL);
 	return cargaActual;
 }
 
@@ -84,7 +83,6 @@ void llenarArrayPlanificador(t_workerPlanificacion planificador[],int tamaniolis
 	int historicoAnterior = 0;
 	if(!strcmp("WCLOCK",algoritmoBalanceo)){
 		cargaMax = obtenerCargaMaxima();
-		printf("me devolvio de carga maxima %d \n", cargaMax); //luego borrar
 	}
 	for(i=0;i<tamaniolistaNodos;i++){
 		t_infoNodo* nodoObtenido = mlist_get(listaNodosActivos,i);
@@ -222,7 +220,6 @@ t_yfile* reciboInformacionSolicitada(int job,int master){
 
 	else if(packetArchivo.operation == OP_ARCHIVO_NODES){
 		Datosfile = yfile_unpack(packetArchivo.content);
-		printf("recibi correctamente de filesystem \n");
 		return Datosfile;
 	}
 	else{
@@ -233,8 +230,8 @@ t_yfile* reciboInformacionSolicitada(int job,int master){
 
 char* generarNombreArchivoTemporalTransf(int job,int master, int bloque){
 	char* nombreArchivoTemporal = malloc(sizeof(char)*21);
- sprintf(nombreArchivoTemporal,"/tmp/j%dMaster%d-temp%d",job,master,bloque);
- return nombreArchivoTemporal;
+	 sprintf(nombreArchivoTemporal,"/tmp/j%dMaster%d-temp%d",job,master,bloque);
+	 return nombreArchivoTemporal;
 }
 
 void agregarAtablaEstado(int job, char* nodo,int Master,int bloque,char* etapa,char* archivo_temporal,char* estado){
@@ -281,7 +278,6 @@ void eliminarEstadosMultiples(int socketMaster,int job, char* estadoNuevo){//qui
 
 	}
 	log_print("Actualizacion tabla de estado: Aborto de job: %d",job);
-	//imprimirListaEstadosCompleta();
 	mlist_destroy(listaFiltrada, NULL);
 }
 
@@ -306,7 +302,6 @@ void destruirlista(void* bloqueobtenido) {
 
 
 void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
-	printf("Entre a replanificar \n");
 	bool aborto = false;
 	t_serial* serial_send = serial_pack("s",pathArchivo);
 	requerirInformacionFilesystem(serial_send);
@@ -317,11 +312,7 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 		return string_equals_ignore_case(((t_Estado *) estadoTarea)->nodo,nodo) && ((t_Estado *) estadoTarea)->master == master && ((t_Estado *) estadoTarea)->job == job && string_equals_ignore_case(((t_Estado *) estadoTarea)->etapa,"Transformacion");
 	}
 
-	//imprimirListaEstadosCompleta();
-
-	mlist_t* listaFiltradaEstadosBloquesDelNodo = mlist_filter(listaEstados, (void*)esNodoBuscado); //violacion de segmento
-
-	imprimirListaEstadosCompleta();
+	mlist_t* listaFiltradaEstadosBloquesDelNodo = mlist_filter(listaEstados, (void*)esNodoBuscado);
 
 	int i;
 	mlist_t* ListaDeBloquesReplanificar = mlist_create();
@@ -347,7 +338,6 @@ void replanificacion(char* nodo, const char* pathArchivo,int master,int job){
 		mlist_append(ListaDeBloquesReplanificar,bloqueEncontrado);
 	}
 
-	printf("Tamanio de la lista a replanificar es : %d \n",mlist_length(ListaDeBloquesReplanificar));
 	mlist_t* list_to_send = mlist_create();
 
 	int posicionCargaNodoObtenida = obtenerPosicionCargaNodo(nodo);
@@ -459,7 +449,6 @@ void actualizarCargaDelNodo(char* nodoCopia, int job, int aumentarOQuitar, int c
 			t_cargaPorJob * cargaJob = (t_cargaPorJob *) cargaJobObtenida;
 
 			cargaNodoCopia->cargaActual -= cargaJob->cargaDelJob;
-			printf("La carga actual del Nodo: %s, es: %d \n", cargaNodoCopia->nodo, cargaNodoCopia->cargaActual);
 			eliminarCargaJobDelNodo(job, cargaNodoCopia->cargaPorJob);
 		}
 	}
@@ -505,7 +494,6 @@ bool NodoConCopia_is_active(char* nodo){
 	bool contieneNodo(void* unNodo){
 	  return string_equals_ignore_case(((t_infoNodo*) unNodo)->nodo, nodo);
 	 }
-	 printf("El tamanio de la lista de nodos activos es : %d \n", mlist_length(listaNodosActivos));
 	 if( mlist_length(listaNodosActivos) == 0){
 	  return false;
 	 }
@@ -535,7 +523,6 @@ void finalizarJobGlobalEnTablaEstado(int socketMaster,int job, char* estadoNuevo
 		log_print("Actualizacion tabla de estado: finalizacion de job: %d || nodo: %s",job,estadoEncontrado->nodo);
 	}
 
-	//ahora quito las cargas de los nodos de reduccion local que estan como finalizadoOK menos el encargado.
 	eliminarCargasReduccionesLocales(estadoEncontrado->nodo,socketMaster,job);
 
 }
