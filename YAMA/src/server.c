@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <struct.h>
+#include <thread.h>
 #include "funcionesYAMA.h"
 #include "YAMA.h"
 #include "mstring.h"
@@ -81,7 +82,7 @@ void listen_to_master() {
 								completarPrimeraVez();
 								t_workerPlanificacion planificador[tamaniolistaNodos];
 								entreAPlanificar = true;
-								usleep(retardoPlanificacion);
+								thread_sleep(retardoPlanificacion);
 								planificar(planificador, tamaniolistaNodos,Datosfile->blocks);
 								if(recibiSenial){
 									 config_reload();
@@ -103,7 +104,7 @@ void listen_to_master() {
 
 					if(finalizoOperacion->response == -1){
 						entreAPlanificar = true;
-						usleep(retardoPlanificacion);
+						thread_sleep(retardoPlanificacion);
 						replanificacion(finalizoOperacion->nodo,finalizoOperacion->file,sock,finalizoOperacion->idJOB);
 						if(recibiSenial){
 							 config_reload();
